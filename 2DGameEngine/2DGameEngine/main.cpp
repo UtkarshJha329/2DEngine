@@ -5,6 +5,7 @@
 #include <GLFW/glfw3.h>
 
 #include "entt/entt.hpp"
+#include "flecs/flecs.h"
 
 #include "Shader.h"
 #include "Components/Mesh.h"
@@ -37,6 +38,26 @@ void InitializeMesh(entt::entity& curEntity, entt::registry& curRegistery, float
     glEnableVertexAttribArray(0);
 }
 
+void InitializeMesh(Mesh &curMesh, float* vertices, unsigned int numVertices, unsigned int* indices, unsigned int numIndices) {
+
+    curMesh.vertices.assign(vertices, vertices + numVertices);
+    curMesh.indices.assign(indices, indices + numIndices);
+
+    glGenVertexArrays(1, &curMesh.VAO);
+    glGenBuffers(1, &curMesh.VBO);
+    glGenBuffers(1, &curMesh.EBO);
+
+    glBindVertexArray(curMesh.VAO);
+    // 2. copy our vertices array in a buffer for OpenGL to use
+    glBindBuffer(GL_ARRAY_BUFFER, curMesh.VBO);
+    glBufferData(GL_ARRAY_BUFFER, curMesh.vertices.size() * sizeof(float), vertices, GL_STATIC_DRAW);
+    glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, curMesh.EBO);
+    glBufferData(GL_ELEMENT_ARRAY_BUFFER, curMesh.indices.size() * sizeof(unsigned int), indices, GL_STATIC_DRAW);
+    // 3. then set our vertex attributes pointers
+    glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 3 * sizeof(float), (void*)0);
+    glEnableVertexAttribArray(0);
+}
+
 int main()
 {
     glfwInit();
@@ -63,10 +84,20 @@ int main()
     glViewport(0, 0, window_width, window_height);
     glfwSetFramebufferSizeCallback(window, framebuffer_size_callback);
 
+    flecs::world world;
     entt::registry registry;
 
     auto entity = registry.create();
     registry.emplace<Mesh>(entity);
+
+    auto e = world.entity();
+    auto e_child1 = world.entity().child_of(e);
+    auto e_child2 = world.entity().child_of(e);
+    auto e_child3 = world.entity().child_of(e);
+    auto e_child4 = world.entity().child_of(e);
+    e.add<Mesh>();
+
+    e.children([](flecs::entity children) {std::cout << children.id() << std::endl; });
 
     Shader shaderProgram("Shaders/SimpleShader.vert", "Shaders/SimpleShader.frag");
 
@@ -83,6 +114,11 @@ int main()
 
     InitializeMesh(entity, registry, vertices, 12, indices, 6);
 
+    auto q = world.query_builder<Mesh>();
+    q.each([&](Mesh& mesh) {
+        InitializeMesh(mesh, vertices, 12, indices, 6);
+        });
+
     while (!glfwWindowShouldClose(window))
     {
         processInput(window);
@@ -94,7 +130,7 @@ int main()
 
         auto &curMesh = registry.get<Mesh>(entity);
 
-        glBindVertexArray(curMesh.VAO);
+        glBindVertexArray(e.get<Mesh>()->VAO);
         glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_INT, 0);
         glBindVertexArray(0);
 

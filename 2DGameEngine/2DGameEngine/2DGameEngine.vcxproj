@@ -141,11 +141,13 @@
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
+    <ClCompile Include="flecs\flecs.c" />
     <ClCompile Include="glad.c" />
     <ClCompile Include="main.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="Components\Mesh.h" />
+    <ClInclude Include="flecs\flecs.h" />
     <ClInclude Include="Shader.h" />
   </ItemGroup>
   <ItemGroup>
