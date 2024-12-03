@@ -1,154 +1,140 @@
 
 #include <iostream>
 
-#include <glad/glad.h>
-#include <GLFW/glfw3.h>
-
-#include "entt/entt.hpp"
 #include "flecs/flecs.h"
+#include "raylib/raylib.h"
+#include "raylib/raymath.h"
 
-#include "Shader.h"
-#include "Components/Mesh.h"
+#include "PerlinNoise.hpp"
 
-#define window_width 800
-#define window_height 600
+#include <vector>
 
-void framebuffer_size_callback(GLFWwindow* window, int width, int height);
-void processInput(GLFWwindow* window);
+#include "CubeMeshData.h"
 
-void InitializeMesh(entt::entity& curEntity, entt::registry& curRegistery, float* vertices, unsigned int numVertices, unsigned int* indices, unsigned int numIndices) {
-
-    auto curMesh = curRegistery.try_get<Mesh>(curEntity);
-
-    curMesh->vertices.assign(vertices, vertices + numVertices);
-    curMesh->indices.assign(indices, indices + numIndices);
-
-    glGenVertexArrays(1, &curMesh->VAO);
-    glGenBuffers(1, &curMesh->VBO);
-    glGenBuffers(1, &curMesh->EBO);
-
-    glBindVertexArray(curMesh->VAO);
-    // 2. copy our vertices array in a buffer for OpenGL to use
-    glBindBuffer(GL_ARRAY_BUFFER, curMesh->VBO);
-    glBufferData(GL_ARRAY_BUFFER, curMesh->vertices.size() * sizeof(float), vertices, GL_STATIC_DRAW);
-    glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, curMesh->EBO);
-    glBufferData(GL_ELEMENT_ARRAY_BUFFER, curMesh->indices.size() * sizeof(unsigned int), indices, GL_STATIC_DRAW);
-    // 3. then set our vertex attributes pointers
-    glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 3 * sizeof(float), (void*)0);
-    glEnableVertexAttribArray(0);
-}
-
-void InitializeMesh(Mesh &curMesh, float* vertices, unsigned int numVertices, unsigned int* indices, unsigned int numIndices) {
-
-    curMesh.vertices.assign(vertices, vertices + numVertices);
-    curMesh.indices.assign(indices, indices + numIndices);
-
-    glGenVertexArrays(1, &curMesh.VAO);
-    glGenBuffers(1, &curMesh.VBO);
-    glGenBuffers(1, &curMesh.EBO);
-
-    glBindVertexArray(curMesh.VAO);
-    // 2. copy our vertices array in a buffer for OpenGL to use
-    glBindBuffer(GL_ARRAY_BUFFER, curMesh.VBO);
-    glBufferData(GL_ARRAY_BUFFER, curMesh.vertices.size() * sizeof(float), vertices, GL_STATIC_DRAW);
-    glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, curMesh.EBO);
-    glBufferData(GL_ELEMENT_ARRAY_BUFFER, curMesh.indices.size() * sizeof(unsigned int), indices, GL_STATIC_DRAW);
-    // 3. then set our vertex attributes pointers
-    glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 3 * sizeof(float), (void*)0);
-    glEnableVertexAttribArray(0);
-}
+static Mesh GenMeshCustom(void);    // Generate a simple triangle mesh from code
 
 int main()
 {
-    glfwInit();
-    glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, 3);
-    glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, 3);
-    glfwWindowHint(GLFW_OPENGL_PROFILE, GLFW_OPENGL_CORE_PROFILE);
-    //glfwWindowHint(GLFW_OPENGL_FORWARD_COMPAT, GL_TRUE);
-
-    GLFWwindow* window = glfwCreateWindow(window_width, window_height, "2D Engine", NULL, NULL);
-    if (window == NULL)
-    {
-        std::cout << "Failed to create GLFW window" << std::endl;
-        glfwTerminate();
-        return -1;
-    }
-    glfwMakeContextCurrent(window);
-
-    if (!gladLoadGLLoader((GLADloadproc)glfwGetProcAddress))
-    {
-        std::cout << "Failed to initialize GLAD" << std::endl;
-        return -1;
-    }
-
-    glViewport(0, 0, window_width, window_height);
-    glfwSetFramebufferSizeCallback(window, framebuffer_size_callback);
 
     flecs::world world;
-    entt::registry registry;
-
-    auto entity = registry.create();
-    registry.emplace<Mesh>(entity);
 
     auto e = world.entity();
-    auto e_child1 = world.entity().child_of(e);
-    auto e_child2 = world.entity().child_of(e);
-    auto e_child3 = world.entity().child_of(e);
-    auto e_child4 = world.entity().child_of(e);
-    e.add<Mesh>();
 
-    e.children([](flecs::entity children) {std::cout << children.id() << std::endl; });
+    InitWindow(800, 450, "raylib [core] example - basic window");
 
-    Shader shaderProgram("Shaders/SimpleShader.vert", "Shaders/SimpleShader.frag");
+    Camera camera = { { 5.0f, 5.0f, 5.0f }, { 0.0f, 0.0f, 0.0f }, { 0.0f, 1.0f, 0.0f }, 45.0f, 0 };
+    // Model drawing position
+    Vector3 position = { 0.0f, 0.0f, 0.0f };
 
-    float vertices[] = {
-         0.5f,  0.5f, 0.0f,  // top right
-         0.5f, -0.5f, 0.0f,  // bottom right
-        -0.5f, -0.5f, 0.0f,  // bottom left
-        -0.5f,  0.5f, 0.0f   // top left 
-    };
-    unsigned int indices[] = {  // note that we start from 0!
-        0, 1, 3,   // first triangle
-        1, 2, 3    // second triangle
-    };
+    // We generate a checked image for texturing
+    Image checked = GenImageChecked(2, 2, 1, 1, RED, GREEN);
+    Texture2D texture = LoadTextureFromImage(checked);
+    UnloadImage(checked);
 
-    InitializeMesh(entity, registry, vertices, 12, indices, 6);
+    Model genModel = LoadModelFromMesh(GenMeshCustom());
 
-    auto q = world.query_builder<Mesh>();
-    q.each([&](Mesh& mesh) {
-        InitializeMesh(mesh, vertices, 12, indices, 6);
-        });
+    genModel.materials[0].maps[MATERIAL_MAP_DIFFUSE].texture = texture;
 
-    while (!glfwWindowShouldClose(window))
+    while (!WindowShouldClose())
     {
-        processInput(window);
+        UpdateCamera(&camera, CAMERA_FIRST_PERSON);
 
-        glClearColor(0.2f, 0.3f, 0.3f, 1.0f);
-        glClear(GL_COLOR_BUFFER_BIT);
+        BeginDrawing();
+        ClearBackground(RAYWHITE);
+        //DrawText("Congrats! You created your first window!", 190, 200, 20, LIGHTGRAY);
+            BeginMode3D(camera);
 
-        glUseProgram(shaderProgram.ID);
+            //DrawModelWires(genModel, position, 1.0f, WHITE);
+            DrawModel(genModel, position, 1.0f, WHITE);
+            DrawGrid(10, 1.0);
 
-        auto &curMesh = registry.get<Mesh>(entity);
-
-        glBindVertexArray(e.get<Mesh>()->VAO);
-        glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_INT, 0);
-        glBindVertexArray(0);
-
-        glfwSwapBuffers(window);
-        glfwPollEvents();
+            EndMode3D();
+        EndDrawing();
     }
 
-    glfwTerminate();
+    UnloadTexture(texture);
+
+    CloseWindow();
     return 0;
 }
 
-void processInput(GLFWwindow* window)
+static Mesh GenMeshCustom(void)
 {
-    if (glfwGetKey(window, GLFW_KEY_ESCAPE) == GLFW_PRESS)
-        glfwSetWindowShouldClose(window, true);
+    Mesh mesh = { 0 };
+
+    std::vector<float> vertices;
+    std::vector<unsigned short> indices;
+    std::vector<float> texCoords;
+    std::vector<unsigned char> vertColour;
+
+    float noise[11][11];
+
+    const siv::PerlinNoise::seed_type seed = 123456u;
+
+    const siv::PerlinNoise perlin{ seed };
+
+    for (int i = 0; i < 11; i++)
+    {
+        for (int j = 0; j < 11; j++)
+        {
+            noise[i][j] = perlin.noise2D_01((double)i, (double)j);
+        }
+    }
+
+    int size = 5;
+    for (int x = -size; x <= size; x++)
+    {
+        for (int z = -size; z <= size; z++)
+        {
+            FaceIndicesTop(indices, vertices.size() / 3);
+            FaceVerticesTop(vertices, x, round(noise[x + size][z + size] * size), z);
+            TexCoords(texCoords);
+            VertColour(vertColour);
+            
+            FaceIndicesBottom(indices, vertices.size() / 3);
+            FaceVerticesBottom(vertices, x, round(noise[x + size][z + size] * size), z);
+            TexCoords(texCoords);
+            VertColour(vertColour);
+
+            FaceIndicesFront(indices, vertices.size() / 3);
+            FaceVerticesFront(vertices, x, round(noise[x + size][z + size] * size), z);
+            TexCoords(texCoords);
+            VertColour(vertColour);
+
+            FaceIndicesBack(indices, vertices.size() / 3);
+            FaceVerticesBack(vertices, x, round(noise[x + size][z + size] * size), z);
+            TexCoords(texCoords);
+            VertColour(vertColour);
+
+            FaceIndicesRight(indices, vertices.size() / 3);
+            FaceVerticesRight(vertices, x, round(noise[x + size][z + size] * size), z);
+            TexCoords(texCoords);
+            VertColour(vertColour);
+
+            FaceIndicesLeft(indices, vertices.size() / 3);
+            FaceVerticesLeft(vertices, x, round(noise[x + size][z + size]* size), z);
+            TexCoords(texCoords);
+            VertColour(vertColour);
+        }
+    }
+
+    mesh.triangleCount = indices.size() / 3;
+    mesh.vertexCount = vertices.size() / 3;
+    mesh.vertices = (float*)MemAlloc(vertices.size() * sizeof(float));    // 3 vertices, 3 coordinates each (x, y, z)
+    mesh.texcoords = (float*)MemAlloc(texCoords.size() * sizeof(float));   // 3 vertices, 2 coordinates each (x, y)
+    //mesh.normals = (float*)MemAlloc(mesh.vertexCount * 3 * sizeof(float));     // 3 vertices, 3 coordinates each (x, y, z)
+    //mesh.colors = (unsigned char*)MemAlloc(vertColour.size() * sizeof(unsigned char));
+    
+    mesh.indices = (unsigned short*)MemAlloc(indices.size() * sizeof(unsigned short*));
+
+    mesh.vertices = vertices.data();
+    mesh.indices = indices.data();
+    mesh.texcoords = texCoords.data();
+    //mesh.colors = vertColour.data();
+
+    // Upload mesh data from CPU (RAM) to GPU (VRAM) memory
+    UploadMesh(&mesh, false);
+
+    return mesh;
 }
 
-void framebuffer_size_callback(GLFWwindow* window, int width, int height)
-{
-    glViewport(0, 0, width, height);
-}
