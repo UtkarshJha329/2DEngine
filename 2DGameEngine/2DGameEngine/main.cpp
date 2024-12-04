@@ -46,9 +46,10 @@ int main()
         BeginDrawing();
         ClearBackground(RAYWHITE);
         //DrawText("Congrats! You created your first window!", 190, 200, 20, LIGHTGRAY);
-            BeginMode3D(camera);
+        DrawFPS(40, 40);
 
-            DrawModelWires(genModel, offsetPos, 1.0f, WHITE);
+            BeginMode3D(camera);
+            //DrawModelWires(genModel, offsetPos, 1.0f, WHITE);
             DrawModel(genModel, position, 1.0f, WHITE);
             DrawGrid(10, 1.0);
 
@@ -71,21 +72,22 @@ static Mesh GenMeshCustom(void)
     std::vector<float> texCoords;
     std::vector<unsigned char> vertColour;
 
-    float noise[11][11];
+    const int size = 10;
+
+    float noise[(size * 2) + 1][(size * 2) + 1];
 
     const siv::PerlinNoise::seed_type seed = 123456u;
 
     const siv::PerlinNoise perlin{ seed };
 
-    for (int i = 0; i < 11; i++)
+    for (int i = 0; i < (size * 2) + 1; i++)
     {
-        for (int j = 0; j < 11; j++)
+        for (int j = 0; j < (size * 2) + 1; j++)
         {
-            noise[i][j] = perlin.noise2D_01((double)i, (double)j);
+            noise[i][j] = perlin.noise2D_01((double)i * 0.1f, (double)j * 0.1f);
         }
     }
 
-    int size = 0;
     for (int x = -size; x <= size; x++)
     {
         for (int z = -size; z <= size; z++)
