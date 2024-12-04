@@ -92,35 +92,47 @@ static Mesh GenMeshCustom(void)
     {
         for (int z = -size; z <= size; z++)
         {
+            float curNoise = noise[x + size][z + size];
+            float curVoxelHeight = round(curNoise * size);
+
             FaceIndicesTop(indices, vertices.size() / 3);
-            FaceVerticesTop(vertices, x, round(noise[x + size][z + size] * size), z);
+            FaceVerticesTop(vertices, x, curVoxelHeight, z);
             TexCoords(texCoords);
             VertColour(vertColour);
             
             FaceIndicesBottom(indices, vertices.size() / 3);
-            FaceVerticesBottom(vertices, x, round(noise[x + size][z + size] * size), z);
+            FaceVerticesBottom(vertices, x, curVoxelHeight, z);
             TexCoords(texCoords);
             VertColour(vertColour);
 
-            FaceIndicesFront(indices, vertices.size() / 3);
-            FaceVerticesFront(vertices, x, round(noise[x + size][z + size] * size), z);
-            TexCoords(texCoords);
-            VertColour(vertColour);
+            if (z + size + 1 < (size * 2) + 1 && round(noise[x + size][z + size + 1] * size) < curVoxelHeight) {
 
-            FaceIndicesBack(indices, vertices.size() / 3);
-            FaceVerticesBack(vertices, x, round(noise[x + size][z + size] * size), z);
-            TexCoords(texCoords);
-            VertColour(vertColour);
+                FaceIndicesFront(indices, vertices.size() / 3);
+                FaceVerticesFront(vertices, x, curVoxelHeight, z);
+                TexCoords(texCoords);
+                VertColour(vertColour);
+            }
 
-            FaceIndicesRight(indices, vertices.size() / 3);
-            FaceVerticesRight(vertices, x, round(noise[x + size][z + size] * size), z);
-            TexCoords(texCoords);
-            VertColour(vertColour);
+            if (z + size - 1 >= 0 && round(noise[x + size][z + size - 1] * size) < curVoxelHeight) {
+                FaceIndicesBack(indices, vertices.size() / 3);
+                FaceVerticesBack(vertices, x, curVoxelHeight, z);
+                TexCoords(texCoords);
+                VertColour(vertColour);
+            }
 
-            FaceIndicesLeft(indices, vertices.size() / 3);
-            FaceVerticesLeft(vertices, x, round(noise[x + size][z + size]* size), z);
-            TexCoords(texCoords);
-            VertColour(vertColour);
+            if (x + size + 1 < (size * 2) + 1 && round(noise[x + size + 1][z + size] * size) < curVoxelHeight) {
+                FaceIndicesRight(indices, vertices.size() / 3);
+                FaceVerticesRight(vertices, x, curVoxelHeight, z);
+                TexCoords(texCoords);
+                VertColour(vertColour);
+            }
+
+            if (x + size - 1 >= 0 && round(noise[x + size - 1][z + size] * size) < curVoxelHeight) {
+                FaceIndicesLeft(indices, vertices.size() / 3);
+                FaceVerticesLeft(vertices, x, curVoxelHeight, z);
+                TexCoords(texCoords);
+                VertColour(vertColour);
+            }
         }
     }
 
