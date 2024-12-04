@@ -35,16 +35,20 @@ int main()
 
     genModel.materials[0].maps[MATERIAL_MAP_DIFFUSE].texture = texture;
 
+    DisableCursor();
+
+    Vector3 offsetPos = { 1.5f, 0.0f, 0.0f };
+
     while (!WindowShouldClose())
     {
-        UpdateCamera(&camera, CAMERA_FIRST_PERSON);
+        UpdateCamera(&camera, CAMERA_FREE);
 
         BeginDrawing();
         ClearBackground(RAYWHITE);
         //DrawText("Congrats! You created your first window!", 190, 200, 20, LIGHTGRAY);
             BeginMode3D(camera);
 
-            //DrawModelWires(genModel, position, 1.0f, WHITE);
+            DrawModelWires(genModel, offsetPos, 1.0f, WHITE);
             DrawModel(genModel, position, 1.0f, WHITE);
             DrawGrid(10, 1.0);
 
@@ -81,7 +85,7 @@ static Mesh GenMeshCustom(void)
         }
     }
 
-    int size = 5;
+    int size = 0;
     for (int x = -size; x <= size; x++)
     {
         for (int z = -size; z <= size; z++)

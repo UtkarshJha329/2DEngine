@@ -105,6 +105,14 @@ void FaceVerticesBottom(std::vector<float>& vertices, float offsetX, float offse
 
     vertices.push_back(-0.5 + offsetX);
     vertices.push_back(-0.5 + offsetY);
+    vertices.push_back(-0.5 + offsetZ);
+
+    vertices.push_back(0.5 + offsetX);
+    vertices.push_back(-0.5 + offsetY);
+    vertices.push_back(0.5 + offsetZ);
+
+    vertices.push_back(-0.5 + offsetX);
+    vertices.push_back(-0.5 + offsetY);
     vertices.push_back(0.5 + offsetZ);
 
     vertices.push_back(-0.5 + offsetX);
@@ -113,19 +121,12 @@ void FaceVerticesBottom(std::vector<float>& vertices, float offsetX, float offse
 
     vertices.push_back(0.5 + offsetX);
     vertices.push_back(-0.5 + offsetY);
-    vertices.push_back(0.5 + offsetZ);
-
-    vertices.push_back(0.5 + offsetX);
-    vertices.push_back(-0.5 + offsetY);
-    vertices.push_back(0.5 + offsetZ);
-
-    vertices.push_back(-0.5 + offsetX);
-    vertices.push_back(-0.5 + offsetY);
     vertices.push_back(-0.5 + offsetZ);
 
     vertices.push_back(0.5 + offsetX);
     vertices.push_back(-0.5 + offsetY);
-    vertices.push_back(-0.5 + offsetZ);
+    vertices.push_back(0.5 + offsetZ);
+
 }
 
 void FaceIndicesBottom(std::vector<unsigned short>& indices, unsigned short offset) {
