@@ -8,10 +8,14 @@
 #include "PerlinNoise.hpp"
 
 #include <vector>
+#include <string>
 
 #include "CubeMeshData.h"
 
-static Mesh GenMeshCustom(void);    // Generate a simple triangle mesh from code
+#define ThreeDimensionalStdVector(_name, _type, _size) std::vector<std::vector<std::vector<_type>>> _name(_size, std::vector<std::vector<_type>>(_size, std::vector<_type>(_size)));
+#define TwoDimensionalStdVector(_name, _type, _size) std::vector<std::vector<_type>> _name(_size, std::vector<_type>(_size));
+
+static Mesh GenMeshCustom(Vector3 position);
 
 int main()
 {
@@ -31,13 +35,31 @@ int main()
     Texture2D texture = LoadTextureFromImage(checked);
     UnloadImage(checked);
 
-    Model genModel = LoadModelFromMesh(GenMeshCustom());
+    Color colours[9] = { MAGENTA, WHITE, LIGHTGRAY, YELLOW, BLUE, RED, GREEN, ORANGE, VIOLET };
 
-    genModel.materials[0].maps[MATERIAL_MAP_DIFFUSE].texture = texture;
+    const int numChunks = 3;
+    //Model genModel[(numChunks * 2) + 1][(numChunks * 2) + 1];
+    TwoDimensionalStdVector(genModel, Model, (numChunks * 2) + 1);
+    std::vector<Color> perChunkColours;
+
+    const int chunkSize = 21;
+
+    for (int x = -numChunks; x <= numChunks; x++)
+    {
+        for (int y = -numChunks; y <= numChunks; y++)
+        {
+            Vector3 curPos = { x * chunkSize, 0, y * chunkSize};
+            genModel[x + numChunks][y + numChunks] = LoadModelFromMesh(GenMeshCustom(curPos));
+            genModel[x + numChunks][y + numChunks].materials[0].maps[MATERIAL_MAP_DIFFUSE].texture = texture;
+            perChunkColours.push_back(colours[GetRandomValue(0, 9)]);
+        }
+
+    }
 
     DisableCursor();
 
     Vector3 offsetPos = { 1.5f, 0.0f, 0.0f };
+
 
     while (!WindowShouldClose())
     {
@@ -48,9 +70,21 @@ int main()
         //DrawText("Congrats! You created your first window!", 190, 200, 20, LIGHTGRAY);
         DrawFPS(40, 40);
 
+        std::string curNumMeshes = "Total Num Chunks -\n" + std::to_string(((numChunks * 2) + 1) * ((numChunks * 2) + 1));
+        DrawText(curNumMeshes.c_str(), 300, 40, 30, MAGENTA);
+
             BeginMode3D(camera);
             //DrawModelWires(genModel, offsetPos, 1.0f, WHITE);
-            DrawModel(genModel, position, 1.0f, WHITE);
+            for (int x = -numChunks; x <= numChunks; x++)
+            {
+                for (int y = -numChunks; y <= numChunks; y++)
+                {
+                    Vector3 curPos = { x * chunkSize, 0, y * chunkSize };
+                    DrawModel(genModel[x + numChunks][y + numChunks], curPos, 1.0f, perChunkColours[((x + numChunks) * (numChunks)) + (y + numChunks)]);
+
+                }
+
+            }
             DrawGrid(10, 1.0);
 
             EndMode3D();
@@ -63,7 +97,7 @@ int main()
     return 0;
 }
 
-static Mesh GenMeshCustom(void)
+static Mesh GenMeshCustom(Vector3 position)
 {
     Mesh mesh = { 0 };
 
@@ -74,22 +108,9 @@ static Mesh GenMeshCustom(void)
 
     const int size = 10;
 
-    float noise[(size * 2) + 1][(size * 2) + 1][(size * 2) + 1];
-
     const siv::PerlinNoise::seed_type seed = 123456u;
 
     const siv::PerlinNoise perlin{ seed };
-
-    for (int i = 0; i < (size * 2) + 1; i++)
-    {
-        for (int j = 0; j < (size * 2) + 1; j++)
-        {
-            for (int k = 0; k < (size * 2) + 1; k++)
-            {
-                noise[i][j][k] = perlin.noise3D_01((double)i * 0.1f, (double)j * 0.1f, (double)k * 0.1f);
-            }
-        }
-    }
 
     for (int y = -size; y <= size; y++)
     {
@@ -97,28 +118,38 @@ static Mesh GenMeshCustom(void)
         {
             for (int z = -size; z <= size; z++)
             {
-                float curNoise = noise[x + size][z + size][y + size];
+                int _x = x + size + position.x;
+                int _y = y + size + position.y;
+                int _z = z + size + position.z;
+
+                float curNoise = perlin.noise3D_01((double)_x * 0.1f, (double)_z * 0.1f, (double)_y * 0.1f);
 
                 float emptyThreshold = 0.5f;
                 bool curVoxelIsEmpty = curNoise < emptyThreshold ? true : false;
 
                 if (!curVoxelIsEmpty) {
 
-                    if (y + size + 1 < (size * 2) + 1 && noise[x + size][z + size][y + size + 1] < emptyThreshold) {
+                    float curNoiseTop = perlin.noise3D_01((double)_x * 0.1f, (double)_z * 0.1f, (double)(_y + 1) * 0.1f);
+
+                    if (curNoiseTop < emptyThreshold || y == size) {
                         FaceIndicesTop(indices, vertices.size() / 3);
                         FaceVerticesTop(vertices, x, y, z);
                         TexCoords(texCoords);
                         VertColour(vertColour);
                     }
 
-                    if (y + size - 1 >= 0 && noise[x + size][z + size][y + size - 1] < emptyThreshold) {
+                    float curNoiseBottom = perlin.noise3D_01((double)_x * 0.1f, (double)_z * 0.1f, (double)(_y - 1) * 0.1f);
+
+                    if (curNoiseBottom < emptyThreshold || y == -size) {
                         FaceIndicesBottom(indices, vertices.size() / 3);
                         FaceVerticesBottom(vertices, x, y, z);
                         TexCoords(texCoords);
                         VertColour(vertColour);
                     }
 
-                    if (z + size + 1 < (size * 2) + 1 && noise[x + size][z + size + 1][y + size] < emptyThreshold) {
+                    float curNoiseFront = perlin.noise3D_01((double)_x * 0.1f, (double)(_z + 1) * 0.1f, (double)_y * 0.1f);
+
+                    if (curNoiseFront < emptyThreshold || z == size) {
 
                         FaceIndicesFront(indices, vertices.size() / 3);
                         FaceVerticesFront(vertices, x, y, z);
@@ -126,21 +157,28 @@ static Mesh GenMeshCustom(void)
                         VertColour(vertColour);
                     }
 
-                    if (z + size - 1 >= 0 && noise[x + size][z + size - 1][y + size] < emptyThreshold) {
+                    float curNoiseBack = perlin.noise3D_01((double)_x * 0.1f, (double)(_z - 1) * 0.1f, (double)_y * 0.1f);
+
+                    if (curNoiseBack < emptyThreshold || z == -size) {
+
                         FaceIndicesBack(indices, vertices.size() / 3);
                         FaceVerticesBack(vertices, x, y, z);
                         TexCoords(texCoords);
                         VertColour(vertColour);
                     }
 
-                    if (x + size + 1 < (size * 2) + 1 && noise[x + size + 1][z + size][y + size] < emptyThreshold) {
+                    float curNoiseRight = perlin.noise3D_01((double)(_x + 1) * 0.1f, (double)_z * 0.1f, (double)_y * 0.1f);
+
+                    if (curNoiseRight < emptyThreshold || x == size) {
                         FaceIndicesRight(indices, vertices.size() / 3);
                         FaceVerticesRight(vertices, x, y, z);
                         TexCoords(texCoords);
                         VertColour(vertColour);
                     }
 
-                    if (x + size - 1 >= 0 && noise[x + size - 1][z + size][y + size] < emptyThreshold) {
+                    float curNoiseLeft = perlin.noise3D_01((double)(_x - 1) * 0.1f, (double)_z * 0.1f, (double)_y * 0.1f);
+
+                    if (curNoiseLeft < emptyThreshold || x == -size) {
                         FaceIndicesLeft(indices, vertices.size() / 3);
                         FaceVerticesLeft(vertices, x, y, z);
                         TexCoords(texCoords);
@@ -155,6 +193,9 @@ static Mesh GenMeshCustom(void)
 
     mesh.triangleCount = indices.size() / 3;
     mesh.vertexCount = vertices.size() / 3;
+
+
+
     mesh.vertices = (float*)MemAlloc(vertices.size() * sizeof(float));    // 3 vertices, 3 coordinates each (x, y, z)
     mesh.texcoords = (float*)MemAlloc(texCoords.size() * sizeof(float));   // 3 vertices, 2 coordinates each (x, y)
     //mesh.normals = (float*)MemAlloc(mesh.vertexCount * 3 * sizeof(float));     // 3 vertices, 3 coordinates each (x, y, z)
