@@ -26,6 +26,14 @@ static void GenMeshCustom(std::unordered_map<BlockFaceDirection, Mesh>& meshFaci
     , Vector3 position);
 Mesh PlaneFacingDir(Vector3 dir);
 
+Vector3 up = { 0, 1, 0 };
+Vector3 down = { 0, -1, 0 };
+Vector3 front = { 0, 0, 1 };
+Vector3 back = { 0, 0, -1 };
+Vector3 right = { 1, 0, 0 };
+Vector3 left = { -1, 0, 0 };
+
+
 int main()
 {
 
@@ -66,8 +74,8 @@ int main()
     GenMeshCustom(meshFacingParticularDir, transformOfVerticesOfFaceInParticularDir, curPos);
 
     // Load lighting instanceShader
-    Shader instanceShader = LoadShader(TextFormat("Shaders/lighting_instancing.vs", GLSL_VERSION),
-        TextFormat("Shaders/lighting.fs", GLSL_VERSION));
+    Shader instanceShader = LoadShader(TextFormat("Shaders/lighting_instancing.vert", GLSL_VERSION),
+        TextFormat("Shaders/lighting.frag", GLSL_VERSION));
     // Get instanceShader locations
     instanceShader.locs[SHADER_LOC_MATRIX_MVP] = GetShaderLocation(instanceShader, "mvp");
     instanceShader.locs[SHADER_LOC_VECTOR_VIEW] = GetShaderLocation(instanceShader, "viewPos");
@@ -107,6 +115,13 @@ int main()
 
     //}
 
+    std::cout << "UP : " << transformOfVerticesOfFaceInParticularDir[BlockFaceDirection::UP].size() << std::endl;
+    std::cout << "DOWN : " << transformOfVerticesOfFaceInParticularDir[BlockFaceDirection::DOWN].size() << std::endl;
+    std::cout << "FRONT : " << transformOfVerticesOfFaceInParticularDir[BlockFaceDirection::FRONT].size() << std::endl;
+    std::cout << "BACK : " << transformOfVerticesOfFaceInParticularDir[BlockFaceDirection::BACK].size() << std::endl;
+    std::cout << "RIGHT : " << transformOfVerticesOfFaceInParticularDir[BlockFaceDirection::RIGHT].size() << std::endl;
+    std::cout << "LEFT : " << transformOfVerticesOfFaceInParticularDir[BlockFaceDirection::LEFT].size() << std::endl;
+
     DisableCursor();
 
     while (!WindowShouldClose())
@@ -116,6 +131,8 @@ int main()
         float cameraPos[3] = {camera.position.x, camera.position.y, camera.position.z};
         SetShaderValue(instancedMaterial.shader, instancedMaterial.shader.locs[SHADER_LOC_VECTOR_VIEW], cameraPos, SHADER_UNIFORM_VEC3);
 
+        Vector3 cameraDir = Vector3Subtract(camera.target, camera.position);
+        cameraDir = Vector3Normalize(cameraDir);
 
         BeginDrawing();
         ClearBackground(RAYWHITE);
@@ -137,7 +154,7 @@ int main()
 
             //}
 
-            rlEnableShader(instancedMaterial.shader.id);
+            //rlEnableShader(instancedMaterial.shader.id);
 
             DrawMeshInstancedFlattenedTransforms(meshFacingParticularDir[BlockFaceDirection::UP]
                 , instancedMaterial
@@ -169,7 +186,6 @@ int main()
                 , transformOfVerticesOfFaceInParticularDir[BlockFaceDirection::LEFT].data()
                 , transformOfVerticesOfFaceInParticularDir[BlockFaceDirection::LEFT].size());
 
-
             DrawGrid(10, 1.0);
 
             EndMode3D();
@@ -187,7 +203,8 @@ static void GenMeshCustom(std::unordered_map<BlockFaceDirection, Mesh> &meshFaci
     , std::unordered_map<BlockFaceDirection, std::vector<float16>> &transformOfVerticesOfFaceInParticularDir
     , Vector3 position)
 {
-    const int size = 10;
+    const int chunkSize = 10;
+    const int numChunks = 10;
 
     const siv::PerlinNoise::seed_type seed = 123456u;
 
@@ -199,13 +216,6 @@ static void GenMeshCustom(std::unordered_map<BlockFaceDirection, Mesh> &meshFaci
     Mesh planeFacingBack = { 0 };
     Mesh planeFacingRight = { 0 };
     Mesh planeFacingLeft = { 0 };
-
-    Vector3 up = { 0, 1, 0 };
-    Vector3 down = { 0, -1, 0 };
-    Vector3 front = { 0, 0, 1 };
-    Vector3 back = { 0, 0, -1 };
-    Vector3 right = { 1, 0, 0 };
-    Vector3 left = { -1, 0, 0 };
 
     planeFacingUp = PlaneFacingDir(up);
 
@@ -227,71 +237,81 @@ static void GenMeshCustom(std::unordered_map<BlockFaceDirection, Mesh> &meshFaci
     meshFacingParticularDir.insert({ BlockFaceDirection::RIGHT, planeFacingRight });
     meshFacingParticularDir.insert({ BlockFaceDirection::LEFT, planeFacingLeft });
 
-    for (int y = -size; y <= size; y++)
+    for (int i = -numChunks; i <= numChunks; i++)
     {
-        for (int x = -size; x <= size; x++)
+        position.x = i * chunkSize;
+
+        for (int j = -numChunks; j <= numChunks; j++)
         {
-            for (int z = -size; z <= size; z++)
+            position.z = j * chunkSize;
+
+            for (int y = -chunkSize; y <= chunkSize; y++)
             {
-                int _x = x + size + position.x;
-                int _y = y + size + position.y;
-                int _z = z + size + position.z;
+                for (int x = -chunkSize; x <= chunkSize; x++)
+                {
+                    for (int z = -chunkSize; z <= chunkSize; z++)
+                    {
+                        int _x = x + chunkSize + position.x;
+                        int _y = y + chunkSize + position.y;
+                        int _z = z + chunkSize + position.z;
 
-                float curNoise = perlin.noise3D_01((double)_x * 0.1f, (double)_z * 0.1f, (double)_y * 0.1f);
+                        float curNoise = perlin.noise3D_01((double)_x * 0.1f, (double)_z * 0.1f, (double)_y * 0.1f);
 
-                float emptyThreshold = 0.5f;
-                bool curVoxelIsEmpty = curNoise < emptyThreshold ? true : false;
+                        float emptyThreshold = 0.5f;
+                        bool curVoxelIsEmpty = curNoise < emptyThreshold ? true : false;
 
-                if (!curVoxelIsEmpty) {
+                        if (!curVoxelIsEmpty) {
 
-                    Matrix translation = MatrixTranslate((float)_x, (float)_y, (float)_z);
-                    Matrix rotation = MatrixRotate({ 0,1,0 }, 0);
-                    //Matrix scale = MatrixScale(1.0f, 1.0f, 1.0f);
+                            Matrix translation = MatrixTranslate((float)_x, (float)_y, (float)_z);
+                            Matrix rotation = MatrixRotate({ 0,1,0 }, 0);
+                            //Matrix scale = MatrixScale(1.0f, 1.0f, 1.0f);
 
-                    Matrix curTransform = MatrixMultiply(MatrixIdentity(), rotation);
-                    curTransform = MatrixMultiply(curTransform, translation);
+                            Matrix curTransform = MatrixMultiply(MatrixIdentity(), rotation);
+                            curTransform = MatrixMultiply(curTransform, translation);
 
-                    //Matrix curTransform = MatrixMultiply(rotation, translation);
-                    float16 curTransformFlattened = MatrixToFloatV(curTransform);
+                            //Matrix curTransform = MatrixMultiply(rotation, translation);
+                            float16 curTransformFlattened = MatrixToFloatV(curTransform);
 
-                    float curNoiseTop = perlin.noise3D_01((double)_x * 0.1f, (double)_z * 0.1f, (double)(_y + 1) * 0.1f);
+                            float curNoiseTop = perlin.noise3D_01((double)_x * 0.1f, (double)_z * 0.1f, (double)(_y + 1) * 0.1f);
 
-                    if (curNoiseTop < emptyThreshold || y == size) {
-                        transformOfVerticesOfFaceInParticularDir[BlockFaceDirection::UP].push_back(curTransformFlattened);
+                            if (curNoiseTop < emptyThreshold || y == chunkSize) {
+                                transformOfVerticesOfFaceInParticularDir[BlockFaceDirection::UP].push_back(curTransformFlattened);
+                            }
+
+                            float curNoiseBottom = perlin.noise3D_01((double)_x * 0.1f, (double)_z * 0.1f, (double)(_y - 1) * 0.1f);
+
+                            if (curNoiseBottom < emptyThreshold) {
+                                transformOfVerticesOfFaceInParticularDir[BlockFaceDirection::DOWN].push_back(curTransformFlattened);
+                            }
+
+                            float curNoiseFront = perlin.noise3D_01((double)_x * 0.1f, (double)(_z + 1) * 0.1f, (double)_y * 0.1f);
+
+                            if (curNoiseFront < emptyThreshold) {
+                                transformOfVerticesOfFaceInParticularDir[BlockFaceDirection::FRONT].push_back(curTransformFlattened);
+                            }
+
+                            float curNoiseBack = perlin.noise3D_01((double)_x * 0.1f, (double)(_z - 1) * 0.1f, (double)_y * 0.1f);
+
+                            if (curNoiseBack < emptyThreshold) {
+                                transformOfVerticesOfFaceInParticularDir[BlockFaceDirection::BACK].push_back(curTransformFlattened);
+                            }
+
+                            float curNoiseRight = perlin.noise3D_01((double)(_x + 1) * 0.1f, (double)_z * 0.1f, (double)_y * 0.1f);
+
+                            if (curNoiseRight < emptyThreshold) {
+                                transformOfVerticesOfFaceInParticularDir[BlockFaceDirection::RIGHT].push_back(curTransformFlattened);
+                            }
+
+                            float curNoiseLeft = perlin.noise3D_01((double)(_x - 1) * 0.1f, (double)_z * 0.1f, (double)_y * 0.1f);
+
+                            if (curNoiseLeft < emptyThreshold) {
+                                transformOfVerticesOfFaceInParticularDir[BlockFaceDirection::LEFT].push_back(curTransformFlattened);
+                            }
+
+                        }
+
                     }
-
-                    float curNoiseBottom = perlin.noise3D_01((double)_x * 0.1f, (double)_z * 0.1f, (double)(_y - 1) * 0.1f);
-
-                    if (curNoiseBottom < emptyThreshold || y == -size) {
-                        transformOfVerticesOfFaceInParticularDir[BlockFaceDirection::DOWN].push_back(curTransformFlattened);
-                    }
-
-                    float curNoiseFront = perlin.noise3D_01((double)_x * 0.1f, (double)(_z + 1) * 0.1f, (double)_y * 0.1f);
-
-                    if (curNoiseFront < emptyThreshold || z == size) {
-                        transformOfVerticesOfFaceInParticularDir[BlockFaceDirection::FRONT].push_back(curTransformFlattened);
-                    }
-
-                    float curNoiseBack = perlin.noise3D_01((double)_x * 0.1f, (double)(_z - 1) * 0.1f, (double)_y * 0.1f);
-
-                    if (curNoiseBack < emptyThreshold || z == -size) {
-                        transformOfVerticesOfFaceInParticularDir[BlockFaceDirection::BACK].push_back(curTransformFlattened);
-                    }
-
-                    float curNoiseRight = perlin.noise3D_01((double)(_x + 1) * 0.1f, (double)_z * 0.1f, (double)_y * 0.1f);
-
-                    if (curNoiseRight < emptyThreshold || x == size) {
-                        transformOfVerticesOfFaceInParticularDir[BlockFaceDirection::RIGHT].push_back(curTransformFlattened);
-                    }
-
-                    float curNoiseLeft = perlin.noise3D_01((double)(_x - 1) * 0.1f, (double)_z * 0.1f, (double)_y * 0.1f);
-
-                    if (curNoiseLeft < emptyThreshold || x == -size) {
-                        transformOfVerticesOfFaceInParticularDir[BlockFaceDirection::LEFT].push_back(curTransformFlattened);
-                    }
-
                 }
-
             }
         }
     }
