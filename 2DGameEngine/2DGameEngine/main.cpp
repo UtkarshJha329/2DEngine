@@ -81,8 +81,31 @@ int main()
     Vector3 curPos = { 0, 0, 0 };
 
     const int numChunksWidth = (2 * numChunks) + 1;
-    std::vector<std::vector<std::unordered_map<BlockFaceDirection, Mesh>>> chunkMeshFacingParticularDir(numChunksWidth, std::vector<std::unordered_map<BlockFaceDirection, Mesh>>(numChunksWidth));
-    std::vector<std::vector<std::unordered_map<BlockFaceDirection, std::vector<float16>>>> chunkTransformOfVerticesOfFaceInParticularDir(numChunksWidth, std::vector<std::unordered_map<BlockFaceDirection, std::vector<float16>>>(numChunksWidth));
+    std::unordered_map<BlockFaceDirection, Mesh> chunkMeshFacingParticularDir;
+
+    Mesh planeFacingUp = { 0 };
+    Mesh planeFacingDown = { 0 };
+    Mesh planeFacingFront = { 0 };
+    Mesh planeFacingBack = { 0 };
+    Mesh planeFacingRight = { 0 };
+    Mesh planeFacingLeft = { 0 };
+
+    planeFacingUp = PlaneFacingDir(up);
+
+    planeFacingDown = PlaneFacingDir(down);
+    planeFacingFront = PlaneFacingDir(front);
+    planeFacingBack = PlaneFacingDir(back);
+    planeFacingRight = PlaneFacingDir(right);
+    planeFacingLeft = PlaneFacingDir(left);
+
+    chunkMeshFacingParticularDir.insert({ BlockFaceDirection::UP, planeFacingUp });
+    chunkMeshFacingParticularDir.insert({ BlockFaceDirection::DOWN, planeFacingDown });
+    chunkMeshFacingParticularDir.insert({ BlockFaceDirection::FRONT, planeFacingFront });
+    chunkMeshFacingParticularDir.insert({ BlockFaceDirection::BACK, planeFacingBack });
+    chunkMeshFacingParticularDir.insert({ BlockFaceDirection::RIGHT, planeFacingRight });
+    chunkMeshFacingParticularDir.insert({ BlockFaceDirection::LEFT, planeFacingLeft });
+
+    std::unordered_map<BlockFaceDirection, std::vector<float16>> transformOfVerticesOfFaceInParticularDir;
 
     Vector3 curChunkPos = { 0, 0, 0 };
     for (int i = -numChunks; i <= numChunks; i++)
@@ -95,7 +118,7 @@ int main()
 
             std::cout << "Chunk coords : " << curChunkPos.x << ", " << curChunkPos.z << std::endl;
 
-            GenMeshCustom(chunkMeshFacingParticularDir[i + numChunks][j + numChunks], chunkTransformOfVerticesOfFaceInParticularDir[i + numChunks][j + numChunks], curChunkPos);
+            GenMeshCustom(chunkMeshFacingParticularDir, transformOfVerticesOfFaceInParticularDir, curChunkPos);
 
         }
     }
@@ -183,44 +206,35 @@ int main()
 
             //rlEnableShader(instancedMaterial.shader.id);
 
-            for (int i = -numChunks; i <= numChunks; i++)
-            {
-                for (int j = -numChunks; j <= numChunks; j++)
-                {
-                    //SetRandomColour(ambientValue, i + numChunks, j + numChunks);
-                    //SetShaderValue(instanceShader, ambientLoc, ambientValue, SHADER_UNIFORM_VEC4);
+            DrawMeshInstancedFlattenedTransforms(chunkMeshFacingParticularDir[BlockFaceDirection::UP]
+                , instancedMaterial
+                , transformOfVerticesOfFaceInParticularDir[BlockFaceDirection::UP].data()
+                , transformOfVerticesOfFaceInParticularDir[BlockFaceDirection::UP].size());
 
-                    DrawMeshInstancedFlattenedTransforms(chunkMeshFacingParticularDir[i + numChunks][j + numChunks][BlockFaceDirection::UP]
-                        , instancedMaterial
-                        , chunkTransformOfVerticesOfFaceInParticularDir[i + numChunks][j + numChunks][BlockFaceDirection::UP].data()
-                        , chunkTransformOfVerticesOfFaceInParticularDir[i + numChunks][j + numChunks][BlockFaceDirection::UP].size());
+            DrawMeshInstancedFlattenedTransforms(chunkMeshFacingParticularDir[BlockFaceDirection::DOWN]
+                , instancedMaterial
+                , transformOfVerticesOfFaceInParticularDir[BlockFaceDirection::DOWN].data()
+                , transformOfVerticesOfFaceInParticularDir[BlockFaceDirection::DOWN].size());
 
-                    DrawMeshInstancedFlattenedTransforms(chunkMeshFacingParticularDir[i + numChunks][j + numChunks][BlockFaceDirection::DOWN]
-                        , instancedMaterial
-                        , chunkTransformOfVerticesOfFaceInParticularDir[i + numChunks][j + numChunks][BlockFaceDirection::DOWN].data()
-                        , chunkTransformOfVerticesOfFaceInParticularDir[i + numChunks][j + numChunks][BlockFaceDirection::DOWN].size());
+            DrawMeshInstancedFlattenedTransforms(chunkMeshFacingParticularDir[BlockFaceDirection::FRONT]
+                , instancedMaterial
+                , transformOfVerticesOfFaceInParticularDir[BlockFaceDirection::FRONT].data()
+                , transformOfVerticesOfFaceInParticularDir[BlockFaceDirection::FRONT].size());
 
-                    DrawMeshInstancedFlattenedTransforms(chunkMeshFacingParticularDir[i + numChunks][j + numChunks][BlockFaceDirection::FRONT]
-                        , instancedMaterial
-                        , chunkTransformOfVerticesOfFaceInParticularDir[i + numChunks][j + numChunks][BlockFaceDirection::FRONT].data()
-                        , chunkTransformOfVerticesOfFaceInParticularDir[i + numChunks][j + numChunks][BlockFaceDirection::FRONT].size());
+            DrawMeshInstancedFlattenedTransforms(chunkMeshFacingParticularDir[BlockFaceDirection::BACK]
+                , instancedMaterial
+                , transformOfVerticesOfFaceInParticularDir[BlockFaceDirection::BACK].data()
+                , transformOfVerticesOfFaceInParticularDir[BlockFaceDirection::BACK].size());
 
-                    DrawMeshInstancedFlattenedTransforms(chunkMeshFacingParticularDir[i + numChunks][j + numChunks][BlockFaceDirection::BACK]
-                        , instancedMaterial
-                        , chunkTransformOfVerticesOfFaceInParticularDir[i + numChunks][j + numChunks][BlockFaceDirection::BACK].data()
-                        , chunkTransformOfVerticesOfFaceInParticularDir[i + numChunks][j + numChunks][BlockFaceDirection::BACK].size());
+            DrawMeshInstancedFlattenedTransforms(chunkMeshFacingParticularDir[BlockFaceDirection::RIGHT]
+                , instancedMaterial
+                , transformOfVerticesOfFaceInParticularDir[BlockFaceDirection::RIGHT].data()
+                , transformOfVerticesOfFaceInParticularDir[BlockFaceDirection::RIGHT].size());
 
-                    DrawMeshInstancedFlattenedTransforms(chunkMeshFacingParticularDir[i + numChunks][j + numChunks][BlockFaceDirection::RIGHT]
-                        , instancedMaterial
-                        , chunkTransformOfVerticesOfFaceInParticularDir[i + numChunks][j + numChunks][BlockFaceDirection::RIGHT].data()
-                        , chunkTransformOfVerticesOfFaceInParticularDir[i + numChunks][j + numChunks][BlockFaceDirection::RIGHT].size());
-
-                    DrawMeshInstancedFlattenedTransforms(chunkMeshFacingParticularDir[i + numChunks][j + numChunks][BlockFaceDirection::LEFT]
-                        , instancedMaterial
-                        , chunkTransformOfVerticesOfFaceInParticularDir[i + numChunks][j + numChunks][BlockFaceDirection::LEFT].data()
-                        , chunkTransformOfVerticesOfFaceInParticularDir[i + numChunks][j + numChunks][BlockFaceDirection::LEFT].size());
-                }
-            }
+            DrawMeshInstancedFlattenedTransforms(chunkMeshFacingParticularDir[BlockFaceDirection::LEFT]
+                , instancedMaterial
+                , transformOfVerticesOfFaceInParticularDir[BlockFaceDirection::LEFT].data()
+                , transformOfVerticesOfFaceInParticularDir[BlockFaceDirection::LEFT].size());
 
 
             DrawGrid(10, 1.0);
@@ -243,33 +257,6 @@ static void GenMeshCustom(std::unordered_map<BlockFaceDirection, Mesh> &meshFaci
     const siv::PerlinNoise::seed_type seed = 123456u;
 
     const siv::PerlinNoise perlin{ seed };
-
-    Mesh planeFacingUp = { 0 };
-    Mesh planeFacingDown = { 0 };
-    Mesh planeFacingFront = { 0 };
-    Mesh planeFacingBack = { 0 };
-    Mesh planeFacingRight = { 0 };
-    Mesh planeFacingLeft = { 0 };
-
-    planeFacingUp = PlaneFacingDir(up);
-
-    //for (int i = 0; i < 18; i++)
-    //{
-    //    std::cout << "PRINTING AFTER EXITING FUNCTION : " << planeFacingUp.vertices[i] << std::endl;
-    //}
-
-    planeFacingDown = PlaneFacingDir(down);
-    planeFacingFront = PlaneFacingDir(front);
-    planeFacingBack = PlaneFacingDir(back);
-    planeFacingRight = PlaneFacingDir(right);
-    planeFacingLeft = PlaneFacingDir(left);
-
-    meshFacingParticularDir.insert({ BlockFaceDirection::UP, planeFacingUp });
-    meshFacingParticularDir.insert({ BlockFaceDirection::DOWN, planeFacingDown });
-    meshFacingParticularDir.insert({ BlockFaceDirection::FRONT, planeFacingFront });
-    meshFacingParticularDir.insert({ BlockFaceDirection::BACK, planeFacingBack });
-    meshFacingParticularDir.insert({ BlockFaceDirection::RIGHT, planeFacingRight });
-    meshFacingParticularDir.insert({ BlockFaceDirection::LEFT, planeFacingLeft });
 
     for (int y = -chunkSize; y <= chunkSize; y++)
     {
