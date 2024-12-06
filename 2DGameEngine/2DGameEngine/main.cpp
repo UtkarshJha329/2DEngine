@@ -31,9 +31,17 @@ int main()
     Vector3 position = { 0.0f, 0.0f, 0.0f };
 
     // We generate a checked image for texturing
-    Image checked = GenImageChecked(2, 2, 1, 1, RED, GREEN);
-    Texture2D texture = LoadTextureFromImage(checked);
-    UnloadImage(checked);
+    //Image checked = GenImageChecked(2, 2, 1, 1, RED, GREEN);
+    //checked.format = PIXELFORMAT_UNCOMPRESSED_R8G8B8A8;;
+    //checked.mipmaps = 2;
+    //Texture2D texture = LoadTextureFromImage(checked);
+    Texture2D textureLoad = LoadTexture("texture_test_small.png");
+    //textureLoad.mipmaps = 4;
+    //GenTextureMipmaps(&textureLoad);
+    //texture.mipmaps = 4;
+    //texture.mipmaps = 0;
+    //GenTextureMipmaps(&texture);
+    //UnloadImage(checked);
 
     Color colours[9] = { MAGENTA, WHITE, LIGHTGRAY, YELLOW, BLUE, RED, GREEN, ORANGE, VIOLET };
 
@@ -50,7 +58,7 @@ int main()
         {
             Vector3 curPos = { x * chunkSize, 0, y * chunkSize};
             genModel[x + numChunks][y + numChunks] = LoadModelFromMesh(GenMeshCustom(curPos));
-            genModel[x + numChunks][y + numChunks].materials[0].maps[MATERIAL_MAP_DIFFUSE].texture = texture;
+            genModel[x + numChunks][y + numChunks].materials[0].maps[MATERIAL_MAP_DIFFUSE].texture = textureLoad;
             perChunkColours.push_back(colours[GetRandomValue(0, 9)]);
         }
 
@@ -80,8 +88,7 @@ int main()
                 for (int y = -numChunks; y <= numChunks; y++)
                 {
                     Vector3 curPos = { x * chunkSize, 0, y * chunkSize };
-                    DrawModel(genModel[x + numChunks][y + numChunks], curPos, 1.0f, perChunkColours[((x + numChunks) * (numChunks)) + (y + numChunks)]);
-
+                    DrawModel(genModel[x + numChunks][y + numChunks], curPos, 1.0f, WHITE/*perChunkColours[((x + numChunks) * (numChunks)) + (y + numChunks)]*/);
                 }
 
             }
@@ -91,7 +98,7 @@ int main()
         EndDrawing();
     }
 
-    UnloadTexture(texture);
+    UnloadTexture(textureLoad);
 
     CloseWindow();
     return 0;
@@ -111,6 +118,17 @@ static Mesh GenMeshCustom(Vector3 position)
     const siv::PerlinNoise::seed_type seed = 123456u;
 
     const siv::PerlinNoise perlin{ seed };
+
+    Mesh meshFacingUp = { 0 };
+    Mesh meshFacingDown = { 0 };
+    Mesh meshFacingFront = { 0 };
+    Mesh meshFacingBack = { 0 };
+    Mesh meshFacingRight = { 0 };
+    Mesh meshFacingLeft = { 0 };
+
+    std::unordered_map<BlockFaceDirection, std::vector<float16>> verticesFacingDir;
+    std::unordered_map<BlockFaceDirection, std::vector<unsigned short>> indicesFacingDir;
+    std::unordered_map<BlockFaceDirection, std::vector<float>> texCoordsFacingDir;
 
     for (int y = -size; y <= size; y++)
     {

@@ -2,26 +2,87 @@
 
 #include <vector>
 
+#include "BlockType.h"
+
+enum class BlockFaceDirection {
+    UP,
+    DOWN,
+    FRONT,
+    BACK,
+    RIGHT,
+    LEFT
+};
+
 void TexCoords(std::vector<float>& texCoords) {
 
-    texCoords.push_back(0.0f);
-    texCoords.push_back(0.0f);
+    //texCoords.push_back(0.0f);
+    //texCoords.push_back(0.0f);
 
-    texCoords.push_back(1.0f);
-    texCoords.push_back(1.0f);
+    //texCoords.push_back(1.0f);
+    //texCoords.push_back(1.0f);
 
-    texCoords.push_back(1.0f);
-    texCoords.push_back(0.0f);
+    //texCoords.push_back(1.0f);
+    //texCoords.push_back(0.0f);
 
-    texCoords.push_back(0.0f);
-    texCoords.push_back(0.0f);
+    //texCoords.push_back(0.0f);
+    //texCoords.push_back(0.0f);
 
-    texCoords.push_back(0.0f);
-    texCoords.push_back(1.0f);
+    //texCoords.push_back(0.0f);
+    //texCoords.push_back(1.0f);
 
-    texCoords.push_back(1.0f);
-    texCoords.push_back(1.0f);
+    //texCoords.push_back(1.0f);
+    //texCoords.push_back(1.0f);
+//************************************
 
+    //const int numTexturesX = 6;
+    //const int numTexturesY = 6;
+
+    //const float xBottomLeft = 4.0f / (float)numTexturesX;
+    //const float yBottomLeft = 0.0f / (float)numTexturesY;
+
+    //texCoords.push_back(xBottomLeft);
+    //texCoords.push_back(yBottomLeft);
+
+    //texCoords.push_back(xBottomLeft + (1.0f / (float)numTexturesX));
+    //texCoords.push_back(yBottomLeft);
+
+    //texCoords.push_back(xBottomLeft + (1.0f / (float)numTexturesX));
+    //texCoords.push_back(yBottomLeft + (1.0f / (float)numTexturesY));
+
+    //texCoords.push_back(xBottomLeft);
+    //texCoords.push_back(yBottomLeft);
+
+    //texCoords.push_back(xBottomLeft);
+    //texCoords.push_back(yBottomLeft - (1.0f / (float)numTexturesY));
+
+    //texCoords.push_back(xBottomLeft + (1.0f / (float)numTexturesX));
+    //texCoords.push_back(yBottomLeft - (1.0f / (float)numTexturesY));
+
+//************************************
+    const int numTexturesX = 6;
+    const int numTexturesY = 6;
+
+    const float xTopLeft = 4.0f / (float)numTexturesX;
+    const float yTopLeft = 0.0f / (float)numTexturesY;
+
+    texCoords.push_back(xTopLeft);
+    texCoords.push_back(yTopLeft);
+
+    texCoords.push_back(xTopLeft + (1.0f / (float)numTexturesX));
+    texCoords.push_back(yTopLeft + (1.0f / (float)numTexturesY));
+
+    texCoords.push_back(xTopLeft + (1.0f / (float)numTexturesX));
+    texCoords.push_back(yTopLeft);
+
+    texCoords.push_back(xTopLeft);
+    texCoords.push_back(yTopLeft);
+
+    texCoords.push_back(xTopLeft);
+    texCoords.push_back(yTopLeft + (1.0f / (float)numTexturesY));
+
+    texCoords.push_back(xTopLeft + (1.0f / (float)numTexturesX));
+    texCoords.push_back(yTopLeft + (1.0f / (float)numTexturesY));
+//************************************
 }
 
 void VertColour(std::vector<unsigned char>& vertColour) {

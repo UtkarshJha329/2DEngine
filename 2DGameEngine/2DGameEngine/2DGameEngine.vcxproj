@@ -145,13 +145,18 @@
     <ClCompile Include="main.cpp" />
   </ItemGroup>
   <ItemGroup>
+    <ClInclude Include="BlockType.h" />
     <ClInclude Include="CubeMeshData.h" />
+    <ClInclude Include="DrawMeshInstancedFlattenedTransforms.h" />
     <ClInclude Include="flecs\flecs.h" />
     <ClInclude Include="PerlinNoise.hpp" />
   </ItemGroup>
   <ItemGroup>
     <None Include="Shaders\SimpleShader.frag" />
     <None Include="Shaders\SimpleShader.vert" />
+  </ItemGroup>
+  <ItemGroup>
+    <Image Include="tileset.png" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">
