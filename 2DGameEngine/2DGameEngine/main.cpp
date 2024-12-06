@@ -5,17 +5,26 @@
 #include "raylib/raylib.h"
 #include "raylib/raymath.h"
 
+#define RLIGHTS_IMPLEMENTATION
+#include "rlights.h"
+
+#define GLSL_VERSION            330
+
 #include "PerlinNoise.hpp"
 
 #include <vector>
 #include <string>
 
 #include "CubeMeshData.h"
+#include "DrawMeshInstancedFlattenedTransforms.h"
 
 #define ThreeDimensionalStdVector(_name, _type, _size) std::vector<std::vector<std::vector<_type>>> _name(_size, std::vector<std::vector<_type>>(_size, std::vector<_type>(_size)));
 #define TwoDimensionalStdVector(_name, _type, _size) std::vector<std::vector<_type>> _name(_size, std::vector<_type>(_size));
 
-static Mesh GenMeshCustom(Vector3 position);
+static void GenMeshCustom(std::unordered_map<BlockFaceDirection, Mesh>& meshFacingParticularDir
+    , std::unordered_map<BlockFaceDirection, std::vector<float16>>& transformOfVerticesOfFaceInParticularDir
+    , Vector3 position);
+Mesh PlaneFacingDir(Vector3 dir);
 
 int main()
 {
@@ -50,85 +59,173 @@ int main()
     TwoDimensionalStdVector(genModel, Model, (numChunks * 2) + 1);
     std::vector<Color> perChunkColours;
 
-    const int chunkSize = 21;
+    Vector3 curPos = { 0, 0, 0 };
 
-    for (int x = -numChunks; x <= numChunks; x++)
-    {
-        for (int y = -numChunks; y <= numChunks; y++)
-        {
-            Vector3 curPos = { x * chunkSize, 0, y * chunkSize};
-            genModel[x + numChunks][y + numChunks] = LoadModelFromMesh(GenMeshCustom(curPos));
-            genModel[x + numChunks][y + numChunks].materials[0].maps[MATERIAL_MAP_DIFFUSE].texture = textureLoad;
-            perChunkColours.push_back(colours[GetRandomValue(0, 9)]);
-        }
+    std::unordered_map<BlockFaceDirection, Mesh> meshFacingParticularDir;
+    std::unordered_map<BlockFaceDirection, std::vector<float16>> transformOfVerticesOfFaceInParticularDir;
+    GenMeshCustom(meshFacingParticularDir, transformOfVerticesOfFaceInParticularDir, curPos);
 
-    }
+    // Load lighting instanceShader
+    Shader instanceShader = LoadShader(TextFormat("Shaders/lighting_instancing.vs", GLSL_VERSION),
+        TextFormat("Shaders/lighting.fs", GLSL_VERSION));
+    // Get instanceShader locations
+    instanceShader.locs[SHADER_LOC_MATRIX_MVP] = GetShaderLocation(instanceShader, "mvp");
+    instanceShader.locs[SHADER_LOC_VECTOR_VIEW] = GetShaderLocation(instanceShader, "viewPos");
+    instanceShader.locs[SHADER_LOC_MATRIX_MODEL] = GetShaderLocationAttrib(instanceShader, "instanceTransform");
+
+    // Set instanceShader value: ambient light level
+    int ambientLoc = GetShaderLocation(instanceShader, "ambient");
+    float ambientValue[4] = { 0.2f, 0.2f, 0.2f, 1.0f };
+    SetShaderValue(instanceShader, ambientLoc, ambientValue, SHADER_UNIFORM_VEC4);
+
+    // Create one light
+    Vector3 lightPos = {50.0f, 50.0f, 0.0f};
+    CreateLight(LIGHT_DIRECTIONAL, lightPos, Vector3Zero(), WHITE, instanceShader);
+
+
+    Material instancedMaterial = LoadMaterialDefault();
+    instancedMaterial.shader = instanceShader;
+    instancedMaterial.maps[MATERIAL_MAP_DIFFUSE].texture = textureLoad;
+    
+    //for (int i = 0; i < 18; i++)
+    //{
+    //    std::cout << "PRINTING BEFORE RENDERING: " << meshFacingParticularDir[BlockFaceDirection::UP].vertices[i] << std::endl;
+    //}
+
+    //const int chunkSize = 0;
+
+    //for (int x = -numChunks; x <= numChunks; x++)
+    //{
+    //    for (int y = -numChunks; y <= numChunks; y++)
+    //    {
+    //        Vector3 curPos = { x * chunkSize, 0, y * chunkSize};
+
+    //        genModel[x + numChunks][y + numChunks] = LoadModelFromMesh();
+    //        genModel[x + numChunks][y + numChunks].materials[0].maps[MATERIAL_MAP_DIFFUSE].texture = textureLoad;
+    //        perChunkColours.push_back(colours[GetRandomValue(0, 9)]);
+    //    }
+
+    //}
 
     DisableCursor();
-
-    Vector3 offsetPos = { 1.5f, 0.0f, 0.0f };
-
 
     while (!WindowShouldClose())
     {
         UpdateCamera(&camera, CAMERA_FREE);
+
+        float cameraPos[3] = {camera.position.x, camera.position.y, camera.position.z};
+        SetShaderValue(instancedMaterial.shader, instancedMaterial.shader.locs[SHADER_LOC_VECTOR_VIEW], cameraPos, SHADER_UNIFORM_VEC3);
+
 
         BeginDrawing();
         ClearBackground(RAYWHITE);
         //DrawText("Congrats! You created your first window!", 190, 200, 20, LIGHTGRAY);
         DrawFPS(40, 40);
 
-        std::string curNumMeshes = "Total Num Chunks -\n" + std::to_string(((numChunks * 2) + 1) * ((numChunks * 2) + 1));
-        DrawText(curNumMeshes.c_str(), 300, 40, 30, MAGENTA);
+        //std::string curNumMeshes = "Total Num Chunks -\n" + std::to_string(((numChunks * 2) + 1) * ((numChunks * 2) + 1));
+        //DrawText(curNumMeshes.c_str(), 300, 40, 30, MAGENTA);
 
             BeginMode3D(camera);
             //DrawModelWires(genModel, offsetPos, 1.0f, WHITE);
-            for (int x = -numChunks; x <= numChunks; x++)
-            {
-                for (int y = -numChunks; y <= numChunks; y++)
-                {
-                    Vector3 curPos = { x * chunkSize, 0, y * chunkSize };
-                    DrawModel(genModel[x + numChunks][y + numChunks], curPos, 1.0f, WHITE/*perChunkColours[((x + numChunks) * (numChunks)) + (y + numChunks)]*/);
-                }
+            //for (int x = -numChunks; x <= numChunks; x++)
+            //{
+            //    for (int y = -numChunks; y <= numChunks; y++)
+            //    {
+            //        Vector3 curPos = { x * chunkSize, 0, y * chunkSize };
+            //        DrawModel(genModel[x + numChunks][y + numChunks], curPos, 1.0f, WHITE/*perChunkColours[((x + numChunks) * (numChunks)) + (y + numChunks)]*/);
+            //    }
 
-            }
+            //}
+
+            rlEnableShader(instancedMaterial.shader.id);
+
+            DrawMeshInstancedFlattenedTransforms(meshFacingParticularDir[BlockFaceDirection::UP]
+                , instancedMaterial
+                , transformOfVerticesOfFaceInParticularDir[BlockFaceDirection::UP].data()
+                , transformOfVerticesOfFaceInParticularDir[BlockFaceDirection::UP].size());
+
+            DrawMeshInstancedFlattenedTransforms(meshFacingParticularDir[BlockFaceDirection::DOWN]
+                , instancedMaterial
+                , transformOfVerticesOfFaceInParticularDir[BlockFaceDirection::DOWN].data()
+                , transformOfVerticesOfFaceInParticularDir[BlockFaceDirection::DOWN].size());
+
+            DrawMeshInstancedFlattenedTransforms(meshFacingParticularDir[BlockFaceDirection::FRONT]
+                , instancedMaterial
+                , transformOfVerticesOfFaceInParticularDir[BlockFaceDirection::FRONT].data()
+                , transformOfVerticesOfFaceInParticularDir[BlockFaceDirection::FRONT].size());
+
+            DrawMeshInstancedFlattenedTransforms(meshFacingParticularDir[BlockFaceDirection::BACK]
+                , instancedMaterial
+                , transformOfVerticesOfFaceInParticularDir[BlockFaceDirection::BACK].data()
+                , transformOfVerticesOfFaceInParticularDir[BlockFaceDirection::BACK].size());
+
+            DrawMeshInstancedFlattenedTransforms(meshFacingParticularDir[BlockFaceDirection::RIGHT]
+                , instancedMaterial
+                , transformOfVerticesOfFaceInParticularDir[BlockFaceDirection::RIGHT].data()
+                , transformOfVerticesOfFaceInParticularDir[BlockFaceDirection::RIGHT].size());
+
+            DrawMeshInstancedFlattenedTransforms(meshFacingParticularDir[BlockFaceDirection::LEFT]
+                , instancedMaterial
+                , transformOfVerticesOfFaceInParticularDir[BlockFaceDirection::LEFT].data()
+                , transformOfVerticesOfFaceInParticularDir[BlockFaceDirection::LEFT].size());
+
+
             DrawGrid(10, 1.0);
 
             EndMode3D();
         EndDrawing();
     }
 
+    UnloadShader(instanceShader);
     UnloadTexture(textureLoad);
 
     CloseWindow();
     return 0;
 }
 
-static Mesh GenMeshCustom(Vector3 position)
+static void GenMeshCustom(std::unordered_map<BlockFaceDirection, Mesh> &meshFacingParticularDir
+    , std::unordered_map<BlockFaceDirection, std::vector<float16>> &transformOfVerticesOfFaceInParticularDir
+    , Vector3 position)
 {
-    Mesh mesh = { 0 };
-
-    std::vector<float> vertices;
-    std::vector<unsigned short> indices;
-    std::vector<float> texCoords;
-    std::vector<unsigned char> vertColour;
-
     const int size = 10;
 
     const siv::PerlinNoise::seed_type seed = 123456u;
 
     const siv::PerlinNoise perlin{ seed };
 
-    Mesh meshFacingUp = { 0 };
-    Mesh meshFacingDown = { 0 };
-    Mesh meshFacingFront = { 0 };
-    Mesh meshFacingBack = { 0 };
-    Mesh meshFacingRight = { 0 };
-    Mesh meshFacingLeft = { 0 };
+    Mesh planeFacingUp = { 0 };
+    Mesh planeFacingDown = { 0 };
+    Mesh planeFacingFront = { 0 };
+    Mesh planeFacingBack = { 0 };
+    Mesh planeFacingRight = { 0 };
+    Mesh planeFacingLeft = { 0 };
 
-    std::unordered_map<BlockFaceDirection, std::vector<float16>> verticesFacingDir;
-    std::unordered_map<BlockFaceDirection, std::vector<unsigned short>> indicesFacingDir;
-    std::unordered_map<BlockFaceDirection, std::vector<float>> texCoordsFacingDir;
+    Vector3 up = { 0, 1, 0 };
+    Vector3 down = { 0, -1, 0 };
+    Vector3 front = { 0, 0, 1 };
+    Vector3 back = { 0, 0, -1 };
+    Vector3 right = { 1, 0, 0 };
+    Vector3 left = { -1, 0, 0 };
+
+    planeFacingUp = PlaneFacingDir(up);
+
+    //for (int i = 0; i < 18; i++)
+    //{
+    //    std::cout << "PRINTING AFTER EXITING FUNCTION : " << planeFacingUp.vertices[i] << std::endl;
+    //}
+
+    planeFacingDown = PlaneFacingDir(down);
+    planeFacingFront = PlaneFacingDir(front);
+    planeFacingBack = PlaneFacingDir(back);
+    planeFacingRight = PlaneFacingDir(right);
+    planeFacingLeft = PlaneFacingDir(left);
+
+    meshFacingParticularDir.insert({ BlockFaceDirection::UP, planeFacingUp });
+    meshFacingParticularDir.insert({ BlockFaceDirection::DOWN, planeFacingDown });
+    meshFacingParticularDir.insert({ BlockFaceDirection::FRONT, planeFacingFront });
+    meshFacingParticularDir.insert({ BlockFaceDirection::BACK, planeFacingBack });
+    meshFacingParticularDir.insert({ BlockFaceDirection::RIGHT, planeFacingRight });
+    meshFacingParticularDir.insert({ BlockFaceDirection::LEFT, planeFacingLeft });
 
     for (int y = -size; y <= size; y++)
     {
@@ -147,60 +244,50 @@ static Mesh GenMeshCustom(Vector3 position)
 
                 if (!curVoxelIsEmpty) {
 
+                    Matrix translation = MatrixTranslate((float)_x, (float)_y, (float)_z);
+                    Matrix rotation = MatrixRotate({ 0,1,0 }, 0);
+                    //Matrix scale = MatrixScale(1.0f, 1.0f, 1.0f);
+
+                    Matrix curTransform = MatrixMultiply(MatrixIdentity(), rotation);
+                    curTransform = MatrixMultiply(curTransform, translation);
+
+                    //Matrix curTransform = MatrixMultiply(rotation, translation);
+                    float16 curTransformFlattened = MatrixToFloatV(curTransform);
+
                     float curNoiseTop = perlin.noise3D_01((double)_x * 0.1f, (double)_z * 0.1f, (double)(_y + 1) * 0.1f);
 
                     if (curNoiseTop < emptyThreshold || y == size) {
-                        FaceIndicesTop(indices, vertices.size() / 3);
-                        FaceVerticesTop(vertices, x, y, z);
-                        TexCoords(texCoords);
-                        VertColour(vertColour);
+                        transformOfVerticesOfFaceInParticularDir[BlockFaceDirection::UP].push_back(curTransformFlattened);
                     }
 
                     float curNoiseBottom = perlin.noise3D_01((double)_x * 0.1f, (double)_z * 0.1f, (double)(_y - 1) * 0.1f);
 
                     if (curNoiseBottom < emptyThreshold || y == -size) {
-                        FaceIndicesBottom(indices, vertices.size() / 3);
-                        FaceVerticesBottom(vertices, x, y, z);
-                        TexCoords(texCoords);
-                        VertColour(vertColour);
+                        transformOfVerticesOfFaceInParticularDir[BlockFaceDirection::DOWN].push_back(curTransformFlattened);
                     }
 
                     float curNoiseFront = perlin.noise3D_01((double)_x * 0.1f, (double)(_z + 1) * 0.1f, (double)_y * 0.1f);
 
                     if (curNoiseFront < emptyThreshold || z == size) {
-
-                        FaceIndicesFront(indices, vertices.size() / 3);
-                        FaceVerticesFront(vertices, x, y, z);
-                        TexCoords(texCoords);
-                        VertColour(vertColour);
+                        transformOfVerticesOfFaceInParticularDir[BlockFaceDirection::FRONT].push_back(curTransformFlattened);
                     }
 
                     float curNoiseBack = perlin.noise3D_01((double)_x * 0.1f, (double)(_z - 1) * 0.1f, (double)_y * 0.1f);
 
                     if (curNoiseBack < emptyThreshold || z == -size) {
-
-                        FaceIndicesBack(indices, vertices.size() / 3);
-                        FaceVerticesBack(vertices, x, y, z);
-                        TexCoords(texCoords);
-                        VertColour(vertColour);
+                        transformOfVerticesOfFaceInParticularDir[BlockFaceDirection::BACK].push_back(curTransformFlattened);
                     }
 
                     float curNoiseRight = perlin.noise3D_01((double)(_x + 1) * 0.1f, (double)_z * 0.1f, (double)_y * 0.1f);
 
                     if (curNoiseRight < emptyThreshold || x == size) {
-                        FaceIndicesRight(indices, vertices.size() / 3);
-                        FaceVerticesRight(vertices, x, y, z);
-                        TexCoords(texCoords);
-                        VertColour(vertColour);
+                        transformOfVerticesOfFaceInParticularDir[BlockFaceDirection::RIGHT].push_back(curTransformFlattened);
                     }
 
                     float curNoiseLeft = perlin.noise3D_01((double)(_x - 1) * 0.1f, (double)_z * 0.1f, (double)_y * 0.1f);
 
                     if (curNoiseLeft < emptyThreshold || x == -size) {
-                        FaceIndicesLeft(indices, vertices.size() / 3);
-                        FaceVerticesLeft(vertices, x, y, z);
-                        TexCoords(texCoords);
-                        VertColour(vertColour);
+                        transformOfVerticesOfFaceInParticularDir[BlockFaceDirection::LEFT].push_back(curTransformFlattened);
                     }
 
                 }
@@ -208,27 +295,57 @@ static Mesh GenMeshCustom(Vector3 position)
             }
         }
     }
+}
 
-    mesh.triangleCount = indices.size() / 3;
-    mesh.vertexCount = vertices.size() / 3;
+Mesh PlaneFacingDir(Vector3 dir) {
 
+    Mesh curMesh = { 0 };
 
+    curMesh.vertices = (float*)MemAlloc(18 * sizeof(float));
+    curMesh.texcoords = (float*)MemAlloc(12 * sizeof(float));
+    curMesh.indices = (unsigned short*)MemAlloc(6 * sizeof(unsigned short*));
 
-    mesh.vertices = (float*)MemAlloc(vertices.size() * sizeof(float));    // 3 vertices, 3 coordinates each (x, y, z)
-    mesh.texcoords = (float*)MemAlloc(texCoords.size() * sizeof(float));   // 3 vertices, 2 coordinates each (x, y)
-    //mesh.normals = (float*)MemAlloc(mesh.vertexCount * 3 * sizeof(float));     // 3 vertices, 3 coordinates each (x, y, z)
-    //mesh.colors = (unsigned char*)MemAlloc(vertColour.size() * sizeof(unsigned char));
+    if (dir.x == 0 && dir.y == 1 && dir.z == 0) {
+        FaceIndicesTop(curMesh.indices, 0);
+        FaceVerticesTop(curMesh.vertices, 0, 0, 0);
+    }
+    else if (dir.x == 0 && dir.y == -1 && dir.z == 0) {
+        FaceIndicesBottom(curMesh.indices, 0);
+        FaceVerticesBottom(curMesh.vertices, 0, 0, 0);
+    }
+    else if (dir.x == 0 && dir.y == 0 && dir.z == 1) {
+        FaceIndicesFront(curMesh.indices, 0);
+        FaceVerticesFront(curMesh.vertices, 0, 0, 0);
+    }
+    else if (dir.x == 0 && dir.y == 0 && dir.z == -1) {
+        FaceIndicesBack(curMesh.indices, 0);
+        FaceVerticesBack(curMesh.vertices, 0, 0, 0);
+    }
+    else if (dir.x == 1 && dir.y == 0 && dir.z == 0) {
+        FaceIndicesRight(curMesh.indices, 0);
+        FaceVerticesRight(curMesh.vertices, 0, 0, 0);
+    }
+    else if (dir.x == -1 && dir.y == 0 && dir.z == 0) {
+        FaceIndicesLeft(curMesh.indices, 0);
+        FaceVerticesLeft(curMesh.vertices, 0, 0, 0);
+    }
+    TexCoords(curMesh.texcoords);
+
+    curMesh.triangleCount = 6 / 3;
+    curMesh.vertexCount = 18 / 3;
+
+    UploadMesh(&curMesh, false);
     
-    mesh.indices = (unsigned short*)MemAlloc(indices.size() * sizeof(unsigned short*));
+    return curMesh;
 
-    mesh.vertices = vertices.data();
-    mesh.indices = indices.data();
-    mesh.texcoords = texCoords.data();
-    //mesh.colors = vertColour.data();
+    if (dir.x == 0 && dir.y == 1 && dir.z == 0) {
 
-    // Upload mesh data from CPU (RAM) to GPU (VRAM) memory
-    UploadMesh(&mesh, false);
+        for (int i = 0; i < 18; i++)
+        {
+            std::cout << "After uploading mesh to gpu but inside function: " << curMesh.vertices[i] << std::endl;
+        }
+    }
 
-    return mesh;
+
 }
 

@@ -13,7 +13,7 @@ enum class BlockFaceDirection {
     LEFT
 };
 
-void TexCoords(std::vector<float>& texCoords) {
+void TexCoords(float* texCoords) {
 
     //texCoords.push_back(0.0f);
     //texCoords.push_back(0.0f);
@@ -65,23 +65,23 @@ void TexCoords(std::vector<float>& texCoords) {
     const float xTopLeft = 4.0f / (float)numTexturesX;
     const float yTopLeft = 0.0f / (float)numTexturesY;
 
-    texCoords.push_back(xTopLeft);
-    texCoords.push_back(yTopLeft);
+    texCoords[0] = (xTopLeft);
+    texCoords[1] = (yTopLeft);
 
-    texCoords.push_back(xTopLeft + (1.0f / (float)numTexturesX));
-    texCoords.push_back(yTopLeft + (1.0f / (float)numTexturesY));
+    texCoords[2] = (xTopLeft + (1.0f / (float)numTexturesX));
+    texCoords[3] = (yTopLeft + (1.0f / (float)numTexturesY));
 
-    texCoords.push_back(xTopLeft + (1.0f / (float)numTexturesX));
-    texCoords.push_back(yTopLeft);
+    texCoords[4] = (xTopLeft + (1.0f / (float)numTexturesX));
+    texCoords[5] = (yTopLeft);
 
-    texCoords.push_back(xTopLeft);
-    texCoords.push_back(yTopLeft);
+    texCoords[6] = (xTopLeft);
+    texCoords[7] = (yTopLeft);
 
-    texCoords.push_back(xTopLeft);
-    texCoords.push_back(yTopLeft + (1.0f / (float)numTexturesY));
+    texCoords[8] = (xTopLeft);
+    texCoords[9] = (yTopLeft + (1.0f / (float)numTexturesY));
 
-    texCoords.push_back(xTopLeft + (1.0f / (float)numTexturesX));
-    texCoords.push_back(yTopLeft + (1.0f / (float)numTexturesY));
+    texCoords[10] = (xTopLeft + (1.0f / (float)numTexturesX));
+    texCoords[11] = (yTopLeft + (1.0f / (float)numTexturesY));
 //************************************
 }
 
@@ -120,253 +120,253 @@ void VertColour(std::vector<unsigned char>& vertColour) {
 
 }
 
-void FaceVerticesTop(std::vector<float>& vertices, float offsetX, float offsetY, float offsetZ) {
+void FaceVerticesTop(float* vertices, float offsetX, float offsetY, float offsetZ) {
 
-    vertices.push_back(-0.5 + offsetX);
-    vertices.push_back(0.5 + offsetY);
-    vertices.push_back(-0.5 + offsetZ);
+    vertices[0] = (-0.5 + offsetX);
+    vertices[1] = (0.5 + offsetY);
+    vertices[2] = (-0.5 + offsetZ);
 
-    vertices.push_back(0.5 + offsetX);
-    vertices.push_back(0.5 + offsetY);
-    vertices.push_back(0.5 + offsetZ);
+    vertices[3] = (0.5 + offsetX);
+    vertices[4] = (0.5 + offsetY);
+    vertices[5] = (0.5 + offsetZ);
 
-    vertices.push_back(0.5 + offsetX);
-    vertices.push_back(0.5 + offsetY);
-    vertices.push_back(-0.5 + offsetZ);
+    vertices[6] = (0.5 + offsetX);
+    vertices[7] = (0.5 + offsetY);
+    vertices[8] = (-0.5 + offsetZ);
 
-    vertices.push_back(-0.5 + offsetX);
-    vertices.push_back(0.5 + offsetY);
-    vertices.push_back(-0.5 + offsetZ);
+    vertices[9] = (-0.5 + offsetX);
+    vertices[10] = (0.5 + offsetY);
+    vertices[11] = (-0.5 + offsetZ);
 
-    vertices.push_back(-0.5 + offsetX);
-    vertices.push_back(0.5 + offsetY);
-    vertices.push_back(0.5 + offsetZ);
+    vertices[12] = (-0.5 + offsetX);
+    vertices[13] = (0.5 + offsetY);
+    vertices[14] = (0.5 + offsetZ);
 
-    vertices.push_back(0.5 + offsetX);
-    vertices.push_back(0.5 + offsetY);
-    vertices.push_back(0.5 + offsetZ);
+    vertices[15] = (0.5 + offsetX);
+    vertices[16] = (0.5 + offsetY);
+    vertices[17] = (0.5 + offsetZ);
 }
 
-void FaceIndicesTop(std::vector<unsigned short>& indices, unsigned short offset) {
-    indices.push_back(0 + offset);
-    indices.push_back(1 + offset);
-    indices.push_back(2 + offset);
+void FaceIndicesTop(unsigned short* indices, unsigned short offset) {
+    indices[0] = (0 + offset);
+    indices[1] = (1 + offset);
+    indices[2] = (2 + offset);
 
     //indices.push_back(0 + offset);
     //indices.push_back(3 + offset);
     //indices.push_back(1 + offset);
 
-    indices.push_back(3 + offset);
-    indices.push_back(4 + offset);
-    indices.push_back(5 + offset);
+    indices[3] = (3 + offset);
+    indices[4] = (4 + offset);
+    indices[5] = (5 + offset);
 
 }
 
-void FaceVerticesBottom(std::vector<float>& vertices, float offsetX, float offsetY, float offsetZ) {
+void FaceVerticesBottom(float* vertices, float offsetX, float offsetY, float offsetZ) {
 
-    vertices.push_back(-0.5 + offsetX);
-    vertices.push_back(-0.5 + offsetY);
-    vertices.push_back(-0.5 + offsetZ);
+    vertices[0] = (-0.5 + offsetX);
+    vertices[1] = (-0.5 + offsetY);
+    vertices[2] = (-0.5 + offsetZ);
 
-    vertices.push_back(0.5 + offsetX);
-    vertices.push_back(-0.5 + offsetY);
-    vertices.push_back(0.5 + offsetZ);
+    vertices[3] = (0.5 + offsetX);
+    vertices[4] = (-0.5 + offsetY);
+    vertices[5] = (0.5 + offsetZ);
 
-    vertices.push_back(-0.5 + offsetX);
-    vertices.push_back(-0.5 + offsetY);
-    vertices.push_back(0.5 + offsetZ);
+    vertices[6] = (-0.5 + offsetX);
+    vertices[7] = (-0.5 + offsetY);
+    vertices[8] = (0.5 + offsetZ);
 
-    vertices.push_back(-0.5 + offsetX);
-    vertices.push_back(-0.5 + offsetY);
-    vertices.push_back(-0.5 + offsetZ);
+    vertices[9] =  (-0.5 + offsetX);
+    vertices[10] = (-0.5 + offsetY);
+    vertices[11] = (-0.5 + offsetZ);
 
-    vertices.push_back(0.5 + offsetX);
-    vertices.push_back(-0.5 + offsetY);
-    vertices.push_back(-0.5 + offsetZ);
+    vertices[12] = (0.5 + offsetX);
+    vertices[13] = (-0.5 + offsetY);
+    vertices[14] = (-0.5 + offsetZ);
 
-    vertices.push_back(0.5 + offsetX);
-    vertices.push_back(-0.5 + offsetY);
-    vertices.push_back(0.5 + offsetZ);
+    vertices[15] = (0.5 + offsetX);
+    vertices[16] = (-0.5 + offsetY);
+    vertices[17] = (0.5 + offsetZ);
 
 }
 
-void FaceIndicesBottom(std::vector<unsigned short>& indices, unsigned short offset) {
-    indices.push_back(0 + offset);
-    indices.push_back(1 + offset);
-    indices.push_back(2 + offset);
+void FaceIndicesBottom(unsigned short* indices, unsigned short offset) {
+    indices[0] = (0 + offset);
+    indices[1] = (1 + offset);
+    indices[2] = (2 + offset);
 
     //indices.push_back(2 + offset);
     //indices.push_back(1 + offset);
     //indices.push_back(3 + offset);
 
-    indices.push_back(3 + offset);
-    indices.push_back(4 + offset);
-    indices.push_back(5 + offset);
+    indices[3] = (3 + offset);
+    indices[4] = (4 + offset);
+    indices[5] = (5 + offset);
 }
 
-void FaceVerticesFront(std::vector<float>& vertices, float offsetX, float offsetY, float offsetZ) {
+void FaceVerticesFront(float* vertices, float offsetX, float offsetY, float offsetZ) {
 
-    vertices.push_back(-0.5 + offsetX);
-    vertices.push_back(0.5 + offsetY);
-    vertices.push_back(0.5 + offsetZ);
+    vertices[0] = (-0.5 + offsetX);
+    vertices[1] = (0.5 + offsetY);
+    vertices[2] = (0.5 + offsetZ);
 
-    vertices.push_back(0.5 + offsetX);
-    vertices.push_back(-0.5 + offsetY);
-    vertices.push_back(0.5 + offsetZ);
+    vertices[3] = (0.5 + offsetX);
+    vertices[4] = (-0.5 + offsetY);
+    vertices[5] = (0.5 + offsetZ);
 
-    vertices.push_back(0.5 + offsetX);
-    vertices.push_back(0.5 + offsetY);
-    vertices.push_back(0.5 + offsetZ);
+    vertices[6] = (0.5 + offsetX);
+    vertices[7] = (0.5 + offsetY);
+    vertices[8] = (0.5 + offsetZ);
 
-    vertices.push_back(-0.5 + offsetX);
-    vertices.push_back(0.5 + offsetY);
-    vertices.push_back(0.5 + offsetZ);
+    vertices[9] = (-0.5 + offsetX);
+    vertices[10] = (0.5 + offsetY);
+    vertices[11] = (0.5 + offsetZ);
 
-    vertices.push_back(-0.5 + offsetX);
-    vertices.push_back(-0.5 + offsetY);
-    vertices.push_back(0.5 + offsetZ);
+    vertices[12] = (-0.5 + offsetX);
+    vertices[13] = (-0.5 + offsetY);
+    vertices[14] = (0.5 + offsetZ);
 
-    vertices.push_back(0.5 + offsetX);
-    vertices.push_back(-0.5 + offsetY);
-    vertices.push_back(0.5 + offsetZ);
+    vertices[15] = (0.5 + offsetX);
+    vertices[16] = (-0.5 + offsetY);
+    vertices[17] = (0.5 + offsetZ);
 }
 
-void FaceIndicesFront(std::vector<unsigned short>& indices, unsigned short offset) {
-    indices.push_back(0 + offset);
-    indices.push_back(1 + offset);
-    indices.push_back(2 + offset);
+void FaceIndicesFront(unsigned short* indices, unsigned short offset) {
+    indices[0] = (0 + offset);
+    indices[1] = (1 + offset);
+    indices[2] = (2 + offset);
 
     //indices.push_back(0 + offset);
     //indices.push_back(3 + offset);
     //indices.push_back(1 + offset);
 
-    indices.push_back(3 + offset);
-    indices.push_back(4 + offset);
-    indices.push_back(5 + offset);
+    indices[3] = (3 + offset);
+    indices[4] = (4 + offset);
+    indices[5] = (5 + offset);
 }
 
-void FaceVerticesBack(std::vector<float>& vertices, float offsetX, float offsetY, float offsetZ) {
+void FaceVerticesBack(float* vertices, float offsetX, float offsetY, float offsetZ) {
 
-    vertices.push_back(0.5 + offsetX);
-    vertices.push_back(0.5 + offsetY);
-    vertices.push_back(-0.5 + offsetZ);
+    vertices[0] = (0.5 + offsetX);
+    vertices[1] = (0.5 + offsetY);
+    vertices[2] = (-0.5 + offsetZ);
 
-    vertices.push_back(-0.5 + offsetX);
-    vertices.push_back(-0.5 + offsetY);
-    vertices.push_back(-0.5 + offsetZ);
+    vertices[3] = (-0.5 + offsetX);
+    vertices[4] = (-0.5 + offsetY);
+    vertices[5] = (-0.5 + offsetZ);
 
-    vertices.push_back(-0.5 + offsetX);
-    vertices.push_back(0.5 + offsetY);
-    vertices.push_back(-0.5 + offsetZ);
+    vertices[6] = (-0.5 + offsetX);
+    vertices[7] = (0.5 + offsetY);
+    vertices[8] = (-0.5 + offsetZ);
 
-    vertices.push_back(0.5 + offsetX);
-    vertices.push_back(0.5 + offsetY);
-    vertices.push_back(-0.5 + offsetZ);
+    vertices[9] =  (0.5 + offsetX);
+    vertices[10] = (0.5 + offsetY);
+    vertices[11] = (-0.5 + offsetZ);
 
-    vertices.push_back(0.5 + offsetX);
-    vertices.push_back(-0.5 + offsetY);
-    vertices.push_back(-0.5 + offsetZ);
+    vertices[12] = (0.5 + offsetX);
+    vertices[13] = (-0.5 + offsetY);
+    vertices[14] = (-0.5 + offsetZ);
 
-    vertices.push_back(-0.5 + offsetX);
-    vertices.push_back(-0.5 + offsetY);
-    vertices.push_back(-0.5 + offsetZ);
+    vertices[15] = (-0.5 + offsetX);
+    vertices[16] = (-0.5 + offsetY);
+    vertices[17] = (-0.5 + offsetZ);
 }
 
-void FaceIndicesBack(std::vector<unsigned short>& indices, unsigned short offset) {
-    indices.push_back(0 + offset);
-    indices.push_back(1 + offset);
-    indices.push_back(2 + offset);
+void FaceIndicesBack(unsigned short* indices, unsigned short offset) {
+    indices[0] = (0 + offset);
+    indices[1] = (1 + offset);
+    indices[2] = (2 + offset);
 
     //indices.push_back(0 + offset);
     //indices.push_back(3 + offset);
     //indices.push_back(1 + offset);
 
-    indices.push_back(3 + offset);
-    indices.push_back(4 + offset);
-    indices.push_back(5 + offset);
+    indices[3] = (3 + offset);
+    indices[4] = (4 + offset);
+    indices[5] = (5 + offset);
 
 }
 
-void FaceVerticesRight(std::vector<float>& vertices, float offsetX, float offsetY, float offsetZ) {
+void FaceVerticesRight(float* vertices, float offsetX, float offsetY, float offsetZ) {
 
-    vertices.push_back(0.5 + offsetX);
-    vertices.push_back(0.5 + offsetY);
-    vertices.push_back(0.5 + offsetZ);
+    vertices[0] = (0.5 + offsetX);
+    vertices[1] = (0.5 + offsetY);
+    vertices[2] = (0.5 + offsetZ);
 
-    vertices.push_back(0.5 + offsetX);
-    vertices.push_back(-0.5 + offsetY);
-    vertices.push_back(-0.5 + offsetZ);
+    vertices[3] = (0.5 + offsetX);
+    vertices[4] = (-0.5 + offsetY);
+    vertices[5] = (-0.5 + offsetZ);
 
-    vertices.push_back(0.5 + offsetX);
-    vertices.push_back(0.5 + offsetY);
-    vertices.push_back(-0.5 + offsetZ);
+    vertices[6] = (0.5 + offsetX);
+    vertices[7] = (0.5 + offsetY);
+    vertices[8] = (-0.5 + offsetZ);
 
-    vertices.push_back(0.5 + offsetX);
-    vertices.push_back(0.5 + offsetY);
-    vertices.push_back(0.5 + offsetZ);
+    vertices[9] =  (0.5 + offsetX);
+    vertices[10] = (0.5 + offsetY);
+    vertices[11] = (0.5 + offsetZ);
 
-    vertices.push_back(0.5 + offsetX);
-    vertices.push_back(-0.5 + offsetY);
-    vertices.push_back(0.5 + offsetZ);
+    vertices[12] = (0.5 + offsetX);
+    vertices[13] = (-0.5 + offsetY);
+    vertices[14] = (0.5 + offsetZ);
 
-    vertices.push_back(0.5 + offsetX);
-    vertices.push_back(-0.5 + offsetY);
-    vertices.push_back(-0.5 + offsetZ);
+    vertices[15] = (0.5 + offsetX);
+    vertices[16] = (-0.5 + offsetY);
+    vertices[17] = (-0.5 + offsetZ);
 }
 
-void FaceIndicesRight(std::vector<unsigned short>& indices, unsigned short offset) {
-    indices.push_back(0 + offset);
-    indices.push_back(1 + offset);
-    indices.push_back(2 + offset);
+void FaceIndicesRight(unsigned short* indices, unsigned short offset) {
+    indices[0] = (0 + offset);
+    indices[1] = (1 + offset);
+    indices[2] = (2 + offset);
 
     //indices.push_back(0 + offset);
     //indices.push_back(3 + offset);
     //indices.push_back(1 + offset);
 
-    indices.push_back(3 + offset);
-    indices.push_back(4 + offset);
-    indices.push_back(5 + offset);
+    indices[3] = (3 + offset);
+    indices[4] = (4 + offset);
+    indices[5] = (5 + offset);
 
 }
 
-void FaceVerticesLeft(std::vector<float>& vertices, float offsetX, float offsetY, float offsetZ) {
+void FaceVerticesLeft(float* vertices, float offsetX, float offsetY, float offsetZ) {
 
-    vertices.push_back(-0.5 + offsetX);
-    vertices.push_back(0.5 + offsetY);
-    vertices.push_back(-0.5 + offsetZ);
+    vertices[0] = (-0.5 + offsetX);
+    vertices[1] = (0.5 + offsetY);
+    vertices[2] = (-0.5 + offsetZ);
 
-    vertices.push_back(-0.5 + offsetX);
-    vertices.push_back(-0.5 + offsetY);
-    vertices.push_back(0.5 + offsetZ);
+    vertices[3] = (-0.5 + offsetX);
+    vertices[4] = (-0.5 + offsetY);
+    vertices[5] = (0.5 + offsetZ);
 
-    vertices.push_back(-0.5 + offsetX);
-    vertices.push_back(0.5 + offsetY);
-    vertices.push_back(0.5 + offsetZ);
+    vertices[6] = (-0.5 + offsetX);
+    vertices[7] = (0.5 + offsetY);
+    vertices[8] = (0.5 + offsetZ);
 
-    vertices.push_back(-0.5 + offsetX);
-    vertices.push_back(0.5 + offsetY);
-    vertices.push_back(-0.5 + offsetZ);
+    vertices[9] =  (-0.5 + offsetX);
+    vertices[10] = (0.5 + offsetY);
+    vertices[11] = (-0.5 + offsetZ);
 
-    vertices.push_back(-0.5 + offsetX);
-    vertices.push_back(-0.5 + offsetY);
-    vertices.push_back(-0.5 + offsetZ);
+    vertices[12] = (-0.5 + offsetX);
+    vertices[13] = (-0.5 + offsetY);
+    vertices[14] = (-0.5 + offsetZ);
 
-    vertices.push_back(-0.5 + offsetX);
-    vertices.push_back(-0.5 + offsetY);
-    vertices.push_back(0.5 + offsetZ);
+    vertices[15] = (-0.5 + offsetX);
+    vertices[16] = (-0.5 + offsetY);
+    vertices[17] = (0.5 + offsetZ);
 }
 
-void FaceIndicesLeft(std::vector<unsigned short>& indices, unsigned short offset) {
-    indices.push_back(0 + offset);
-    indices.push_back(1 + offset);
-    indices.push_back(2 + offset);
+void FaceIndicesLeft(unsigned short* indices, unsigned short offset) {
+    indices[0] = (0 + offset);
+    indices[1] = (1 + offset);
+    indices[2] = (2 + offset);
 
     //indices.push_back(0 + offset);
     //indices.push_back(3 + offset);
     //indices.push_back(1 + offset);
 
-    indices.push_back(3 + offset);
-    indices.push_back(4 + offset);
-    indices.push_back(5 + offset);
+    indices[3] = (3 + offset);
+    indices[4] = (4 + offset);
+    indices[5] = (5 + offset);
 
 }

@@ -38,6 +38,9 @@
     <ClInclude Include="DrawMeshInstancedFlattenedTransforms.h">
       <Filter>Header Files</Filter>
     </ClInclude>
+    <ClInclude Include="rlights.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <None Include="Shaders\SimpleShader.vert" />
