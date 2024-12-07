@@ -1,5 +1,6 @@
 
 #include <iostream>
+#include <chrono>
 
 #include "flecs/flecs.h"
 #include "raylib/raylib.h"
@@ -14,6 +15,7 @@
 
 #include <vector>
 #include <string>
+#include <map>
 
 #include "CubeMeshData.h"
 #include "DrawMeshInstancedFlattenedTransforms.h"
@@ -21,8 +23,18 @@
 #define ThreeDimensionalStdVector(_name, _type, _size) std::vector<std::vector<std::vector<_type>>> _name(_size, std::vector<std::vector<_type>>(_size, std::vector<_type>(_size)));
 #define TwoDimensionalStdVector(_name, _type, _size) std::vector<std::vector<_type>> _name(_size, std::vector<_type>(_size));
 
-static void GenMeshCustom(std::unordered_map<BlockFaceDirection, Mesh>& meshFacingParticularDir
-    , std::unordered_map<BlockFaceDirection, std::vector<float16>>& transformOfVerticesOfFaceInParticularDir
+class VerticesPerFace {
+public:
+
+};
+
+void RecalculateInstancePositions(std::vector<float16>& recalculatedInstanceTransformsList
+    , std::vector<float16>& currentInstanceTransformsList
+    , std::map<std::tuple<int, int, BlockFaceDirection>, int>& numVerticesPerChunkPerFace
+    , BlockFaceDirection curFaceDir
+    , Vector3 cameraPos, Vector3 cameraLookDir);
+
+static void GenMeshCustom(std::unordered_map<BlockFaceDirection, std::vector<float16>>& transformOfVerticesOfFaceInParticularDir
     , Vector3 position);
 Mesh PlaneFacingDir(Vector3 dir);
 
@@ -45,6 +57,8 @@ void SetRandomColour(float* ambient, int x, int y) {
     ambient[2] = curColor.b;
     ambient[3] = curColor.a;
 }
+
+bool once = true;
 
 int main()
 {
@@ -106,6 +120,7 @@ int main()
     chunkMeshFacingParticularDir.insert({ BlockFaceDirection::LEFT, planeFacingLeft });
 
     std::unordered_map<BlockFaceDirection, std::vector<float16>> transformOfVerticesOfFaceInParticularDir;
+    std::map<std::tuple<int, int, BlockFaceDirection>, int> numVerticesPerChunkPerFace;
 
     Vector3 curChunkPos = { 0, 0, 0 };
     for (int i = -numChunks; i <= numChunks; i++)
@@ -116,12 +131,27 @@ int main()
         {
             curChunkPos.z = j * 2 * chunkSize;
 
-            std::cout << "Chunk coords : " << curChunkPos.x << ", " << curChunkPos.z << std::endl;
+            int oldNumVerticesUp = transformOfVerticesOfFaceInParticularDir[BlockFaceDirection::UP].size();
+            int oldNumVerticesDown = transformOfVerticesOfFaceInParticularDir[BlockFaceDirection::DOWN].size();
+            int oldNumVerticesFront = transformOfVerticesOfFaceInParticularDir[BlockFaceDirection::FRONT].size();
+            int oldNumVerticesBack = transformOfVerticesOfFaceInParticularDir[BlockFaceDirection::BACK].size();
+            int oldNumVerticesRight = transformOfVerticesOfFaceInParticularDir[BlockFaceDirection::RIGHT].size();
+            int oldNumVerticesLeft = transformOfVerticesOfFaceInParticularDir[BlockFaceDirection::LEFT].size();
 
-            GenMeshCustom(chunkMeshFacingParticularDir, transformOfVerticesOfFaceInParticularDir, curChunkPos);
+            //std::cout << "Chunk coords : " << curChunkPos.x << ", " << curChunkPos.z << std::endl;
+            GenMeshCustom(transformOfVerticesOfFaceInParticularDir, curChunkPos);
+            
+            numVerticesPerChunkPerFace[{i, j, BlockFaceDirection::UP}] = transformOfVerticesOfFaceInParticularDir[BlockFaceDirection::UP].size() - oldNumVerticesUp;
+            numVerticesPerChunkPerFace[{ i, j, BlockFaceDirection::DOWN}] = transformOfVerticesOfFaceInParticularDir[BlockFaceDirection::DOWN].size() - oldNumVerticesDown;
+            numVerticesPerChunkPerFace[{ i, j, BlockFaceDirection::FRONT}]  = transformOfVerticesOfFaceInParticularDir[BlockFaceDirection::FRONT].size() - oldNumVerticesFront;
+            numVerticesPerChunkPerFace[{ i, j, BlockFaceDirection::BACK}] = transformOfVerticesOfFaceInParticularDir[BlockFaceDirection::BACK].size() - oldNumVerticesBack;
+            numVerticesPerChunkPerFace[{ i, j, BlockFaceDirection::RIGHT}]  = transformOfVerticesOfFaceInParticularDir[BlockFaceDirection::RIGHT].size() - oldNumVerticesRight;
+            numVerticesPerChunkPerFace[{ i, j, BlockFaceDirection::LEFT}] = transformOfVerticesOfFaceInParticularDir[BlockFaceDirection::LEFT].size() - oldNumVerticesLeft;
+
 
         }
     }
+
 
     // Load lighting instanceShader
     Shader instanceShader = LoadShader(TextFormat("Shaders/lighting_instancing.vert", GLSL_VERSION),
@@ -174,8 +204,17 @@ int main()
 
     DisableCursor();
 
+    std::vector<float16> reclaculatedChunksTransformUp;
+    std::vector<float16> reclaculatedChunksTransformDown;
+    std::vector<float16> reclaculatedChunksTransformFront;
+    std::vector<float16> reclaculatedChunksTransformBack;
+    std::vector<float16> reclaculatedChunksTransformRight;
+    std::vector<float16> reclaculatedChunksTransformLeft;
+
     while (!WindowShouldClose())
     {
+        auto curTime = std::chrono::high_resolution_clock::now();
+
         UpdateCamera(&camera, CAMERA_FREE);
 
         float cameraPos[3] = {camera.position.x, camera.position.y, camera.position.z};
@@ -183,6 +222,36 @@ int main()
 
         Vector3 cameraDir = Vector3Subtract(camera.target, camera.position);
         cameraDir = Vector3Normalize(cameraDir);
+
+        //RecalculateInstancePositions(reclaculatedChunksTransformUp
+        //    , transformOfVerticesOfFaceInParticularDir[BlockFaceDirection::UP]
+        //    , numVerticesPerChunkPerFace, BlockFaceDirection::UP
+        //    , position, cameraDir);
+
+        //RecalculateInstancePositions(reclaculatedChunksTransformDown
+        //    , transformOfVerticesOfFaceInParticularDir[BlockFaceDirection::DOWN]
+        //    , numVerticesPerChunkPerFace, BlockFaceDirection::DOWN
+        //    , position, cameraDir);
+
+        //RecalculateInstancePositions(reclaculatedChunksTransformFront
+        //    , transformOfVerticesOfFaceInParticularDir[BlockFaceDirection::FRONT]
+        //    , numVerticesPerChunkPerFace, BlockFaceDirection::FRONT
+        //    , position, cameraDir);
+
+        //RecalculateInstancePositions(reclaculatedChunksTransformBack
+        //    , transformOfVerticesOfFaceInParticularDir[BlockFaceDirection::BACK]
+        //    , numVerticesPerChunkPerFace, BlockFaceDirection::BACK
+        //    , position, cameraDir);
+
+        //RecalculateInstancePositions(reclaculatedChunksTransformRight
+        //    , transformOfVerticesOfFaceInParticularDir[BlockFaceDirection::RIGHT]
+        //    , numVerticesPerChunkPerFace, BlockFaceDirection::RIGHT
+        //    , position, cameraDir);
+
+        //RecalculateInstancePositions(reclaculatedChunksTransformLeft
+        //    , transformOfVerticesOfFaceInParticularDir[BlockFaceDirection::LEFT]
+        //    , numVerticesPerChunkPerFace, BlockFaceDirection::LEFT
+        //    , position, cameraDir);
 
         BeginDrawing();
         ClearBackground(RAYWHITE);
@@ -205,6 +274,36 @@ int main()
             //}
 
             //rlEnableShader(instancedMaterial.shader.id);
+
+            //DrawMeshInstancedFlattenedTransforms(chunkMeshFacingParticularDir[BlockFaceDirection::UP]
+            //    , instancedMaterial
+            //    , reclaculatedChunksTransformUp.data()
+            //    , reclaculatedChunksTransformUp.size());
+
+            //DrawMeshInstancedFlattenedTransforms(chunkMeshFacingParticularDir[BlockFaceDirection::DOWN]
+            //    , instancedMaterial
+            //    , reclaculatedChunksTransformDown.data()
+            //    , reclaculatedChunksTransformDown.size());
+
+            //DrawMeshInstancedFlattenedTransforms(chunkMeshFacingParticularDir[BlockFaceDirection::FRONT]
+            //    , instancedMaterial
+            //    , reclaculatedChunksTransformFront.data()
+            //    , reclaculatedChunksTransformFront.size());
+
+            //DrawMeshInstancedFlattenedTransforms(chunkMeshFacingParticularDir[BlockFaceDirection::BACK]
+            //    , instancedMaterial
+            //    , reclaculatedChunksTransformBack.data()
+            //    , reclaculatedChunksTransformBack.size());
+
+            //DrawMeshInstancedFlattenedTransforms(chunkMeshFacingParticularDir[BlockFaceDirection::RIGHT]
+            //    , instancedMaterial
+            //    , reclaculatedChunksTransformRight.data()
+            //    , reclaculatedChunksTransformRight.size());
+
+            //DrawMeshInstancedFlattenedTransforms(chunkMeshFacingParticularDir[BlockFaceDirection::LEFT]
+            //    , instancedMaterial
+            //    , reclaculatedChunksTransformLeft.data()
+            //    , reclaculatedChunksTransformLeft.size());
 
             DrawMeshInstancedFlattenedTransforms(chunkMeshFacingParticularDir[BlockFaceDirection::UP]
                 , instancedMaterial
@@ -250,13 +349,14 @@ int main()
     return 0;
 }
 
-static void GenMeshCustom(std::unordered_map<BlockFaceDirection, Mesh> &meshFacingParticularDir
-    , std::unordered_map<BlockFaceDirection, std::vector<float16>> &transformOfVerticesOfFaceInParticularDir
+static void GenMeshCustom(std::unordered_map<BlockFaceDirection, std::vector<float16>> &transformOfVerticesOfFaceInParticularDir
     , Vector3 position)
 {
     const siv::PerlinNoise::seed_type seed = 123456u;
 
     const siv::PerlinNoise perlin{ seed };
+
+    float scale = 0.1f;
 
     for (int y = -chunkSize; y <= chunkSize; y++)
     {
@@ -268,7 +368,7 @@ static void GenMeshCustom(std::unordered_map<BlockFaceDirection, Mesh> &meshFaci
                 int _y = y + chunkSize + position.y;
                 int _z = z + chunkSize + position.z;
 
-                float curNoise = perlin.noise3D_01((double)_x * 0.1f, (double)_z * 0.1f, (double)_y * 0.1f);
+                float curNoise = perlin.noise3D_01((double)_x * scale, (double)_z * scale, (double)_y * scale);
 
                 float emptyThreshold = 0.5f;
                 bool curVoxelIsEmpty = curNoise < emptyThreshold ? true : false;
@@ -285,37 +385,37 @@ static void GenMeshCustom(std::unordered_map<BlockFaceDirection, Mesh> &meshFaci
                     //Matrix curTransform = MatrixMultiply(rotation, translation);
                     float16 curTransformFlattened = MatrixToFloatV(curTransform);
 
-                    float curNoiseTop = perlin.noise3D_01((double)_x * 0.1f, (double)_z * 0.1f, (double)(_y + 1) * 0.1f);
+                    float curNoiseTop = perlin.noise3D_01((double)_x * scale, (double)_z * scale, (double)(_y + 1) * scale);
 
                     if (curNoiseTop < emptyThreshold || y == chunkSize) {
                         transformOfVerticesOfFaceInParticularDir[BlockFaceDirection::UP].push_back(curTransformFlattened);
                     }
 
-                    float curNoiseBottom = perlin.noise3D_01((double)_x * 0.1f, (double)_z * 0.1f, (double)(_y - 1) * 0.1f);
+                    float curNoiseBottom = perlin.noise3D_01((double)_x * scale, (double)_z * scale, (double)(_y - 1) * scale);
 
                     if (curNoiseBottom < emptyThreshold) {
                         transformOfVerticesOfFaceInParticularDir[BlockFaceDirection::DOWN].push_back(curTransformFlattened);
                     }
 
-                    float curNoiseFront = perlin.noise3D_01((double)_x * 0.1f, (double)(_z + 1) * 0.1f, (double)_y * 0.1f);
+                    float curNoiseFront = perlin.noise3D_01((double)_x * scale, (double)(_z + 1) * scale, (double)_y * scale);
 
                     if (curNoiseFront < emptyThreshold) {
                         transformOfVerticesOfFaceInParticularDir[BlockFaceDirection::FRONT].push_back(curTransformFlattened);
                     }
 
-                    float curNoiseBack = perlin.noise3D_01((double)_x * 0.1f, (double)(_z - 1) * 0.1f, (double)_y * 0.1f);
+                    float curNoiseBack = perlin.noise3D_01((double)_x * scale, (double)(_z - 1) * scale, (double)_y * scale);
 
                     if (curNoiseBack < emptyThreshold) {
                         transformOfVerticesOfFaceInParticularDir[BlockFaceDirection::BACK].push_back(curTransformFlattened);
                     }
 
-                    float curNoiseRight = perlin.noise3D_01((double)(_x + 1) * 0.1f, (double)_z * 0.1f, (double)_y * 0.1f);
+                    float curNoiseRight = perlin.noise3D_01((double)(_x + 1) * scale, (double)_z * scale, (double)_y * scale);
 
                     if (curNoiseRight < emptyThreshold) {
                         transformOfVerticesOfFaceInParticularDir[BlockFaceDirection::RIGHT].push_back(curTransformFlattened);
                     }
 
-                    float curNoiseLeft = perlin.noise3D_01((double)(_x - 1) * 0.1f, (double)_z * 0.1f, (double)_y * 0.1f);
+                    float curNoiseLeft = perlin.noise3D_01((double)(_x - 1) * scale, (double)_z * scale, (double)_y * scale);
 
                     if (curNoiseLeft < emptyThreshold) {
                         transformOfVerticesOfFaceInParticularDir[BlockFaceDirection::LEFT].push_back(curTransformFlattened);
@@ -368,15 +468,36 @@ Mesh PlaneFacingDir(Vector3 dir) {
     UploadMesh(&curMesh, false);
     
     return curMesh;
-
-    if (dir.x == 0 && dir.y == 1 && dir.z == 0) {
-
-        for (int i = 0; i < 18; i++)
-        {
-            std::cout << "After uploading mesh to gpu but inside function: " << curMesh.vertices[i] << std::endl;
-        }
-    }
-
-
 }
 
+void RecalculateInstancePositions(std::vector<float16>& recalculatedInstanceTransformsList
+    , std::vector<float16>& currentInstanceTransformsList
+    , std::map<std::tuple<int, int, BlockFaceDirection>, int>& numVerticesPerChunkPerFace
+    , BlockFaceDirection curFaceDir
+    , Vector3 cameraPos, Vector3 cameraLookDir) {
+
+    int numVerticesCrossed = 0;
+
+    Vector3 curChunkPos = { 0, 0, 0 };
+    for (int i = -numChunks; i <= numChunks; i++)
+    {
+        curChunkPos.x = i * chunkSize * 2;
+
+        for (int j = -numChunks; j <= numChunks; j++)
+        {
+            curChunkPos.z = j * 2 * chunkSize;
+
+            int curNumVertices = numVerticesPerChunkPerFace[{i, j, curFaceDir}];
+
+            float dotProduct = Vector3DotProduct(cameraLookDir, Vector3Normalize(Vector3Subtract(curChunkPos, cameraPos)));
+            if (dotProduct >= 0 /*curChunkPos.z > cameraPos.z && curChunkPos.x > cameraPos.x*/) {
+
+                for (int k = numVerticesCrossed; k < numVerticesCrossed + curNumVertices; k++)
+                {
+                    recalculatedInstanceTransformsList.push_back(currentInstanceTransformsList[k]);
+                }
+            }
+            numVerticesCrossed += curNumVertices;
+        }
+    }
+}
