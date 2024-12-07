@@ -42,7 +42,7 @@ Vector3 right = { 1, 0, 0 };
 Vector3 left = { -1, 0, 0 };
 
 const int numChunks = 10;
-const int chunkSize = 10;
+const int chunkSize = 16;
 
 Color randColors[9] = {LIGHTGRAY, BLACK, RED, YELLOW, PINK, GREEN, BLUE, PURPLE, GOLD};
 
@@ -54,7 +54,26 @@ void SetRandomColour(float* ambient, int x, int y) {
     ambient[3] = curColor.a;
 }
 
-bool once = true;
+int PackThreeNumbers(int num1, int num2, int num3) {
+    // Ensure that each number is within the range [0, 31]
+    if (num1 < 0 || num1 > 31 || num2 < 0 || num2 > 31 || num3 < 0 || num3 > 31) {
+        std::cerr << "Numbers " << num1 << ", " << num2 << ", " << num3 << "must be between 0 and 31" << std::endl;
+        return -1;
+    }
+
+    // Pack the three numbers into a single int
+    // Shift num1 by 10 bits, num2 by 5 bits, and leave num3 as it is
+    int packed = (num1 << 10) | (num2 << 5) | num3;
+
+    return packed;
+}
+
+void UnpackThreeNumbers(int packed, unsigned int& num1, unsigned int& num2, unsigned int& num3) {
+    // Unpack the numbers by shifting and masking
+    num1 = (packed >> 10) & 0x1F;  // 0x1F is the mask for 5 bits (11111)
+    num2 = (packed >> 5) & 0x1F;
+    num3 = packed & 0x1F;
+}
 
 int main()
 {
@@ -108,17 +127,17 @@ int main()
     int numChunksY = 1;
 
     Vector3 curChunkPos = { 0, 0, 0 };
-    for (int i = -numChunks; i <= numChunks; i++)
+    for (int i = -numChunks; i < numChunks; i++)
     {
-        curChunkPos.x = i * (2 * chunkSize + 1);
+        curChunkPos.x = i * (2 * chunkSize);
 
-        for (int j = -numChunks; j <= numChunks; j++)
+        for (int j = -numChunks; j < numChunks; j++)
         {
-            curChunkPos.z = j * (2 * chunkSize + 1);
+            curChunkPos.z = j * (2 * chunkSize);
 
-            for (int k = -numChunksY; k <= numChunksY; k++)
+            for (int k = -numChunksY; k < numChunksY; k++)
             {
-                curChunkPos.y = k * (2 * chunkSize + 1);
+                curChunkPos.y = k * (2 * chunkSize);
                 GenMeshCustom(chunkTransformOfVerticesOfFaceInParticularDir[i + numChunks][j + numChunks][k + numChunksY], curChunkPos);
             }
 
@@ -159,15 +178,20 @@ int main()
 
             BeginMode3D(camera);
 
-            for (int k = -numChunksY; k <= numChunksY; k++)
+            for (int k = -numChunksY; k < numChunksY; k++)
             {
-                for (int j = -numChunks; j <= numChunks; j++)
+                for (int j = -numChunks; j < numChunks; j++)
                 {
-                    for (int i = -numChunks; i <= numChunks; i++)
+                    for (int i = -numChunks; i < numChunks; i++)
                     {
-                        Vector3 curChunkPos = { i * ((chunkSize * 2) + 1), k * ((chunkSize * 2) + 1), (j * ((chunkSize * 2) + 1))};
+                        Vector3 curChunkPos = { i * ((chunkSize * 2)), k * ((chunkSize * 2)), (j * ((chunkSize * 2)))};
 
                         if (ShouldDrawChunk(curChunkPos, camera)) {
+
+                            int curChunkPosLoc = GetShaderLocation(instanceShader, "curChunkPos");
+                            int curChunkPosCoords[3] = { curChunkPos.x, curChunkPos.y, curChunkPos.z };
+                            SetShaderValue(instanceShader, curChunkPosLoc, curChunkPosCoords, SHADER_UNIFORM_VEC3);
+
                             DrawMeshInstancedFlattenedPositions(chunkMeshFacingParticularDir[BlockFaceDirection::UP]
                                 , instancedMaterial
                                 , chunkTransformOfVerticesOfFaceInParticularDir[i + numChunks][j + numChunks][k + numChunksY][BlockFaceDirection::UP].data()
@@ -227,11 +251,11 @@ static void GenMeshCustom(std::unordered_map<BlockFaceDirection, std::vector<flo
 
     float scale = 0.1f;
 
-    for (int y = -chunkSize; y <= chunkSize; y++)
+    for (int y = -chunkSize; y < chunkSize; y++)
     {
-        for (int x = -chunkSize; x <= chunkSize; x++)
+        for (int x = -chunkSize; x < chunkSize; x++)
         {
-            for (int z = -chunkSize; z <= chunkSize; z++)
+            for (int z = -chunkSize; z < chunkSize; z++)
             {
                 int _x = x + chunkSize + position.x;
                 int _y = y + chunkSize + position.y;
@@ -244,7 +268,8 @@ static void GenMeshCustom(std::unordered_map<BlockFaceDirection, std::vector<flo
 
                 if (!curVoxelIsEmpty) {
 
-                    float3 curPosition = { _x, _y, _z };
+                    int curPositionPacked = PackThreeNumbers(x + chunkSize, y + chunkSize, z + chunkSize);
+                    float3 curPosition = {_x, _y, _z};
 
                     float curNoiseTop = perlin.noise3D_01((double)_x * scale, (double)_z * scale, (double)(_y + 1) * scale);
 
