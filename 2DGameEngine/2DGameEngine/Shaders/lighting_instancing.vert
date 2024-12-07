@@ -6,7 +6,7 @@ in vec2 vertexTexCoord;
 in vec3 vertexNormal;
 //in vec4 vertexColor;      // Not required
 
-in mat4 instanceTransform;
+in vec3 instancePosition;
 
 // Input uniform values
 uniform mat4 mvp;
@@ -22,6 +22,11 @@ out vec3 fragNormal;
 
 void main()
 {
+
+    mat4 transformationMatrix = mat4(1.0f);
+    vec3 translationVector = vec3(instancePosition); 
+
+    transformationMatrix = translate(transformationMatrix, translationVector);
     // Send vertex attributes to fragment shader
     fragPosition = vec3(instanceTransform*vec4(vertexPosition, 1.0));
     fragTexCoord = vertexTexCoord;
