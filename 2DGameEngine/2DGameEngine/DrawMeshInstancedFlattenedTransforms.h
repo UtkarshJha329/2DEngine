@@ -8,6 +8,10 @@
     #define MAX_MATERIAL_MAPS       12    // Maximum number of maps supported
 #endif
 
+#ifndef GL_INT
+    #define GL_INT 0x1404
+#endif
+
 // Draw multiple mesh instances with material and different transforms
 void DrawMeshInstancedFlattenedPositions(Mesh mesh, Material material, const int* instancePositions, int instances)
 {
