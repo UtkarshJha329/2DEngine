@@ -150,6 +150,7 @@
     <ClInclude Include="DrawMeshInstancedFlattenedTransforms.h" />
     <ClInclude Include="flecs\flecs.h" />
     <ClInclude Include="PerlinNoise.hpp" />
+    <ClInclude Include="Plane.h" />
     <ClInclude Include="rlights.h" />
   </ItemGroup>
   <ItemGroup>
