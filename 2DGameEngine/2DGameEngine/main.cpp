@@ -157,9 +157,14 @@ int main()
 
         DrawFPS(40, 40);
 
-
             BeginMode3D(camera);
 
+            std::vector<float16> drawingTransformsUp;
+            std::vector<float16> drawingTransformsDown;
+            std::vector<float16> drawingTransformsFront;
+            std::vector<float16> drawingTransformsBack;
+            std::vector<float16> drawingTransformsRight;
+            std::vector<float16> drawingTransformsLeft;
 
             for (int i = -numChunks; i <= numChunks; i++)
             {
@@ -168,38 +173,65 @@ int main()
                     Vector3 curChunkPos = { i * ((chunkSize * 2) + 1), 0, (j * ((chunkSize * 2) + 1))};
 
                     if (ShouldDrawChunk(curChunkPos, camera.position, cameraDir)) {
-                        DrawMeshInstancedFlattenedTransforms(chunkMeshFacingParticularDir[BlockFaceDirection::UP]
-                            , instancedMaterial
-                            , chunkTransformOfVerticesOfFaceInParticularDir[i + numChunks][j + numChunks][BlockFaceDirection::UP].data()
-                            , chunkTransformOfVerticesOfFaceInParticularDir[i + numChunks][j + numChunks][BlockFaceDirection::UP].size());
 
-                        DrawMeshInstancedFlattenedTransforms(chunkMeshFacingParticularDir[BlockFaceDirection::DOWN]
-                            , instancedMaterial
-                            , chunkTransformOfVerticesOfFaceInParticularDir[i + numChunks][j + numChunks][BlockFaceDirection::DOWN].data()
-                            , chunkTransformOfVerticesOfFaceInParticularDir[i + numChunks][j + numChunks][BlockFaceDirection::DOWN].size());
+                        drawingTransformsUp.insert(drawingTransformsUp.end()
+                            , chunkTransformOfVerticesOfFaceInParticularDir[i + numChunks][j + numChunks][BlockFaceDirection::UP].begin()
+                            , chunkTransformOfVerticesOfFaceInParticularDir[i + numChunks][j + numChunks][BlockFaceDirection::UP].end());
 
-                        DrawMeshInstancedFlattenedTransforms(chunkMeshFacingParticularDir[BlockFaceDirection::FRONT]
-                            , instancedMaterial
-                            , chunkTransformOfVerticesOfFaceInParticularDir[i + numChunks][j + numChunks][BlockFaceDirection::FRONT].data()
-                            , chunkTransformOfVerticesOfFaceInParticularDir[i + numChunks][j + numChunks][BlockFaceDirection::FRONT].size());
+                        drawingTransformsDown.insert(drawingTransformsDown.end()
+                            , chunkTransformOfVerticesOfFaceInParticularDir[i + numChunks][j + numChunks][BlockFaceDirection::DOWN].begin()
+                            , chunkTransformOfVerticesOfFaceInParticularDir[i + numChunks][j + numChunks][BlockFaceDirection::DOWN].end());
 
-                        DrawMeshInstancedFlattenedTransforms(chunkMeshFacingParticularDir[BlockFaceDirection::BACK]
-                            , instancedMaterial
-                            , chunkTransformOfVerticesOfFaceInParticularDir[i + numChunks][j + numChunks][BlockFaceDirection::BACK].data()
-                            , chunkTransformOfVerticesOfFaceInParticularDir[i + numChunks][j + numChunks][BlockFaceDirection::BACK].size());
+                        drawingTransformsFront.insert(drawingTransformsFront.end()
+                            , chunkTransformOfVerticesOfFaceInParticularDir[i + numChunks][j + numChunks][BlockFaceDirection::FRONT].begin()
+                            , chunkTransformOfVerticesOfFaceInParticularDir[i + numChunks][j + numChunks][BlockFaceDirection::FRONT].end());
 
-                        DrawMeshInstancedFlattenedTransforms(chunkMeshFacingParticularDir[BlockFaceDirection::RIGHT]
-                            , instancedMaterial
-                            , chunkTransformOfVerticesOfFaceInParticularDir[i + numChunks][j + numChunks][BlockFaceDirection::RIGHT].data()
-                            , chunkTransformOfVerticesOfFaceInParticularDir[i + numChunks][j + numChunks][BlockFaceDirection::RIGHT].size());
+                        drawingTransformsBack.insert(drawingTransformsBack.end()
+                            , chunkTransformOfVerticesOfFaceInParticularDir[i + numChunks][j + numChunks][BlockFaceDirection::BACK].begin()
+                            , chunkTransformOfVerticesOfFaceInParticularDir[i + numChunks][j + numChunks][BlockFaceDirection::BACK].end());
 
-                        DrawMeshInstancedFlattenedTransforms(chunkMeshFacingParticularDir[BlockFaceDirection::LEFT]
-                            , instancedMaterial
-                            , chunkTransformOfVerticesOfFaceInParticularDir[i + numChunks][j + numChunks][BlockFaceDirection::LEFT].data()
-                            , chunkTransformOfVerticesOfFaceInParticularDir[i + numChunks][j + numChunks][BlockFaceDirection::LEFT].size());
+                        drawingTransformsRight.insert(drawingTransformsRight.end()
+                            , chunkTransformOfVerticesOfFaceInParticularDir[i + numChunks][j + numChunks][BlockFaceDirection::RIGHT].begin()
+                            , chunkTransformOfVerticesOfFaceInParticularDir[i + numChunks][j + numChunks][BlockFaceDirection::RIGHT].end());
+
+                        drawingTransformsLeft.insert(drawingTransformsLeft.end()
+                            , chunkTransformOfVerticesOfFaceInParticularDir[i + numChunks][j + numChunks][BlockFaceDirection::LEFT].begin()
+                            , chunkTransformOfVerticesOfFaceInParticularDir[i + numChunks][j + numChunks][BlockFaceDirection::LEFT].end());
+
                     }
                 }
             }
+
+            DrawMeshInstancedFlattenedTransforms(chunkMeshFacingParticularDir[BlockFaceDirection::UP]
+                , instancedMaterial
+                , drawingTransformsUp.data()
+                , drawingTransformsUp.size());
+
+            DrawMeshInstancedFlattenedTransforms(chunkMeshFacingParticularDir[BlockFaceDirection::DOWN]
+                , instancedMaterial
+                , drawingTransformsDown.data()
+                , drawingTransformsDown.size());
+
+            DrawMeshInstancedFlattenedTransforms(chunkMeshFacingParticularDir[BlockFaceDirection::FRONT]
+                , instancedMaterial
+                , drawingTransformsFront.data()
+                , drawingTransformsFront.size());
+
+            DrawMeshInstancedFlattenedTransforms(chunkMeshFacingParticularDir[BlockFaceDirection::BACK]
+                , instancedMaterial
+                , drawingTransformsBack.data()
+                , drawingTransformsBack.size());
+
+            DrawMeshInstancedFlattenedTransforms(chunkMeshFacingParticularDir[BlockFaceDirection::RIGHT]
+                , instancedMaterial
+                , drawingTransformsRight.data()
+                , drawingTransformsRight.size());
+
+            DrawMeshInstancedFlattenedTransforms(chunkMeshFacingParticularDir[BlockFaceDirection::LEFT]
+                , instancedMaterial
+                , drawingTransformsLeft.data()
+                , drawingTransformsLeft.size());
+
 
             DrawGrid(10, 1.0);
 
