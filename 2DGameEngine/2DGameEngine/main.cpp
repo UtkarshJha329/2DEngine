@@ -29,7 +29,7 @@ public:
 
 };
 
-static void GenMeshCustom(std::unordered_map<BlockFaceDirection, std::vector<float16>>& transformOfVerticesOfFaceInParticularDir, Vector3 position);
+static void GenMeshCustom(std::unordered_map<BlockFaceDirection, std::vector<float3>>& transformOfVerticesOfFaceInParticularDir, Vector3 position);
 Mesh PlaneFacingDir(Vector3 dir);
 
 bool ShouldDrawChunk(Vector3 curChunkPos, Camera camera);
@@ -103,7 +103,7 @@ int main()
     chunkMeshFacingParticularDir.insert({ BlockFaceDirection::LEFT, planeFacingLeft });
 
     //std::vector<std::vector<std::vector<std::unordered_map<BlockFaceDirection, std::vector<float16>>>>> chunkTransformOfVerticesOfFaceInParticularDir(numChunksWidth, std::vector<std::vector<std::unordered_map<BlockFaceDirection, std::vector<float16>>>(numChunksWidth, std::vector<std::unordered_map<BlockFaceDirection, std::vector<float16>>>(numChunksWidth)));
-    ThreeDimensionalStdVectorUnorderedMap(chunkTransformOfVerticesOfFaceInParticularDir, BlockFaceDirection, std::vector<float16>, numChunksWidth);
+    ThreeDimensionalStdVectorUnorderedMap(chunkTransformOfVerticesOfFaceInParticularDir, BlockFaceDirection, std::vector<float3>, numChunksWidth);
 
     int numChunksY = 1;
 
@@ -168,32 +168,32 @@ int main()
                         Vector3 curChunkPos = { i * ((chunkSize * 2) + 1), k * ((chunkSize * 2) + 1), (j * ((chunkSize * 2) + 1))};
 
                         if (ShouldDrawChunk(curChunkPos, camera)) {
-                            DrawMeshInstancedFlattenedTransforms(chunkMeshFacingParticularDir[BlockFaceDirection::UP]
+                            DrawMeshInstancedFlattenedPositions(chunkMeshFacingParticularDir[BlockFaceDirection::UP]
                                 , instancedMaterial
                                 , chunkTransformOfVerticesOfFaceInParticularDir[i + numChunks][j + numChunks][k + numChunksY][BlockFaceDirection::UP].data()
                                 , chunkTransformOfVerticesOfFaceInParticularDir[i + numChunks][j + numChunks][k + numChunksY][BlockFaceDirection::UP].size());
 
-                            DrawMeshInstancedFlattenedTransforms(chunkMeshFacingParticularDir[BlockFaceDirection::DOWN]
+                            DrawMeshInstancedFlattenedPositions(chunkMeshFacingParticularDir[BlockFaceDirection::DOWN]
                                 , instancedMaterial
                                 , chunkTransformOfVerticesOfFaceInParticularDir[i + numChunks][j + numChunks][k + numChunksY][BlockFaceDirection::DOWN].data()
                                 , chunkTransformOfVerticesOfFaceInParticularDir[i + numChunks][j + numChunks][k + numChunksY][BlockFaceDirection::DOWN].size());
 
-                            DrawMeshInstancedFlattenedTransforms(chunkMeshFacingParticularDir[BlockFaceDirection::FRONT]
+                            DrawMeshInstancedFlattenedPositions(chunkMeshFacingParticularDir[BlockFaceDirection::FRONT]
                                 , instancedMaterial
                                 , chunkTransformOfVerticesOfFaceInParticularDir[i + numChunks][j + numChunks][k + numChunksY][BlockFaceDirection::FRONT].data()
                                 , chunkTransformOfVerticesOfFaceInParticularDir[i + numChunks][j + numChunks][k + numChunksY][BlockFaceDirection::FRONT].size());
 
-                            DrawMeshInstancedFlattenedTransforms(chunkMeshFacingParticularDir[BlockFaceDirection::BACK]
+                            DrawMeshInstancedFlattenedPositions(chunkMeshFacingParticularDir[BlockFaceDirection::BACK]
                                 , instancedMaterial
                                 , chunkTransformOfVerticesOfFaceInParticularDir[i + numChunks][j + numChunks][k + numChunksY][BlockFaceDirection::BACK].data()
                                 , chunkTransformOfVerticesOfFaceInParticularDir[i + numChunks][j + numChunks][k + numChunksY][BlockFaceDirection::BACK].size());
 
-                            DrawMeshInstancedFlattenedTransforms(chunkMeshFacingParticularDir[BlockFaceDirection::RIGHT]
+                            DrawMeshInstancedFlattenedPositions(chunkMeshFacingParticularDir[BlockFaceDirection::RIGHT]
                                 , instancedMaterial
                                 , chunkTransformOfVerticesOfFaceInParticularDir[i + numChunks][j + numChunks][k + numChunksY][BlockFaceDirection::RIGHT].data()
                                 , chunkTransformOfVerticesOfFaceInParticularDir[i + numChunks][j + numChunks][k + numChunksY][BlockFaceDirection::RIGHT].size());
 
-                            DrawMeshInstancedFlattenedTransforms(chunkMeshFacingParticularDir[BlockFaceDirection::LEFT]
+                            DrawMeshInstancedFlattenedPositions(chunkMeshFacingParticularDir[BlockFaceDirection::LEFT]
                                 , instancedMaterial
                                 , chunkTransformOfVerticesOfFaceInParticularDir[i + numChunks][j + numChunks][k + numChunksY][BlockFaceDirection::LEFT].data()
                                 , chunkTransformOfVerticesOfFaceInParticularDir[i + numChunks][j + numChunks][k + numChunksY][BlockFaceDirection::LEFT].size());
@@ -218,7 +218,7 @@ int main()
     return 0;
 }
 
-static void GenMeshCustom(std::unordered_map<BlockFaceDirection, std::vector<float16>> &transformOfVerticesOfFaceInParticularDir
+static void GenMeshCustom(std::unordered_map<BlockFaceDirection, std::vector<float3>> &transformOfVerticesOfFaceInParticularDir
     , Vector3 position)
 {
     const siv::PerlinNoise::seed_type seed = 123456u;
@@ -244,50 +244,42 @@ static void GenMeshCustom(std::unordered_map<BlockFaceDirection, std::vector<flo
 
                 if (!curVoxelIsEmpty) {
 
-                    Matrix translation = MatrixTranslate((float)_x, (float)_y, (float)_z);
-                    Matrix rotation = MatrixRotate({ 0,1,0 }, 0);
-                    //Matrix scale = MatrixScale(1.0f, 1.0f, 1.0f);
-
-                    Matrix curTransform = MatrixMultiply(MatrixIdentity(), rotation);
-                    curTransform = MatrixMultiply(curTransform, translation);
-
-                    //Matrix curTransform = MatrixMultiply(rotation, translation);
-                    float16 curTransformFlattened = MatrixToFloatV(curTransform);
+                    float3 curPosition = { _x, _y, _z };
 
                     float curNoiseTop = perlin.noise3D_01((double)_x * scale, (double)_z * scale, (double)(_y + 1) * scale);
 
                     if (curNoiseTop < emptyThreshold || y == chunkSize) {
-                        transformOfVerticesOfFaceInParticularDir[BlockFaceDirection::UP].push_back(curTransformFlattened);
+                        transformOfVerticesOfFaceInParticularDir[BlockFaceDirection::UP].push_back(curPosition);
                     }
 
                     float curNoiseBottom = perlin.noise3D_01((double)_x * scale, (double)_z * scale, (double)(_y - 1) * scale);
 
                     if (curNoiseBottom < emptyThreshold) {
-                        transformOfVerticesOfFaceInParticularDir[BlockFaceDirection::DOWN].push_back(curTransformFlattened);
+                        transformOfVerticesOfFaceInParticularDir[BlockFaceDirection::DOWN].push_back(curPosition);
                     }
 
                     float curNoiseFront = perlin.noise3D_01((double)_x * scale, (double)(_z + 1) * scale, (double)_y * scale);
 
                     if (curNoiseFront < emptyThreshold) {
-                        transformOfVerticesOfFaceInParticularDir[BlockFaceDirection::FRONT].push_back(curTransformFlattened);
+                        transformOfVerticesOfFaceInParticularDir[BlockFaceDirection::FRONT].push_back(curPosition);
                     }
 
                     float curNoiseBack = perlin.noise3D_01((double)_x * scale, (double)(_z - 1) * scale, (double)_y * scale);
 
                     if (curNoiseBack < emptyThreshold) {
-                        transformOfVerticesOfFaceInParticularDir[BlockFaceDirection::BACK].push_back(curTransformFlattened);
+                        transformOfVerticesOfFaceInParticularDir[BlockFaceDirection::BACK].push_back(curPosition);
                     }
 
                     float curNoiseRight = perlin.noise3D_01((double)(_x + 1) * scale, (double)_z * scale, (double)_y * scale);
 
                     if (curNoiseRight < emptyThreshold) {
-                        transformOfVerticesOfFaceInParticularDir[BlockFaceDirection::RIGHT].push_back(curTransformFlattened);
+                        transformOfVerticesOfFaceInParticularDir[BlockFaceDirection::RIGHT].push_back(curPosition);
                     }
 
                     float curNoiseLeft = perlin.noise3D_01((double)(_x - 1) * scale, (double)_z * scale, (double)_y * scale);
 
                     if (curNoiseLeft < emptyThreshold) {
-                        transformOfVerticesOfFaceInParticularDir[BlockFaceDirection::LEFT].push_back(curTransformFlattened);
+                        transformOfVerticesOfFaceInParticularDir[BlockFaceDirection::LEFT].push_back(curPosition);
                     }
 
                 }
