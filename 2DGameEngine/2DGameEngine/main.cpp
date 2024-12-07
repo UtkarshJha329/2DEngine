@@ -24,12 +24,11 @@
 
 #define TwoDimensionalStdVector(_name, _type, _size) std::vector<std::vector<_type>> _name(_size, std::vector<_type>(_size));
 
-class VerticesPerFace {
-public:
+int PackThreeNumbers(int num1, int num2, int num3) {
+    return (num1 << 10) | (num2 << 5) | num3;
+}
 
-};
-
-static void GenMeshCustom(std::unordered_map<BlockFaceDirection, std::vector<float3>>& transformOfVerticesOfFaceInParticularDir, Vector3 position);
+static void GenMeshCustom(std::unordered_map<BlockFaceDirection, std::vector<int>>& transformOfVerticesOfFaceInParticularDir, Vector3 position);
 Mesh PlaneFacingDir(Vector3 dir);
 
 bool ShouldDrawChunk(Vector3 curChunkPos, Camera camera);
@@ -42,7 +41,7 @@ Vector3 right = { 1, 0, 0 };
 Vector3 left = { -1, 0, 0 };
 
 const int numChunks = 10;
-const int chunkSize = 10;
+const int chunkSize = 16;
 
 Color randColors[9] = {LIGHTGRAY, BLACK, RED, YELLOW, PINK, GREEN, BLUE, PURPLE, GOLD};
 
@@ -77,7 +76,7 @@ int main()
 
     Vector3 curPos = { 0, 0, 0 };
 
-    const int numChunksWidth = (2 * numChunks) + 1;
+    const int numChunksWidth = (2 * numChunks);
     std::unordered_map<BlockFaceDirection, Mesh> chunkMeshFacingParticularDir;
 
     Mesh planeFacingUp = { 0 };
@@ -103,22 +102,23 @@ int main()
     chunkMeshFacingParticularDir.insert({ BlockFaceDirection::LEFT, planeFacingLeft });
 
     //std::vector<std::vector<std::vector<std::unordered_map<BlockFaceDirection, std::vector<float16>>>>> chunkTransformOfVerticesOfFaceInParticularDir(numChunksWidth, std::vector<std::vector<std::unordered_map<BlockFaceDirection, std::vector<float16>>>(numChunksWidth, std::vector<std::unordered_map<BlockFaceDirection, std::vector<float16>>>(numChunksWidth)));
-    ThreeDimensionalStdVectorUnorderedMap(chunkTransformOfVerticesOfFaceInParticularDir, BlockFaceDirection, std::vector<float3>, numChunksWidth);
+    //ThreeDimensionalStdVectorUnorderedMap(chunkTransformOfVerticesOfFaceInParticularDir, BlockFaceDirection, std::vector<float3>, numChunksWidth);
+    ThreeDimensionalStdVectorUnorderedMap(chunkTransformOfVerticesOfFaceInParticularDir, BlockFaceDirection, std::vector<int>, numChunksWidth);
 
-    int numChunksY = 1;
+    int numChunksY = 3;
 
     Vector3 curChunkPos = { 0, 0, 0 };
-    for (int i = -numChunks; i <= numChunks; i++)
+    for (int i = -numChunks + 1; i < numChunks; i++)
     {
-        curChunkPos.x = i * (2 * chunkSize + 1);
+        curChunkPos.x = i * (2 * chunkSize);
 
-        for (int j = -numChunks; j <= numChunks; j++)
+        for (int j = -numChunks + 1; j < numChunks; j++)
         {
-            curChunkPos.z = j * (2 * chunkSize + 1);
+            curChunkPos.z = j * (2 * chunkSize);
 
-            for (int k = -numChunksY; k <= numChunksY; k++)
+            for (int k = -numChunksY + 1; k < numChunksY; k++)
             {
-                curChunkPos.y = k * (2 * chunkSize + 1);
+                curChunkPos.y = k * (2 * chunkSize);
                 GenMeshCustom(chunkTransformOfVerticesOfFaceInParticularDir[i + numChunks][j + numChunks][k + numChunksY], curChunkPos);
             }
 
@@ -159,15 +159,20 @@ int main()
 
             BeginMode3D(camera);
 
-            for (int k = -numChunksY; k <= numChunksY; k++)
+            for (int k = -numChunksY + 1; k < numChunksY; k++)
             {
-                for (int j = -numChunks; j <= numChunks; j++)
+                for (int j = -numChunks + 1; j < numChunks; j++)
                 {
-                    for (int i = -numChunks; i <= numChunks; i++)
+                    for (int i = -numChunks + 1; i < numChunks; i++)
                     {
-                        Vector3 curChunkPos = { i * ((chunkSize * 2) + 1), k * ((chunkSize * 2) + 1), (j * ((chunkSize * 2) + 1))};
+                        Vector3 curChunkPos = { i * ((chunkSize * 2)), k * ((chunkSize * 2)), (j * ((chunkSize * 2)))};
 
                         if (ShouldDrawChunk(curChunkPos, camera)) {
+
+                            int curChunkPosLoc = GetShaderLocation(instanceShader, "curChunkPos");
+                            float curChunkPosValue[3] = { curChunkPos.x, curChunkPos.y, curChunkPos.z };
+                            SetShaderValue(instanceShader, curChunkPosLoc, curChunkPosValue, SHADER_UNIFORM_VEC3);
+
                             DrawMeshInstancedFlattenedPositions(chunkMeshFacingParticularDir[BlockFaceDirection::UP]
                                 , instancedMaterial
                                 , chunkTransformOfVerticesOfFaceInParticularDir[i + numChunks][j + numChunks][k + numChunksY][BlockFaceDirection::UP].data()
@@ -218,7 +223,7 @@ int main()
     return 0;
 }
 
-static void GenMeshCustom(std::unordered_map<BlockFaceDirection, std::vector<float3>> &transformOfVerticesOfFaceInParticularDir
+static void GenMeshCustom(std::unordered_map<BlockFaceDirection, std::vector<int>>& transformOfVerticesOfFaceInParticularDir
     , Vector3 position)
 {
     const siv::PerlinNoise::seed_type seed = 123456u;
@@ -227,11 +232,11 @@ static void GenMeshCustom(std::unordered_map<BlockFaceDirection, std::vector<flo
 
     float scale = 0.1f;
 
-    for (int y = -chunkSize; y <= chunkSize; y++)
+    for (int y = -chunkSize + 1; y < chunkSize; y++)
     {
-        for (int x = -chunkSize; x <= chunkSize; x++)
+        for (int x = -chunkSize + 1; x < chunkSize; x++)
         {
-            for (int z = -chunkSize; z <= chunkSize; z++)
+            for (int z = -chunkSize + 1; z < chunkSize; z++)
             {
                 int _x = x + chunkSize + position.x;
                 int _y = y + chunkSize + position.y;
@@ -244,7 +249,7 @@ static void GenMeshCustom(std::unordered_map<BlockFaceDirection, std::vector<flo
 
                 if (!curVoxelIsEmpty) {
 
-                    float3 curPosition = { _x, _y, _z };
+                    int curPosition = PackThreeNumbers(x + chunkSize, y + chunkSize, z + chunkSize);
 
                     float curNoiseTop = perlin.noise3D_01((double)_x * scale, (double)_z * scale, (double)(_y + 1) * scale);
 
@@ -344,7 +349,7 @@ bool ShouldDrawChunk(Vector3 curChunkPos, Camera camera) {
     Plane farPlane = { position + (cameraDir * 100), cameraDir * -1 };
     Plane rightPlane = { position, Vector3CrossProduct(Vector3RotateByAxisAngle(cameraDir, {0, 1, 0}, DEG2RAD * camera.fovy * 0.5f), {0, 1, 0}) };
     Plane leftPlane = { position, Vector3CrossProduct({0, 1, 0}, Vector3RotateByAxisAngle(cameraDir, {0, 1, 0}, DEG2RAD * camera.fovy * -0.5f)) };
-    Plane topPlane = { position, Vector3CrossProduct(cameraRight, Vector3RotateByAxisAngle(cameraDir, cameraRight, DEG2RAD * camera.fovy * 0.5f)) };
+    Plane topPlane = { position, Vector3CrossProduct(Vector3RotateByAxisAngle(cameraDir, cameraRight, DEG2RAD * camera.fovy * 0.5f), cameraRight) };
     Plane bottomPlane = { position, Vector3CrossProduct(cameraRight, Vector3RotateByAxisAngle(cameraDir, cameraRight, DEG2RAD * camera.fovy * -0.5f)) };
 
     float dotProduct = Vector3DotProduct(cameraDir, Vector3Normalize(Vector3Subtract(curChunkPos, camera.position)));
@@ -362,6 +367,14 @@ bool ShouldDrawChunk(Vector3 curChunkPos, Camera camera) {
     }
 
     if (Vector3DotProduct(leftPlane.normal, Vector3Normalize(Vector3Subtract(curChunkPos, leftPlane.pointOnPlane))) < 0) {
+        return false;
+    }
+
+    if (Vector3DotProduct(topPlane.normal, Vector3Normalize(Vector3Subtract(curChunkPos, topPlane.pointOnPlane))) < 0) {
+        return false;
+    }
+
+    if (Vector3DotProduct(bottomPlane.normal, Vector3Normalize(Vector3Subtract(curChunkPos, bottomPlane.pointOnPlane))) < 0) {
         return false;
     }
 

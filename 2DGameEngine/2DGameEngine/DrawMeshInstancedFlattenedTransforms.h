@@ -9,7 +9,7 @@
 #endif
 
 // Draw multiple mesh instances with material and different transforms
-void DrawMeshInstancedFlattenedPositions(Mesh mesh, Material material, const float3* instancePositions, int instances)
+void DrawMeshInstancedFlattenedPositions(Mesh mesh, Material material, const int* instancePositions, int instances)
 {
     // Instancing required variables
     //float16* instanceTransforms = NULL;
@@ -73,10 +73,10 @@ void DrawMeshInstancedFlattenedPositions(Mesh mesh, Material material, const flo
     // It isn't clear which would be reliably faster in all cases and on all platforms,
     // anecdotally glMapBuffer() seems very slow (syncs) while glBufferSubData() seems
     // no faster, since we're transferring all the transform matrices anyway
-    instancesVboId = rlLoadVertexBuffer(instancePositions, instances * sizeof(float3), false);
+    instancesVboId = rlLoadVertexBuffer(instancePositions, instances * sizeof(int), false);
 
     rlEnableVertexAttribute(3);
-    rlSetVertexAttribute(3, 3, RL_FLOAT, 0, sizeof(float3), 0);
+    rlSetVertexAttributeI(3, 1, RL_INT, 0, sizeof(int), 0);
     rlSetVertexAttributeDivisor(3, 1);
 
     rlDisableVertexBuffer();

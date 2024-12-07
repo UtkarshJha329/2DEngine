@@ -6,7 +6,7 @@ layout (location = 1) in vec2 vertexTexCoord;
 layout (location = 2) in vec3 vertexNormal;
 //in vec4 vertexColor;      // Not required
 
-layout (location = 3) in vec3 instancePosition;
+layout (location = 3) in int instancePosition;
 
 // Input uniform values
 uniform mat4 mvp;
@@ -20,11 +20,14 @@ out vec3 fragNormal;
 
 // NOTE: Add here your custom variables
 
+uniform vec3 curChunkPos;
+
 void main()
 {
-
+    vec3 curVoxelPos = vec3((instancePosition >> 10) & 0x1F, (instancePosition >> 5) & 0x1F, instancePosition & 0x1F) - vec3(16);  
+    vec3 curPos = curChunkPos + curVoxelPos;
     mat4 translationMatrix = mat4(1.0);  // Identity matrix
-    translationMatrix[3] = vec4(instancePosition, 1.0);
+    translationMatrix[3] = vec4(curPos, 1.0);
 
     //// Construct the rotation matrix (using rotationAxis and rotationAngle)
     //mat4 rotationMatrix = mat4(1.0); // Identity matrix
