@@ -1,6 +1,7 @@
 
 #include <iostream>
 #include <chrono>
+#include <thread>
 
 #include "flecs/flecs.h"
 #include "raylib/raylib.h"
@@ -53,7 +54,15 @@ void SetRandomColour(float* ambient, int x, int y) {
     ambient[3] = curColor.a;
 }
 
-bool once = true;
+static void GenChunkMesh(std::unordered_map<BlockFaceDirection, std::vector<int>>& transformOfVerticesOfFaceInParticularDir, std::unordered_map<int, bool> &chunkGenerated, int chunkIndex, Vector3 position) {
+    
+    GenMeshCustom(transformOfVerticesOfFaceInParticularDir, position);
+    chunkGenerated[chunkIndex] = true;
+}
+
+const siv::PerlinNoise::seed_type seed = 123456u;
+
+const siv::PerlinNoise perlin{ seed };
 
 int main()
 {
@@ -104,22 +113,36 @@ int main()
     //std::vector<std::vector<std::vector<std::unordered_map<BlockFaceDirection, std::vector<float16>>>>> chunkTransformOfVerticesOfFaceInParticularDir(numChunksWidth, std::vector<std::vector<std::unordered_map<BlockFaceDirection, std::vector<float16>>>(numChunksWidth, std::vector<std::unordered_map<BlockFaceDirection, std::vector<float16>>>(numChunksWidth)));
     //ThreeDimensionalStdVectorUnorderedMap(chunkTransformOfVerticesOfFaceInParticularDir, BlockFaceDirection, std::vector<float3>, numChunksWidth);
     ThreeDimensionalStdVectorUnorderedMap(chunkTransformOfVerticesOfFaceInParticularDir, BlockFaceDirection, std::vector<int>, numChunksWidth);
+    std::unordered_map<int, bool> chunkGenerated;
 
     int numChunksY = 3;
+
+    std::vector<std::thread> chunkMeshGenThreads;
 
     Vector3 curChunkPos = { 0, 0, 0 };
     for (int i = -numChunks + 1; i < numChunks; i++)
     {
-        curChunkPos.x = i * (2 * chunkSize);
+        curChunkPos.x = i * (2 * (chunkSize - 1));
 
         for (int j = -numChunks + 1; j < numChunks; j++)
         {
-            curChunkPos.z = j * (2 * chunkSize);
+            curChunkPos.z = j * (2 * (chunkSize - 1));
 
             for (int k = -numChunksY + 1; k < numChunksY; k++)
             {
-                curChunkPos.y = k * (2 * chunkSize);
-                GenMeshCustom(chunkTransformOfVerticesOfFaceInParticularDir[i + numChunks][j + numChunks][k + numChunksY], curChunkPos);
+                curChunkPos.y = k * (2 * (chunkSize - 1));
+                //GenMeshCustom(chunkTransformOfVerticesOfFaceInParticularDir[i + numChunks][j + numChunks][k + numChunksY], curChunkPos);
+                int ic = i + numChunks;
+                int jc = j + numChunks;
+                int kc = k + numChunksY;
+                int curID = ic << 10 | jc << 5 | kc;
+                //std::cout << chunkIndex << std::endl;
+                chunkMeshGenThreads.push_back(std::thread(GenChunkMesh
+                    , std::ref(chunkTransformOfVerticesOfFaceInParticularDir[i + numChunks][j + numChunks][k + numChunksY])
+                    , std::ref(chunkGenerated), curID, curChunkPos));
+
+                //MeshGeneratingThread.detach();
+                
             }
 
         }
@@ -165,43 +188,53 @@ int main()
                 {
                     for (int i = -numChunks + 1; i < numChunks; i++)
                     {
-                        Vector3 curChunkPos = { i * ((chunkSize * 2)), k * ((chunkSize * 2)), (j * ((chunkSize * 2)))};
+                        Vector3 curChunkPos = { i * (((chunkSize) * 2) - 1), k * (((chunkSize) * 2) - 1), (j * (((chunkSize) * 2) - 1))};
 
+                        //Vector3 chunkIndex = { i + numChunks, j + numChunks, k + numChunksY };
                         if (ShouldDrawChunk(curChunkPos, camera)) {
 
-                            int curChunkPosLoc = GetShaderLocation(instanceShader, "curChunkPos");
-                            float curChunkPosValue[3] = { curChunkPos.x, curChunkPos.y, curChunkPos.z };
-                            SetShaderValue(instanceShader, curChunkPosLoc, curChunkPosValue, SHADER_UNIFORM_VEC3);
+                            int ic = i + numChunks;
+                            int jc = j + numChunks;
+                            int kc = k + numChunksY;
+                            int curID = ic << 10 | jc << 5 | kc;
 
-                            DrawMeshInstancedFlattenedPositions(chunkMeshFacingParticularDir[BlockFaceDirection::UP]
-                                , instancedMaterial
-                                , chunkTransformOfVerticesOfFaceInParticularDir[i + numChunks][j + numChunks][k + numChunksY][BlockFaceDirection::UP].data()
-                                , chunkTransformOfVerticesOfFaceInParticularDir[i + numChunks][j + numChunks][k + numChunksY][BlockFaceDirection::UP].size());
+                            if (chunkGenerated[curID]) {
 
-                            DrawMeshInstancedFlattenedPositions(chunkMeshFacingParticularDir[BlockFaceDirection::DOWN]
-                                , instancedMaterial
-                                , chunkTransformOfVerticesOfFaceInParticularDir[i + numChunks][j + numChunks][k + numChunksY][BlockFaceDirection::DOWN].data()
-                                , chunkTransformOfVerticesOfFaceInParticularDir[i + numChunks][j + numChunks][k + numChunksY][BlockFaceDirection::DOWN].size());
+                                int curChunkPosLoc = GetShaderLocation(instanceShader, "curChunkPos");
+                                float curChunkPosValue[3] = { curChunkPos.x, curChunkPos.y, curChunkPos.z };
+                                SetShaderValue(instanceShader, curChunkPosLoc, curChunkPosValue, SHADER_UNIFORM_VEC3);
 
-                            DrawMeshInstancedFlattenedPositions(chunkMeshFacingParticularDir[BlockFaceDirection::FRONT]
-                                , instancedMaterial
-                                , chunkTransformOfVerticesOfFaceInParticularDir[i + numChunks][j + numChunks][k + numChunksY][BlockFaceDirection::FRONT].data()
-                                , chunkTransformOfVerticesOfFaceInParticularDir[i + numChunks][j + numChunks][k + numChunksY][BlockFaceDirection::FRONT].size());
+                                DrawMeshInstancedFlattenedPositions(chunkMeshFacingParticularDir[BlockFaceDirection::UP]
+                                    , instancedMaterial
+                                    , chunkTransformOfVerticesOfFaceInParticularDir[i + numChunks][j + numChunks][k + numChunksY][BlockFaceDirection::UP].data()
+                                    , chunkTransformOfVerticesOfFaceInParticularDir[i + numChunks][j + numChunks][k + numChunksY][BlockFaceDirection::UP].size());
 
-                            DrawMeshInstancedFlattenedPositions(chunkMeshFacingParticularDir[BlockFaceDirection::BACK]
-                                , instancedMaterial
-                                , chunkTransformOfVerticesOfFaceInParticularDir[i + numChunks][j + numChunks][k + numChunksY][BlockFaceDirection::BACK].data()
-                                , chunkTransformOfVerticesOfFaceInParticularDir[i + numChunks][j + numChunks][k + numChunksY][BlockFaceDirection::BACK].size());
+                                DrawMeshInstancedFlattenedPositions(chunkMeshFacingParticularDir[BlockFaceDirection::DOWN]
+                                    , instancedMaterial
+                                    , chunkTransformOfVerticesOfFaceInParticularDir[i + numChunks][j + numChunks][k + numChunksY][BlockFaceDirection::DOWN].data()
+                                    , chunkTransformOfVerticesOfFaceInParticularDir[i + numChunks][j + numChunks][k + numChunksY][BlockFaceDirection::DOWN].size());
 
-                            DrawMeshInstancedFlattenedPositions(chunkMeshFacingParticularDir[BlockFaceDirection::RIGHT]
-                                , instancedMaterial
-                                , chunkTransformOfVerticesOfFaceInParticularDir[i + numChunks][j + numChunks][k + numChunksY][BlockFaceDirection::RIGHT].data()
-                                , chunkTransformOfVerticesOfFaceInParticularDir[i + numChunks][j + numChunks][k + numChunksY][BlockFaceDirection::RIGHT].size());
+                                DrawMeshInstancedFlattenedPositions(chunkMeshFacingParticularDir[BlockFaceDirection::FRONT]
+                                    , instancedMaterial
+                                    , chunkTransformOfVerticesOfFaceInParticularDir[i + numChunks][j + numChunks][k + numChunksY][BlockFaceDirection::FRONT].data()
+                                    , chunkTransformOfVerticesOfFaceInParticularDir[i + numChunks][j + numChunks][k + numChunksY][BlockFaceDirection::FRONT].size());
 
-                            DrawMeshInstancedFlattenedPositions(chunkMeshFacingParticularDir[BlockFaceDirection::LEFT]
-                                , instancedMaterial
-                                , chunkTransformOfVerticesOfFaceInParticularDir[i + numChunks][j + numChunks][k + numChunksY][BlockFaceDirection::LEFT].data()
-                                , chunkTransformOfVerticesOfFaceInParticularDir[i + numChunks][j + numChunks][k + numChunksY][BlockFaceDirection::LEFT].size());
+                                DrawMeshInstancedFlattenedPositions(chunkMeshFacingParticularDir[BlockFaceDirection::BACK]
+                                    , instancedMaterial
+                                    , chunkTransformOfVerticesOfFaceInParticularDir[i + numChunks][j + numChunks][k + numChunksY][BlockFaceDirection::BACK].data()
+                                    , chunkTransformOfVerticesOfFaceInParticularDir[i + numChunks][j + numChunks][k + numChunksY][BlockFaceDirection::BACK].size());
+
+                                DrawMeshInstancedFlattenedPositions(chunkMeshFacingParticularDir[BlockFaceDirection::RIGHT]
+                                    , instancedMaterial
+                                    , chunkTransformOfVerticesOfFaceInParticularDir[i + numChunks][j + numChunks][k + numChunksY][BlockFaceDirection::RIGHT].data()
+                                    , chunkTransformOfVerticesOfFaceInParticularDir[i + numChunks][j + numChunks][k + numChunksY][BlockFaceDirection::RIGHT].size());
+
+                                DrawMeshInstancedFlattenedPositions(chunkMeshFacingParticularDir[BlockFaceDirection::LEFT]
+                                    , instancedMaterial
+                                    , chunkTransformOfVerticesOfFaceInParticularDir[i + numChunks][j + numChunks][k + numChunksY][BlockFaceDirection::LEFT].data()
+                                    , chunkTransformOfVerticesOfFaceInParticularDir[i + numChunks][j + numChunks][k + numChunksY][BlockFaceDirection::LEFT].size());
+                            }
+
                         }
                     }
                 }
@@ -210,7 +243,21 @@ int main()
             DrawGrid(10, 1.0);
 
             EndMode3D();
-
+            
+            //int numVoxelsPerChunk = chunkSize * 2;
+            //Vector3 cameraChunkPos = { (int)camera.position.x / numVoxelsPerChunk, (int)camera.position.y / numVoxelsPerChunk, (int)camera.position.z / numVoxelsPerChunk };
+            //Vector3 cameraVoxelPos = { (int)camera.position.x - cameraChunkPos.x, (int)camera.position.y - cameraChunkPos.y, (int)camera.position.z - cameraChunkPos.z };
+            //cameraVoxelPos = Vector3SubtractValue(cameraVoxelPos, numVoxelsPerChunk / 2);
+            //std::string cameraVoxelPosText = std::to_string(cameraVoxelPos.x) + ", " + std::to_string(cameraVoxelPos.y) + ", " + std::to_string(cameraVoxelPos.z);
+            //std::string cameraChunkPosText = std::to_string(cameraChunkPos.x) + ", " + std::to_string(cameraChunkPos.y) + ", " + std::to_string(cameraChunkPos.z);
+            //DrawText(cameraVoxelPosText.c_str(), 0, 0, 20, BLACK);
+            //DrawText(cameraChunkPosText.c_str(), 0, 120, 20, BLACK);
+            //int x = (int)camera.position.x;
+            //int y = (int)camera.position.y;
+            //int z = (int)camera.position.z;
+            //float scale = 0.1f;
+            //std::string curNoiseValue = std::to_string(perlin.noise3D_01((double)x * scale, (double)z * scale, (double)(y) * scale));
+            //DrawText(curNoiseValue.c_str(), 0, 140, 20, BLACK);
             DrawFPS(40, 40);
 
         EndDrawing();
@@ -219,6 +266,11 @@ int main()
     UnloadShader(instanceShader);
     UnloadTexture(textureLoad);
 
+    for (int i = 0; i < chunkMeshGenThreads.size(); i++)
+    {
+        chunkMeshGenThreads[i].join();
+    }
+
     CloseWindow();
     return 0;
 }
@@ -226,21 +278,17 @@ int main()
 static void GenMeshCustom(std::unordered_map<BlockFaceDirection, std::vector<int>>& transformOfVerticesOfFaceInParticularDir
     , Vector3 position)
 {
-    const siv::PerlinNoise::seed_type seed = 123456u;
-
-    const siv::PerlinNoise perlin{ seed };
-
     float scale = 0.1f;
 
-    for (int y = -chunkSize + 1; y < chunkSize; y++)
+    for (int y = -chunkSize; y < chunkSize; y++)
     {
-        for (int x = -chunkSize + 1; x < chunkSize; x++)
+        for (int x = -chunkSize; x < chunkSize; x++)
         {
-            for (int z = -chunkSize + 1; z < chunkSize; z++)
+            for (int z = -chunkSize; z < chunkSize; z++)
             {
-                int _x = x + chunkSize + position.x;
-                int _y = y + chunkSize + position.y;
-                int _z = z + chunkSize + position.z;
+                int _x = x + position.x;
+                int _y = y + position.y;
+                int _z = z + position.z;
 
                 float curNoise = perlin.noise3D_01((double)_x * scale, (double)_z * scale, (double)_y * scale);
 
@@ -253,7 +301,7 @@ static void GenMeshCustom(std::unordered_map<BlockFaceDirection, std::vector<int
 
                     float curNoiseTop = perlin.noise3D_01((double)_x * scale, (double)_z * scale, (double)(_y + 1) * scale);
 
-                    if (curNoiseTop < emptyThreshold || y == chunkSize) {
+                    if (curNoiseTop < emptyThreshold) {
                         transformOfVerticesOfFaceInParticularDir[BlockFaceDirection::UP].push_back(curPosition);
                     }
 
@@ -336,23 +384,66 @@ Mesh PlaneFacingDir(Vector3 dir) {
     return curMesh;
 }
 
+//bool ShouldDrawChunk(Vector3 curChunkPos, Camera camera) {
+//
+//    Vector3 position = { 0, 0, 0 };
+//
+//    Vector3 cameraDir = Vector3Subtract(camera.target, camera.position);
+//    cameraDir = Vector3Normalize(cameraDir);
+//
+//    Vector3 cameraRight = Vector3CrossProduct(cameraDir, { 0, 1, 0 });
+//    
+//    Plane nearPlane = { camera.position, cameraDir };
+//    Plane farPlane = { camera.position + (cameraDir * 100), cameraDir * -1 };
+//    Plane rightPlane = { camera.position, Vector3CrossProduct(Vector3RotateByAxisAngle(cameraDir, {0, 1, 0}, DEG2RAD * camera.fovy * 0.5f), {0, 1, 0}) };
+//    Plane leftPlane = { camera.position, Vector3CrossProduct({0, 1, 0}, Vector3RotateByAxisAngle(cameraDir, {0, 1, 0}, DEG2RAD * camera.fovy * -0.5f)) };
+//    Plane topPlane = { camera.position, Vector3CrossProduct(Vector3RotateByAxisAngle(cameraDir, cameraRight, DEG2RAD * camera.fovy * 0.5f), cameraRight) };
+//    Plane bottomPlane = { camera.position, Vector3CrossProduct(cameraRight, Vector3RotateByAxisAngle(cameraDir, cameraRight, DEG2RAD * camera.fovy * -0.5f)) };
+//
+//
+//    if (Vector3DotProduct(nearPlane.normal, Vector3Normalize(Vector3Subtract(curChunkPos, nearPlane.pointOnPlane))) < 0) {
+//        return false;
+//    }
+//
+//    if (Vector3DotProduct(farPlane.normal, Vector3Normalize(Vector3Subtract(curChunkPos, farPlane.pointOnPlane))) < 0) {
+//        return false;
+//    }
+//
+//    if (Vector3DotProduct(rightPlane.normal, Vector3Normalize(Vector3Subtract(curChunkPos, rightPlane.pointOnPlane))) < 0) {
+//        return false;
+//    }
+//
+//    if (Vector3DotProduct(leftPlane.normal, Vector3Normalize(Vector3Subtract(curChunkPos, leftPlane.pointOnPlane))) < 0) {
+//        return false;
+//    }
+//
+//    if (Vector3DotProduct(topPlane.normal, Vector3Normalize(Vector3Subtract(curChunkPos, topPlane.pointOnPlane))) < 0) {
+//        return false;
+//    }
+//
+//    if (Vector3DotProduct(bottomPlane.normal, Vector3Normalize(Vector3Subtract(curChunkPos, bottomPlane.pointOnPlane))) < 0) {
+//        return false;
+//    }
+//
+//    return true;
+//}
+
 bool ShouldDrawChunk(Vector3 curChunkPos, Camera camera) {
 
-    Vector3 position = { 0, 0, 0 };
+    float diagonalDist = 2 * chunkSize * 1.732f;
 
     Vector3 cameraDir = Vector3Subtract(camera.target, camera.position);
     cameraDir = Vector3Normalize(cameraDir);
 
     Vector3 cameraRight = Vector3CrossProduct(cameraDir, { 0, 1, 0 });
-    
+    Vector3 position = camera.position - cameraDir * diagonalDist * 1.414f;
+
     Plane nearPlane = { position, cameraDir };
-    Plane farPlane = { position + (cameraDir * 100), cameraDir * -1 };
+    Plane farPlane = { position + (cameraDir * (100 + diagonalDist * 1.414f)), cameraDir * -1 };
     Plane rightPlane = { position, Vector3CrossProduct(Vector3RotateByAxisAngle(cameraDir, {0, 1, 0}, DEG2RAD * camera.fovy * 0.5f), {0, 1, 0}) };
     Plane leftPlane = { position, Vector3CrossProduct({0, 1, 0}, Vector3RotateByAxisAngle(cameraDir, {0, 1, 0}, DEG2RAD * camera.fovy * -0.5f)) };
     Plane topPlane = { position, Vector3CrossProduct(Vector3RotateByAxisAngle(cameraDir, cameraRight, DEG2RAD * camera.fovy * 0.5f), cameraRight) };
     Plane bottomPlane = { position, Vector3CrossProduct(cameraRight, Vector3RotateByAxisAngle(cameraDir, cameraRight, DEG2RAD * camera.fovy * -0.5f)) };
-
-    float dotProduct = Vector3DotProduct(cameraDir, Vector3Normalize(Vector3Subtract(curChunkPos, camera.position)));
 
     if (Vector3DotProduct(nearPlane.normal, Vector3Normalize(Vector3Subtract(curChunkPos, nearPlane.pointOnPlane))) < 0) {
         return false;
@@ -379,4 +470,96 @@ bool ShouldDrawChunk(Vector3 curChunkPos, Camera camera) {
     }
 
     return true;
+
+    //float distFromNearPlane = Vector3DotProduct(nearPlane.normal, (Vector3Subtract(curChunkPos, nearPlane.pointOnPlane)));
+    //float distFromFarPlane = Vector3DotProduct(farPlane.normal, (Vector3Subtract(curChunkPos, farPlane.pointOnPlane)));
+    //float distFromRightPlane = Vector3DotProduct(rightPlane.normal, (Vector3Subtract(curChunkPos, rightPlane.pointOnPlane)));
+    //float distFromLeftPlane = Vector3DotProduct(leftPlane.normal, (Vector3Subtract(curChunkPos, leftPlane.pointOnPlane)));
+    //float distFromTopPlane = Vector3DotProduct(topPlane.normal, (Vector3Subtract(curChunkPos, topPlane.pointOnPlane)));
+    //float distFromBottomPlane = Vector3DotProduct(bottomPlane.normal, (Vector3Subtract(curChunkPos, bottomPlane.pointOnPlane)));
+
+    //std::cout << abs(distFromNearPlane) << ", " 
+    //            << abs(distFromFarPlane) << ", " 
+    //            << abs(distFromRightPlane) << ", " 
+    //            << abs(distFromLeftPlane) << ", " 
+    //            << abs(distFromTopPlane) << ", " 
+    //            << abs(distFromBottomPlane) << std::endl;
+
+    //THE PROBLEM
+    //IS THAT
+    //THE PLANES EXTEND TO INFINITY
+    //SO EVERYTHING NEAR THOSE PLANES IS CONSIDERED LEGIBLE WITH THIS
+    //||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||
+    //VVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVV
+
+    //if (abs(distFromNearPlane) <= diagonalDist
+    //    || abs(distFromFarPlane) <= diagonalDist
+    //    || abs(distFromRightPlane) <= diagonalDist
+    //    || abs(distFromLeftPlane) <= diagonalDist
+    //    || abs(distFromTopPlane) <= diagonalDist
+    //    || abs(distFromBottomPlane) <= diagonalDist) {
+    //    return true;
+    //}
+    
+    return false;
 }
+
+//bool ShouldDrawChunk(Vector3 curChunkPos, Camera camera) {
+//
+//    Vector3 position = { 0, 0, 0 };
+//
+//    const int numCorners = 6;
+//    Vector3 curChunkCornerVertices[numCorners] = {
+//        {curChunkPos.x - chunkSize, curChunkPos.y - chunkSize, curChunkPos.z - chunkSize}
+//        ,{curChunkPos.x - chunkSize, curChunkPos.y - chunkSize, curChunkPos.z + chunkSize}
+//        ,{curChunkPos.x - chunkSize, curChunkPos.y + chunkSize, curChunkPos.z + chunkSize}
+//        ,{curChunkPos.x + chunkSize, curChunkPos.y - chunkSize, curChunkPos.z - chunkSize}
+//        ,{curChunkPos.x + chunkSize, curChunkPos.y + chunkSize, curChunkPos.z - chunkSize}
+//        ,{curChunkPos.x + chunkSize, curChunkPos.y + chunkSize, curChunkPos.z + chunkSize}
+//    };
+//
+//    Vector3 cameraDir = Vector3Subtract(camera.target, camera.position);
+//    cameraDir = Vector3Normalize(cameraDir);
+//
+//    Vector3 cameraRight = Vector3CrossProduct(cameraDir, { 0, 1, 0 });
+//
+//    Plane nearPlane = { camera.position, cameraDir };
+//    Plane farPlane = { camera.position + (cameraDir * 100), cameraDir * -1 };
+//    Plane rightPlane = { camera.position, Vector3CrossProduct(Vector3RotateByAxisAngle(cameraDir, {0, 1, 0}, DEG2RAD * camera.fovy * 0.5f), {0, 1, 0}) };
+//    Plane leftPlane = { camera.position, Vector3CrossProduct({0, 1, 0}, Vector3RotateByAxisAngle(cameraDir, {0, 1, 0}, DEG2RAD * camera.fovy * -0.5f)) };
+//    Plane topPlane = { camera.position, Vector3CrossProduct(Vector3RotateByAxisAngle(cameraDir, cameraRight, DEG2RAD * camera.fovy * 0.5f), cameraRight) };
+//    Plane bottomPlane = { camera.position, Vector3CrossProduct(cameraRight, Vector3RotateByAxisAngle(cameraDir, cameraRight, DEG2RAD * camera.fovy * -0.5f)) };
+//
+//    float dotProduct = Vector3DotProduct(cameraDir, Vector3Normalize(Vector3Subtract(curChunkPos, camera.position)));
+//
+//    for (int i = 0; i < numCorners; i++)
+//    {
+//        if (Vector3DotProduct(nearPlane.normal, Vector3Normalize(Vector3Subtract(curChunkCornerVertices[i], nearPlane.pointOnPlane))) < 0) {
+//            break;
+//        }
+//
+//        if (Vector3DotProduct(farPlane.normal, Vector3Normalize(Vector3Subtract(curChunkCornerVertices[i], farPlane.pointOnPlane))) < 0) {
+//            break;
+//        }
+//
+//        if (Vector3DotProduct(rightPlane.normal, Vector3Normalize(Vector3Subtract(curChunkCornerVertices[i], rightPlane.pointOnPlane))) < 0) {
+//            break;
+//        }
+//
+//        if (Vector3DotProduct(leftPlane.normal, Vector3Normalize(Vector3Subtract(curChunkCornerVertices[i], leftPlane.pointOnPlane))) < 0) {
+//            break;
+//        }
+//
+//        if (Vector3DotProduct(topPlane.normal, Vector3Normalize(Vector3Subtract(curChunkCornerVertices[i], topPlane.pointOnPlane))) < 0) {
+//            break;
+//        }
+//
+//        if (Vector3DotProduct(bottomPlane.normal, Vector3Normalize(Vector3Subtract(curChunkCornerVertices[i], bottomPlane.pointOnPlane))) < 0) {
+//            break;
+//        }
+//
+//        return true;
+//    }
+//
+//    return false;
+//}
