@@ -112,7 +112,7 @@ int main()
 
     //std::vector<std::vector<std::vector<std::unordered_map<BlockFaceDirection, std::vector<float16>>>>> chunkTransformOfVerticesOfFaceInParticularDir(numChunksWidth, std::vector<std::vector<std::unordered_map<BlockFaceDirection, std::vector<float16>>>(numChunksWidth, std::vector<std::unordered_map<BlockFaceDirection, std::vector<float16>>>(numChunksWidth)));
     //ThreeDimensionalStdVectorUnorderedMap(chunkTransformOfVerticesOfFaceInParticularDir, BlockFaceDirection, std::vector<float3>, numChunksWidth);
-    ThreeDimensionalStdVectorUnorderedMap(chunkTransformOfVerticesOfFaceInParticularDir, BlockFaceDirection, std::vector<int>, numChunksWidth);
+    ThreeDimensionalStdVectorUnorderedMap(chunkTransformOfVerticesOfFaceInParticularDir, BlockFaceDirection, std::vector<int>, chunkSize);
     std::unordered_map<int, bool> chunkGenerated;
 
     int numChunksY = 3;
@@ -120,25 +120,22 @@ int main()
     std::vector<std::thread> chunkMeshGenThreads;
 
     Vector3 curChunkPos = { 0, 0, 0 };
-    for (int i = -numChunks + 1; i < numChunks; i++)
+    for (int i = 0; i < numChunks; i++)
     {
-        curChunkPos.x = i * (2 * (chunkSize - 1));
+        curChunkPos.x = i * chunkSize;
 
-        for (int j = -numChunks + 1; j < numChunks; j++)
+        for (int j = 0; j < numChunks; j++)
         {
-            curChunkPos.z = j * (2 * (chunkSize - 1));
+            curChunkPos.z = j * chunkSize;
 
-            for (int k = -numChunksY + 1; k < numChunksY; k++)
+            for (int k = 0; k < numChunksY; k++)
             {
-                curChunkPos.y = k * (2 * (chunkSize - 1));
-                //GenMeshCustom(chunkTransformOfVerticesOfFaceInParticularDir[i + numChunks][j + numChunks][k + numChunksY], curChunkPos);
-                int ic = i + numChunks;
-                int jc = j + numChunks;
-                int kc = k + numChunksY;
-                int curID = ic << 10 | jc << 5 | kc;
+                curChunkPos.y = k * chunkSize;
+
+                int curID = i << 10 | k << 5 | j;
                 //std::cout << chunkIndex << std::endl;
                 chunkMeshGenThreads.push_back(std::thread(GenChunkMesh
-                    , std::ref(chunkTransformOfVerticesOfFaceInParticularDir[i + numChunks][j + numChunks][k + numChunksY])
+                    , std::ref(chunkTransformOfVerticesOfFaceInParticularDir[i][j][k])
                     , std::ref(chunkGenerated), curID, curChunkPos));
 
                 //MeshGeneratingThread.detach();
@@ -170,8 +167,6 @@ int main()
 
     while (!WindowShouldClose())
     {
-        auto curTime = std::chrono::high_resolution_clock::now();
-
         UpdateCamera(&camera, CAMERA_FREE);
 
         float cameraPos[3] = {camera.position.x, camera.position.y, camera.position.z};
@@ -182,21 +177,18 @@ int main()
 
             BeginMode3D(camera);
 
-            for (int k = -numChunksY + 1; k < numChunksY; k++)
+            for (int k = 0; k < numChunksY; k++)
             {
-                for (int j = -numChunks + 1; j < numChunks; j++)
+                for (int j = 0; j < numChunks; j++)
                 {
-                    for (int i = -numChunks + 1; i < numChunks; i++)
+                    for (int i = 0; i < numChunks; i++)
                     {
-                        Vector3 curChunkPos = { i * (((chunkSize) * 2) - 1), k * (((chunkSize) * 2) - 1), (j * (((chunkSize) * 2) - 1))};
+                        Vector3 curChunkPos = { i * chunkSize, k * chunkSize, j * chunkSize};
 
                         //Vector3 chunkIndex = { i + numChunks, j + numChunks, k + numChunksY };
                         if (ShouldDrawChunk(curChunkPos, camera)) {
 
-                            int ic = i + numChunks;
-                            int jc = j + numChunks;
-                            int kc = k + numChunksY;
-                            int curID = ic << 10 | jc << 5 | kc;
+                            int curID = i << 10 | k << 5 | j;
 
                             if (chunkGenerated[curID]) {
 
@@ -206,33 +198,33 @@ int main()
 
                                 DrawMeshInstancedFlattenedPositions(chunkMeshFacingParticularDir[BlockFaceDirection::UP]
                                     , instancedMaterial
-                                    , chunkTransformOfVerticesOfFaceInParticularDir[i + numChunks][j + numChunks][k + numChunksY][BlockFaceDirection::UP].data()
-                                    , chunkTransformOfVerticesOfFaceInParticularDir[i + numChunks][j + numChunks][k + numChunksY][BlockFaceDirection::UP].size());
+                                    , chunkTransformOfVerticesOfFaceInParticularDir[i][j][k][BlockFaceDirection::UP].data()
+                                    , chunkTransformOfVerticesOfFaceInParticularDir[i][j][k][BlockFaceDirection::UP].size());
 
                                 DrawMeshInstancedFlattenedPositions(chunkMeshFacingParticularDir[BlockFaceDirection::DOWN]
                                     , instancedMaterial
-                                    , chunkTransformOfVerticesOfFaceInParticularDir[i + numChunks][j + numChunks][k + numChunksY][BlockFaceDirection::DOWN].data()
-                                    , chunkTransformOfVerticesOfFaceInParticularDir[i + numChunks][j + numChunks][k + numChunksY][BlockFaceDirection::DOWN].size());
+                                    , chunkTransformOfVerticesOfFaceInParticularDir[i][j][k][BlockFaceDirection::DOWN].data()
+                                    , chunkTransformOfVerticesOfFaceInParticularDir[i][j][k][BlockFaceDirection::DOWN].size());
 
                                 DrawMeshInstancedFlattenedPositions(chunkMeshFacingParticularDir[BlockFaceDirection::FRONT]
                                     , instancedMaterial
-                                    , chunkTransformOfVerticesOfFaceInParticularDir[i + numChunks][j + numChunks][k + numChunksY][BlockFaceDirection::FRONT].data()
-                                    , chunkTransformOfVerticesOfFaceInParticularDir[i + numChunks][j + numChunks][k + numChunksY][BlockFaceDirection::FRONT].size());
+                                    , chunkTransformOfVerticesOfFaceInParticularDir[i][j][k][BlockFaceDirection::FRONT].data()
+                                    , chunkTransformOfVerticesOfFaceInParticularDir[i][j][k][BlockFaceDirection::FRONT].size());
 
                                 DrawMeshInstancedFlattenedPositions(chunkMeshFacingParticularDir[BlockFaceDirection::BACK]
                                     , instancedMaterial
-                                    , chunkTransformOfVerticesOfFaceInParticularDir[i + numChunks][j + numChunks][k + numChunksY][BlockFaceDirection::BACK].data()
-                                    , chunkTransformOfVerticesOfFaceInParticularDir[i + numChunks][j + numChunks][k + numChunksY][BlockFaceDirection::BACK].size());
+                                    , chunkTransformOfVerticesOfFaceInParticularDir[i][j][k][BlockFaceDirection::BACK].data()
+                                    , chunkTransformOfVerticesOfFaceInParticularDir[i][j][k][BlockFaceDirection::BACK].size());
 
                                 DrawMeshInstancedFlattenedPositions(chunkMeshFacingParticularDir[BlockFaceDirection::RIGHT]
                                     , instancedMaterial
-                                    , chunkTransformOfVerticesOfFaceInParticularDir[i + numChunks][j + numChunks][k + numChunksY][BlockFaceDirection::RIGHT].data()
-                                    , chunkTransformOfVerticesOfFaceInParticularDir[i + numChunks][j + numChunks][k + numChunksY][BlockFaceDirection::RIGHT].size());
+                                    , chunkTransformOfVerticesOfFaceInParticularDir[i][j][k][BlockFaceDirection::RIGHT].data()
+                                    , chunkTransformOfVerticesOfFaceInParticularDir[i][j][k][BlockFaceDirection::RIGHT].size());
 
                                 DrawMeshInstancedFlattenedPositions(chunkMeshFacingParticularDir[BlockFaceDirection::LEFT]
                                     , instancedMaterial
-                                    , chunkTransformOfVerticesOfFaceInParticularDir[i + numChunks][j + numChunks][k + numChunksY][BlockFaceDirection::LEFT].data()
-                                    , chunkTransformOfVerticesOfFaceInParticularDir[i + numChunks][j + numChunks][k + numChunksY][BlockFaceDirection::LEFT].size());
+                                    , chunkTransformOfVerticesOfFaceInParticularDir[i][j][k][BlockFaceDirection::LEFT].data()
+                                    , chunkTransformOfVerticesOfFaceInParticularDir[i][j][k][BlockFaceDirection::LEFT].size());
                             }
 
                         }
@@ -280,11 +272,11 @@ static void GenMeshCustom(std::unordered_map<BlockFaceDirection, std::vector<int
 {
     float scale = 0.1f;
 
-    for (int y = -chunkSize; y < chunkSize; y++)
+    for (int y = 0; y < chunkSize; y++)
     {
-        for (int x = -chunkSize; x < chunkSize; x++)
+        for (int x = 0; x < chunkSize; x++)
         {
-            for (int z = -chunkSize; z < chunkSize; z++)
+            for (int z = 0; z < chunkSize; z++)
             {
                 int _x = x + position.x;
                 int _y = y + position.y;
@@ -297,7 +289,7 @@ static void GenMeshCustom(std::unordered_map<BlockFaceDirection, std::vector<int
 
                 if (!curVoxelIsEmpty) {
 
-                    int curPosition = PackThreeNumbers(x + chunkSize, y + chunkSize, z + chunkSize);
+                    int curPosition = PackThreeNumbers(x, y, z);
 
                     float curNoiseTop = perlin.noise3D_01((double)_x * scale, (double)_z * scale, (double)(_y + 1) * scale);
 

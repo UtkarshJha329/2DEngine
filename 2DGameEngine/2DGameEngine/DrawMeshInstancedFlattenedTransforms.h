@@ -80,7 +80,7 @@ void DrawMeshInstancedFlattenedPositions(Mesh mesh, Material material, const int
     instancesVboId = rlLoadVertexBuffer(instancePositions, instances * sizeof(int), false);
 
     rlEnableVertexAttribute(3);
-    rlSetVertexAttributeI(3, 1, RL_INT, 0, sizeof(int), 0);
+    rlSetVertexAttributeI(3, 1, RL_INT, 0, 0, 0);
     rlSetVertexAttributeDivisor(3, 1);
 
     rlDisableVertexBuffer();
