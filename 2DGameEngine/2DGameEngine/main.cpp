@@ -1,7 +1,7 @@
 
 #include <iostream>
 #include <chrono>
-#include <thread>
+#include <future>
 
 #include "flecs/flecs.h"
 #include "raylib/raylib.h"
@@ -30,7 +30,11 @@ class VerticesPerFace {
 public:
 
 static void MakeNoise3D(std::vector<std::vector<std::vector<std::vector<std::vector<std::vector<float>>>>>>& noiseStorage, int numChunks, int numChunksY, int chunksSize, float scale);
-static void GenMeshCustom(std::unordered_map<BlockFaceDirection, std::vector<int>>& transformOfVerticesOfFaceInParticularDir
+static void MakeNoise2D(std::vector<std::vector<std::vector<std::vector<std::vector<std::vector<float>>>>>>& noiseStorage, int numChunks, int numChunksY, int chunksSize, float scale);
+
+static void GenMeshCustom3D(std::unordered_map<BlockFaceDirection, std::vector<int>>& transformOfVerticesOfFaceInParticularDir
+    , std::vector<std::vector<std::vector<float>>>& noiseForCurrentChunk);
+static void GenMeshCustom2D(std::unordered_map<BlockFaceDirection, std::vector<int>>& transformOfVerticesOfFaceInParticularDir
     , std::vector<std::vector<std::vector<float>>>& noiseForCurrentChunk);
 Mesh PlaneFacingDir(Vector3 dir);
 
@@ -48,17 +52,25 @@ const int chunkSize = 16;
 
 Color randColors[9] = {LIGHTGRAY, BLACK, RED, YELLOW, PINK, GREEN, BLUE, PURPLE, GOLD};
 
+
+static std::mutex chunkGeneratedMutex;
+
 static void GenChunkMesh(std::unordered_map<BlockFaceDirection, std::vector<int>>& transformOfVerticesOfFaceInParticularDir
     , std::vector<std::vector<std::vector<float>>> &noiseForCurChunk 
     , std::unordered_map<int, bool> &chunkGenerated, int chunkIndex) {
     
-    GenMeshCustom(transformOfVerticesOfFaceInParticularDir, noiseForCurChunk);
+    //GenMeshCustom3D(transformOfVerticesOfFaceInParticularDir, noiseForCurChunk);
+    GenMeshCustom2D(transformOfVerticesOfFaceInParticularDir, noiseForCurChunk);
+
+    std::lock_guard<std::mutex> lock(chunkGeneratedMutex);
     chunkGenerated[chunkIndex] = true;
 }
 
 const siv::PerlinNoise::seed_type seed = 123456u;
 
 const siv::PerlinNoise perlin{ seed };
+
+const int farPlaneDistance = 1000;
 
 int main()
 {
@@ -113,10 +125,11 @@ int main()
 
     int numChunksY = 1;
 
-    std::vector<std::thread> chunkMeshGenThreads;
+    std::vector<std::future<void>> chunkMeshGenThreads;
 
     float scale = 0.1f;
-    MakeNoise3D(noise3D, numChunks, numChunksY, chunkSize, scale);
+    //MakeNoise3D(noise3D, numChunks, numChunksY, chunkSize, scale);
+    MakeNoise2D(noise3D, numChunks, numChunksY, chunkSize, scale);
 
     Vector3 curChunkPos = { 0, 0, 0 };
     for (int i = 0; i < numChunks; i++)
@@ -133,7 +146,7 @@ int main()
 
                 int curID = i << 10 | k << 5 | j;
                 //std::cout << chunkIndex << std::endl;
-                chunkMeshGenThreads.push_back(std::thread(GenChunkMesh
+                chunkMeshGenThreads.push_back(std::async(std::launch::async, GenChunkMesh
                     , std::ref(chunkTransformOfVerticesOfFaceInParticularDir[i][j][k])
                     , std::ref(noise3D[i][k][j])
                     , std::ref(chunkGenerated), curID));
@@ -257,12 +270,6 @@ int main()
 
     UnloadShader(instanceShader);
     UnloadTexture(textureLoad);
-
-    for (int i = 0; i < chunkMeshGenThreads.size(); i++)
-    {
-        chunkMeshGenThreads[i].join();
-    }
-
     CloseWindow();
     return 0;
 }
@@ -297,7 +304,51 @@ static void MakeNoise3D(std::vector<std::vector<std::vector<std::vector<std::vec
 
 }
 
-static void GenMeshCustom(std::unordered_map<BlockFaceDirection, std::vector<int>>& transformOfVerticesOfFaceInParticularDir
+static void MakeNoise2D(std::vector<std::vector<std::vector<std::vector<std::vector<std::vector<float>>>>>>& noiseStorage, int numChunks, int numChunksY, int chunksSize, float scale) {
+
+    int _x, _y, _z = 0;
+
+    for (int chunksX = 0; chunksX < numChunks; chunksX++)
+    {
+        for (int chunksY = 0; chunksY < numChunksY; chunksY++)
+        {
+            for (int chunksZ = 0; chunksZ < numChunks; chunksZ++)
+            {
+                for (int x = 0; x <= chunkSize + 1; x++)
+                {
+                    _x = x + chunksX * chunkSize;
+
+                    for (int z = 0; z <= chunkSize + 1; z++)
+                    {
+                        _z = z + chunksZ * chunksSize;
+
+                        float noise = perlin.noise2D_01((double)_x * scale, (double)_z * scale);
+
+                        int scaledNoise = (int)(noise * chunksSize * numChunksY);
+
+                        for (int y = 0; y <= chunkSize + 1; y++)
+                        {
+                            _y = y + chunksY * chunkSize;
+                            if (_y < scaledNoise) {// This is the position under the noise height.
+                                noiseStorage[chunksX][chunksY][chunksZ][x][y][z] = 0;
+                            }
+                            else if (_y == scaledNoise) {// This is the noise height.
+                                noiseStorage[chunksX][chunksY][chunksZ][x][y][z] = 1;
+                            }
+                            else if (_y > scaledNoise) {// This is the position above the noise height.
+                                noiseStorage[chunksX][chunksY][chunksZ][x][y][z] = 2;
+                            }
+                            
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+}
+
+static void GenMeshCustom3D(std::unordered_map<BlockFaceDirection, std::vector<int>>& transformOfVerticesOfFaceInParticularDir
     , std::vector<std::vector<std::vector<float>>> &noiseForCurrentChunk)
 {
     float scale = 0.1f;
@@ -350,6 +401,107 @@ static void GenMeshCustom(std::unordered_map<BlockFaceDirection, std::vector<int
                     float curNoiseLeft = noiseForCurrentChunk[x - 1][y][z];
 
                     if (curNoiseLeft < emptyThreshold) {
+                        transformOfVerticesOfFaceInParticularDir[BlockFaceDirection::LEFT].push_back(curPosition);
+                    }
+
+                }
+
+            }
+        }
+    }
+}
+
+static void GenMeshCustom2D(std::unordered_map<BlockFaceDirection, std::vector<int>>& transformOfVerticesOfFaceInParticularDir
+    , std::vector<std::vector<std::vector<float>>> &noiseForCurrentChunk)
+{
+    float scale = 0.1f;
+
+    for (int y = 1; y <= chunkSize; y++)
+    {
+        for (int x = 1; x <= chunkSize; x++)
+        {
+            for (int z = 1; z <= chunkSize; z++)
+            {
+                float curNoise = noiseForCurrentChunk[x][y][z];
+
+                if (curNoise == 1) {
+
+                    int curPosition = PackThreeNumbers(x - 1, y - 1, z - 1);
+
+                    float curNoiseTop = noiseForCurrentChunk[x][y + 1][z];
+
+                    if (curNoiseTop == 2) {
+                        transformOfVerticesOfFaceInParticularDir[BlockFaceDirection::UP].push_back(curPosition);
+                    }
+
+                    float curNoiseBottom = noiseForCurrentChunk[x][y - 1][z];
+
+                    if (curNoiseBottom == 0) {
+                        transformOfVerticesOfFaceInParticularDir[BlockFaceDirection::DOWN].push_back(curPosition);
+                    }
+
+                    float curNoiseFront = noiseForCurrentChunk[x][y][z + 1];
+
+                    if (curNoiseFront == 2) {
+                        transformOfVerticesOfFaceInParticularDir[BlockFaceDirection::FRONT].push_back(curPosition);
+                    }
+
+                    float curNoiseBack = noiseForCurrentChunk[x][y][z - 1];
+
+                    if (curNoiseBack == 2) {
+                        transformOfVerticesOfFaceInParticularDir[BlockFaceDirection::BACK].push_back(curPosition);
+                    }
+
+                    float curNoiseRight = noiseForCurrentChunk[x + 1][y][z];
+
+                    if (curNoiseRight == 2) {
+                        transformOfVerticesOfFaceInParticularDir[BlockFaceDirection::RIGHT].push_back(curPosition);
+                    }
+
+                    float curNoiseLeft = noiseForCurrentChunk[x - 1][y][z];
+
+                    if (curNoiseLeft == 2) {
+                        transformOfVerticesOfFaceInParticularDir[BlockFaceDirection::LEFT].push_back(curPosition);
+                    }
+
+                }
+                else if (curNoise == 0) {
+
+                    int curPosition = PackThreeNumbers(x - 1, y - 1, z - 1);
+
+                    float curNoiseTop = noiseForCurrentChunk[x][y + 1][z];
+
+                    if (curNoiseTop == 2) {
+                        transformOfVerticesOfFaceInParticularDir[BlockFaceDirection::UP].push_back(curPosition);
+                    }
+
+                    float curNoiseBottom = noiseForCurrentChunk[x][y - 1][z];
+
+                    if (curNoiseBottom == 2) {
+                        transformOfVerticesOfFaceInParticularDir[BlockFaceDirection::DOWN].push_back(curPosition);
+                    }
+
+                    float curNoiseFront = noiseForCurrentChunk[x][y][z + 1];
+
+                    if (curNoiseFront == 2) {
+                        transformOfVerticesOfFaceInParticularDir[BlockFaceDirection::FRONT].push_back(curPosition);
+                    }
+
+                    float curNoiseBack = noiseForCurrentChunk[x][y][z - 1];
+
+                    if (curNoiseBack == 2) {
+                        transformOfVerticesOfFaceInParticularDir[BlockFaceDirection::BACK].push_back(curPosition);
+                    }
+
+                    float curNoiseRight = noiseForCurrentChunk[x + 1][y][z];
+
+                    if (curNoiseRight == 2) {
+                        transformOfVerticesOfFaceInParticularDir[BlockFaceDirection::RIGHT].push_back(curPosition);
+                    }
+
+                    float curNoiseLeft = noiseForCurrentChunk[x - 1][y][z];
+
+                    if (curNoiseLeft == 2) {
                         transformOfVerticesOfFaceInParticularDir[BlockFaceDirection::LEFT].push_back(curPosition);
                     }
 
@@ -457,7 +609,7 @@ bool ShouldDrawChunk(Vector3 curChunkPos, Camera camera) {
     Vector3 position = camera.position - cameraDir * diagonalDist * 1.414f;
 
     Plane nearPlane = { position, cameraDir };
-    Plane farPlane = { position + (cameraDir * (100 + diagonalDist * 1.414f)), cameraDir * -1 };
+    Plane farPlane = { position + (cameraDir * (farPlaneDistance + diagonalDist * 1.414f)), cameraDir * -1 };
     Plane rightPlane = { position, Vector3CrossProduct(Vector3RotateByAxisAngle(cameraDir, {0, 1, 0}, DEG2RAD * camera.fovy * 0.5f), {0, 1, 0}) };
     Plane leftPlane = { position, Vector3CrossProduct({0, 1, 0}, Vector3RotateByAxisAngle(cameraDir, {0, 1, 0}, DEG2RAD * camera.fovy * -0.5f)) };
     Plane topPlane = { position, Vector3CrossProduct(cameraRight, Vector3RotateByAxisAngle(cameraDir, cameraRight, DEG2RAD * camera.fovy * 0.5f)) };
