@@ -26,8 +26,9 @@
 
 #define TwoDimensionalStdVector(_name, _type, _size) std::vector<std::vector<_type>> _name(_size, std::vector<_type>(_size));
 
-class VerticesPerFace {
-public:
+int PackThreeNumbers(int num1, int num2, int num3) {
+    return num1 << 10 | num2 << 5 | num3;
+}
 
 static void MakeNoise3D(std::vector<std::vector<std::vector<std::vector<std::vector<std::vector<float>>>>>>& noiseStorage, int numChunks, int numChunksY, int chunksSize, float scale);
 static void MakeNoise2D(std::vector<std::vector<std::vector<std::vector<std::vector<std::vector<float>>>>>>& noiseStorage, int numChunks, int numChunksY, int chunksSize, float scale);
@@ -48,6 +49,7 @@ Vector3 right = { 1, 0, 0 };
 Vector3 left = { -1, 0, 0 };
 
 const int numChunks = 10;
+const int numChunksY = 3;
 const int chunkSize = 16;
 
 Color randColors[9] = {LIGHTGRAY, BLACK, RED, YELLOW, PINK, GREEN, BLUE, PURPLE, GOLD};
@@ -122,8 +124,6 @@ int main()
     ThreeDimensionalStdVectorUnorderedMap(chunkTransformOfVerticesOfFaceInParticularDir, BlockFaceDirection, std::vector<int>, chunkSize);
     Noise3D(noise3D, float, numChunks + 1, chunkSize + 3);
     std::unordered_map<int, bool> chunkGenerated;
-
-    int numChunksY = 1;
 
     std::vector<std::future<void>> chunkMeshGenThreads;
 
