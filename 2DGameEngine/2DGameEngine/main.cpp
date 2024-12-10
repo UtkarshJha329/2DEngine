@@ -26,9 +26,8 @@
 
 #define TwoDimensionalStdVector(_name, _type, _size) std::vector<std::vector<_type>> _name(_size, std::vector<_type>(_size));
 
-int PackThreeNumbers(int num1, int num2, int num3) {
-    return (num1 << 10) | (num2 << 5) | num3;
-}
+class VerticesPerFace {
+public:
 
 static void MakeNoise3D(std::vector<std::vector<std::vector<std::vector<std::vector<std::vector<float>>>>>>& noiseStorage, int numChunks, int numChunksY, int chunksSize, float scale);
 static void GenMeshCustom(std::unordered_map<BlockFaceDirection, std::vector<int>>& transformOfVerticesOfFaceInParticularDir
@@ -112,7 +111,7 @@ int main()
     Noise3D(noise3D, float, numChunks + 1, chunkSize + 3);
     std::unordered_map<int, bool> chunkGenerated;
 
-    int numChunksY = 3;
+    int numChunksY = 1;
 
     std::vector<std::thread> chunkMeshGenThreads;
 
@@ -461,7 +460,7 @@ bool ShouldDrawChunk(Vector3 curChunkPos, Camera camera) {
     Plane farPlane = { position + (cameraDir * (100 + diagonalDist * 1.414f)), cameraDir * -1 };
     Plane rightPlane = { position, Vector3CrossProduct(Vector3RotateByAxisAngle(cameraDir, {0, 1, 0}, DEG2RAD * camera.fovy * 0.5f), {0, 1, 0}) };
     Plane leftPlane = { position, Vector3CrossProduct({0, 1, 0}, Vector3RotateByAxisAngle(cameraDir, {0, 1, 0}, DEG2RAD * camera.fovy * -0.5f)) };
-    Plane topPlane = { position, Vector3CrossProduct(Vector3RotateByAxisAngle(cameraDir, cameraRight, DEG2RAD * camera.fovy * 0.5f), cameraRight) };
+    Plane topPlane = { position, Vector3CrossProduct(cameraRight, Vector3RotateByAxisAngle(cameraDir, cameraRight, DEG2RAD * camera.fovy * 0.5f)) };
     Plane bottomPlane = { position, Vector3CrossProduct(cameraRight, Vector3RotateByAxisAngle(cameraDir, cameraRight, DEG2RAD * camera.fovy * -0.5f)) };
 
     if (Vector3DotProduct(nearPlane.normal, Vector3Normalize(Vector3Subtract(curChunkPos, nearPlane.pointOnPlane))) < 0) {
@@ -477,14 +476,6 @@ bool ShouldDrawChunk(Vector3 curChunkPos, Camera camera) {
     }
 
     if (Vector3DotProduct(leftPlane.normal, Vector3Normalize(Vector3Subtract(curChunkPos, leftPlane.pointOnPlane))) < 0) {
-        return false;
-    }
-
-    if (Vector3DotProduct(topPlane.normal, Vector3Normalize(Vector3Subtract(curChunkPos, topPlane.pointOnPlane))) < 0) {
-        return false;
-    }
-
-    if (Vector3DotProduct(bottomPlane.normal, Vector3Normalize(Vector3Subtract(curChunkPos, bottomPlane.pointOnPlane))) < 0) {
         return false;
     }
 
