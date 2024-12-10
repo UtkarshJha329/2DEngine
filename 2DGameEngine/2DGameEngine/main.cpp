@@ -20,6 +20,7 @@
 #include "CubeMeshData.h"
 #include "DrawMeshInstancedFlattenedTransforms.h"
 
+#define Noise3D(_name, _type, _numChunks, _chunkSize) std::vector<std::vector<std::vector<std::vector<std::vector<std::vector<_type>>>>>> _name(_numChunks, std::vector<std::vector<std::vector<std::vector<std::vector<_type>>>>>(_numChunks, std::vector<std::vector<std::vector<std::vector<_type>>>>(_numChunks, std::vector<std::vector<std::vector<_type>>>(_chunkSize, std::vector<std::vector<_type>>(_chunkSize, std::vector<_type>(_chunkSize))))))
 #define ThreeDimensionalStdVector(_name, _type, _size) std::vector<std::vector<std::vector<_type>>> _name(_size, std::vector<std::vector<_type>>(_size, std::vector<_type>(_size)));
 #define ThreeDimensionalStdVectorUnorderedMap(_name, _type1, _type2, _size) std::vector<std::vector<std::vector<std::unordered_map<_type1, _type2>>>> _name(_size, std::vector<std::vector<std::unordered_map<_type1, _type2>>>(_size, std::vector<std::unordered_map<_type1, _type2>>(_size)));
 
@@ -29,7 +30,9 @@ int PackThreeNumbers(int num1, int num2, int num3) {
     return (num1 << 10) | (num2 << 5) | num3;
 }
 
-static void GenMeshCustom(std::unordered_map<BlockFaceDirection, std::vector<int>>& transformOfVerticesOfFaceInParticularDir, Vector3 position);
+static void MakeNoise3D(std::vector<std::vector<std::vector<std::vector<std::vector<std::vector<float>>>>>>& noiseStorage, int numChunks, int numChunksY, int chunksSize, float scale);
+static void GenMeshCustom(std::unordered_map<BlockFaceDirection, std::vector<int>>& transformOfVerticesOfFaceInParticularDir
+    , std::vector<std::vector<std::vector<float>>>& noiseForCurrentChunk);
 Mesh PlaneFacingDir(Vector3 dir);
 
 bool ShouldDrawChunk(Vector3 curChunkPos, Camera camera);
@@ -46,17 +49,11 @@ const int chunkSize = 16;
 
 Color randColors[9] = {LIGHTGRAY, BLACK, RED, YELLOW, PINK, GREEN, BLUE, PURPLE, GOLD};
 
-void SetRandomColour(float* ambient, int x, int y) {
-    Color curColor = randColors[(x + y) % 9];
-    ambient[0] = curColor.r;
-    ambient[1] = curColor.g;
-    ambient[2] = curColor.b;
-    ambient[3] = curColor.a;
-}
-
-static void GenChunkMesh(std::unordered_map<BlockFaceDirection, std::vector<int>>& transformOfVerticesOfFaceInParticularDir, std::unordered_map<int, bool> &chunkGenerated, int chunkIndex, Vector3 position) {
+static void GenChunkMesh(std::unordered_map<BlockFaceDirection, std::vector<int>>& transformOfVerticesOfFaceInParticularDir
+    , std::vector<std::vector<std::vector<float>>> &noiseForCurChunk 
+    , std::unordered_map<int, bool> &chunkGenerated, int chunkIndex) {
     
-    GenMeshCustom(transformOfVerticesOfFaceInParticularDir, position);
+    GenMeshCustom(transformOfVerticesOfFaceInParticularDir, noiseForCurChunk);
     chunkGenerated[chunkIndex] = true;
 }
 
@@ -85,7 +82,6 @@ int main()
 
     Vector3 curPos = { 0, 0, 0 };
 
-    const int numChunksWidth = (2 * numChunks);
     std::unordered_map<BlockFaceDirection, Mesh> chunkMeshFacingParticularDir;
 
     Mesh planeFacingUp = { 0 };
@@ -113,11 +109,15 @@ int main()
     //std::vector<std::vector<std::vector<std::unordered_map<BlockFaceDirection, std::vector<float16>>>>> chunkTransformOfVerticesOfFaceInParticularDir(numChunksWidth, std::vector<std::vector<std::unordered_map<BlockFaceDirection, std::vector<float16>>>(numChunksWidth, std::vector<std::unordered_map<BlockFaceDirection, std::vector<float16>>>(numChunksWidth)));
     //ThreeDimensionalStdVectorUnorderedMap(chunkTransformOfVerticesOfFaceInParticularDir, BlockFaceDirection, std::vector<float3>, numChunksWidth);
     ThreeDimensionalStdVectorUnorderedMap(chunkTransformOfVerticesOfFaceInParticularDir, BlockFaceDirection, std::vector<int>, chunkSize);
+    Noise3D(noise3D, float, numChunks + 1, chunkSize + 3);
     std::unordered_map<int, bool> chunkGenerated;
 
     int numChunksY = 3;
 
     std::vector<std::thread> chunkMeshGenThreads;
+
+    float scale = 0.1f;
+    MakeNoise3D(noise3D, numChunks, numChunksY, chunkSize, scale);
 
     Vector3 curChunkPos = { 0, 0, 0 };
     for (int i = 0; i < numChunks; i++)
@@ -136,7 +136,8 @@ int main()
                 //std::cout << chunkIndex << std::endl;
                 chunkMeshGenThreads.push_back(std::thread(GenChunkMesh
                     , std::ref(chunkTransformOfVerticesOfFaceInParticularDir[i][j][k])
-                    , std::ref(chunkGenerated), curID, curChunkPos));
+                    , std::ref(noise3D[i][k][j])
+                    , std::ref(chunkGenerated), curID));
 
                 //MeshGeneratingThread.detach();
                 
@@ -267,61 +268,87 @@ int main()
     return 0;
 }
 
+static void MakeNoise3D(std::vector<std::vector<std::vector<std::vector<std::vector<std::vector<float>>>>>> &noiseStorage, int numChunks, int numChunksY, int chunksSize, float scale) {
+
+    int _x, _y, _z = 0;
+
+    for (int chunksX = 0; chunksX < numChunks; chunksX++)
+    {
+        for (int chunksY = 0; chunksY < numChunksY; chunksY++)
+        {
+            for (int chunksZ = 0; chunksZ < numChunks; chunksZ++)
+            {
+                for (int x = 0; x <= chunkSize + 1; x++)
+                {
+                    _x = x + chunksX * chunkSize;
+
+                    for (int y = 0; y <= chunkSize + 1; y++)
+                    {
+                        _y = y + chunksY * chunkSize;
+                        for (int z = 0; z <= chunkSize + 1; z++)
+                        {
+                            _z = z + chunksZ * chunksSize;
+                            noiseStorage[chunksX][chunksY][chunksZ][x][y][z] = perlin.noise3D_01((double)_x * scale, (double)_z * scale, (double)_y * scale);
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+}
+
 static void GenMeshCustom(std::unordered_map<BlockFaceDirection, std::vector<int>>& transformOfVerticesOfFaceInParticularDir
-    , Vector3 position)
+    , std::vector<std::vector<std::vector<float>>> &noiseForCurrentChunk)
 {
     float scale = 0.1f;
 
-    for (int y = 0; y < chunkSize; y++)
+    for (int y = 1; y <= chunkSize; y++)
     {
-        for (int x = 0; x < chunkSize; x++)
+        for (int x = 1; x <= chunkSize; x++)
         {
-            for (int z = 0; z < chunkSize; z++)
+            for (int z = 1; z <= chunkSize; z++)
             {
-                int _x = x + position.x;
-                int _y = y + position.y;
-                int _z = z + position.z;
-
-                float curNoise = perlin.noise3D_01((double)_x * scale, (double)_z * scale, (double)_y * scale);
+                float curNoise = noiseForCurrentChunk[x][y][z];
 
                 float emptyThreshold = 0.5f;
                 bool curVoxelIsEmpty = curNoise < emptyThreshold ? true : false;
 
                 if (!curVoxelIsEmpty) {
 
-                    int curPosition = PackThreeNumbers(x, y, z);
+                    int curPosition = PackThreeNumbers(x - 1, y - 1, z - 1);
 
-                    float curNoiseTop = perlin.noise3D_01((double)_x * scale, (double)_z * scale, (double)(_y + 1) * scale);
+                    float curNoiseTop = noiseForCurrentChunk[x][y + 1][z];
 
                     if (curNoiseTop < emptyThreshold) {
                         transformOfVerticesOfFaceInParticularDir[BlockFaceDirection::UP].push_back(curPosition);
                     }
 
-                    float curNoiseBottom = perlin.noise3D_01((double)_x * scale, (double)_z * scale, (double)(_y - 1) * scale);
+                    float curNoiseBottom = noiseForCurrentChunk[x][y - 1][z];
 
                     if (curNoiseBottom < emptyThreshold) {
                         transformOfVerticesOfFaceInParticularDir[BlockFaceDirection::DOWN].push_back(curPosition);
                     }
 
-                    float curNoiseFront = perlin.noise3D_01((double)_x * scale, (double)(_z + 1) * scale, (double)_y * scale);
+                    float curNoiseFront = noiseForCurrentChunk[x][y][z + 1];
 
                     if (curNoiseFront < emptyThreshold) {
                         transformOfVerticesOfFaceInParticularDir[BlockFaceDirection::FRONT].push_back(curPosition);
                     }
 
-                    float curNoiseBack = perlin.noise3D_01((double)_x * scale, (double)(_z - 1) * scale, (double)_y * scale);
+                    float curNoiseBack = noiseForCurrentChunk[x][y][z - 1];
 
                     if (curNoiseBack < emptyThreshold) {
                         transformOfVerticesOfFaceInParticularDir[BlockFaceDirection::BACK].push_back(curPosition);
                     }
 
-                    float curNoiseRight = perlin.noise3D_01((double)(_x + 1) * scale, (double)_z * scale, (double)_y * scale);
+                    float curNoiseRight = noiseForCurrentChunk[x + 1][y][z];
 
                     if (curNoiseRight < emptyThreshold) {
                         transformOfVerticesOfFaceInParticularDir[BlockFaceDirection::RIGHT].push_back(curPosition);
                     }
 
-                    float curNoiseLeft = perlin.noise3D_01((double)(_x - 1) * scale, (double)_z * scale, (double)_y * scale);
+                    float curNoiseLeft = noiseForCurrentChunk[x - 1][y][z];
 
                     if (curNoiseLeft < emptyThreshold) {
                         transformOfVerticesOfFaceInParticularDir[BlockFaceDirection::LEFT].push_back(curPosition);

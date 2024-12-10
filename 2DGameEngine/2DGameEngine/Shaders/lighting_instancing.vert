@@ -24,7 +24,7 @@ uniform vec3 curChunkPos;
 
 void main()
 {
-    vec3 curVoxelPos = vec3((instancePosition >> 10) & 0x1F, (instancePosition >> 5) & 0x1F, instancePosition & 0x1F) - vec3(16);  
+    vec3 curVoxelPos = vec3((instancePosition >> 10) & 31, (instancePosition >> 5) & 31, instancePosition & 31);  
     vec3 curPos = curChunkPos + curVoxelPos;
     mat4 translationMatrix = mat4(1.0);  // Identity matrix
     translationMatrix[3] = vec4(curPos, 1.0);
