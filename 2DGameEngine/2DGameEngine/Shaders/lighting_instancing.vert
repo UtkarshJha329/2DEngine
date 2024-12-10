@@ -24,10 +24,9 @@ uniform vec3 curChunkPos;
 
 void main()
 {
-    vec3 curVoxelPos = vec3((instancePosition >> 10) & 0x1F, (instancePosition >> 5) & 0x1F, instancePosition & 0x1F) - vec3(16);  
-    vec3 curPos = curChunkPos + curVoxelPos;
+    vec3 curVoxelPos = curChunkPos + vec3((instancePosition >> 10) & 0x1F, (instancePosition >> 5) & 0X1F, (instancePosition & 0x1F));
     mat4 translationMatrix = mat4(1.0);  // Identity matrix
-    translationMatrix[3] = vec4(curPos, 1.0);
+    translationMatrix[3] = vec4(curVoxelPos, 1.0);
 
     //// Construct the rotation matrix (using rotationAxis and rotationAngle)
     //mat4 rotationMatrix = mat4(1.0); // Identity matrix

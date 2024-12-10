@@ -24,11 +24,12 @@
 
 #define TwoDimensionalStdVector(_name, _type, _size) std::vector<std::vector<_type>> _name(_size, std::vector<_type>(_size));
 
-int PackThreeNumbers(int num1, int num2, int num3) {
-    return (num1 << 10) | (num2 << 5) | num3;
-}
+class VerticesPerFace {
+public:
 
-static void GenMeshCustom(std::unordered_map<BlockFaceDirection, std::vector<int>>& transformOfVerticesOfFaceInParticularDir, Vector3 position);
+};
+
+static void GenMeshCustom(std::unordered_map<BlockFaceDirection, std::vector<float3>>& transformOfVerticesOfFaceInParticularDir, Vector3 position);
 Mesh PlaneFacingDir(Vector3 dir);
 
 bool ShouldDrawChunk(Vector3 curChunkPos, Camera camera);
@@ -53,7 +54,26 @@ void SetRandomColour(float* ambient, int x, int y) {
     ambient[3] = curColor.a;
 }
 
-bool once = true;
+int PackThreeNumbers(int num1, int num2, int num3) {
+    // Ensure that each number is within the range [0, 31]
+    if (num1 < 0 || num1 > 31 || num2 < 0 || num2 > 31 || num3 < 0 || num3 > 31) {
+        std::cerr << "Numbers " << num1 << ", " << num2 << ", " << num3 << "must be between 0 and 31" << std::endl;
+        return -1;
+    }
+
+    // Pack the three numbers into a single int
+    // Shift num1 by 10 bits, num2 by 5 bits, and leave num3 as it is
+    int packed = (num1 << 10) | (num2 << 5) | num3;
+
+    return packed;
+}
+
+void UnpackThreeNumbers(int packed, unsigned int& num1, unsigned int& num2, unsigned int& num3) {
+    // Unpack the numbers by shifting and masking
+    num1 = (packed >> 10) & 0x1F;  // 0x1F is the mask for 5 bits (11111)
+    num2 = (packed >> 5) & 0x1F;
+    num3 = packed & 0x1F;
+}
 
 int main()
 {
@@ -76,7 +96,7 @@ int main()
 
     Vector3 curPos = { 0, 0, 0 };
 
-    const int numChunksWidth = (2 * numChunks);
+    const int numChunksWidth = (2 * numChunks) + 1;
     std::unordered_map<BlockFaceDirection, Mesh> chunkMeshFacingParticularDir;
 
     Mesh planeFacingUp = { 0 };
@@ -102,21 +122,20 @@ int main()
     chunkMeshFacingParticularDir.insert({ BlockFaceDirection::LEFT, planeFacingLeft });
 
     //std::vector<std::vector<std::vector<std::unordered_map<BlockFaceDirection, std::vector<float16>>>>> chunkTransformOfVerticesOfFaceInParticularDir(numChunksWidth, std::vector<std::vector<std::unordered_map<BlockFaceDirection, std::vector<float16>>>(numChunksWidth, std::vector<std::unordered_map<BlockFaceDirection, std::vector<float16>>>(numChunksWidth)));
-    //ThreeDimensionalStdVectorUnorderedMap(chunkTransformOfVerticesOfFaceInParticularDir, BlockFaceDirection, std::vector<float3>, numChunksWidth);
-    ThreeDimensionalStdVectorUnorderedMap(chunkTransformOfVerticesOfFaceInParticularDir, BlockFaceDirection, std::vector<int>, numChunksWidth);
+    ThreeDimensionalStdVectorUnorderedMap(chunkTransformOfVerticesOfFaceInParticularDir, BlockFaceDirection, std::vector<float3>, numChunksWidth);
 
-    int numChunksY = 3;
+    int numChunksY = 1;
 
     Vector3 curChunkPos = { 0, 0, 0 };
-    for (int i = -numChunks + 1; i < numChunks; i++)
+    for (int i = -numChunks; i < numChunks; i++)
     {
         curChunkPos.x = i * (2 * chunkSize);
 
-        for (int j = -numChunks + 1; j < numChunks; j++)
+        for (int j = -numChunks; j < numChunks; j++)
         {
             curChunkPos.z = j * (2 * chunkSize);
 
-            for (int k = -numChunksY + 1; k < numChunksY; k++)
+            for (int k = -numChunksY; k < numChunksY; k++)
             {
                 curChunkPos.y = k * (2 * chunkSize);
                 GenMeshCustom(chunkTransformOfVerticesOfFaceInParticularDir[i + numChunks][j + numChunks][k + numChunksY], curChunkPos);
@@ -159,19 +178,19 @@ int main()
 
             BeginMode3D(camera);
 
-            for (int k = -numChunksY + 1; k < numChunksY; k++)
+            for (int k = -numChunksY; k < numChunksY; k++)
             {
-                for (int j = -numChunks + 1; j < numChunks; j++)
+                for (int j = -numChunks; j < numChunks; j++)
                 {
-                    for (int i = -numChunks + 1; i < numChunks; i++)
+                    for (int i = -numChunks; i < numChunks; i++)
                     {
                         Vector3 curChunkPos = { i * ((chunkSize * 2)), k * ((chunkSize * 2)), (j * ((chunkSize * 2)))};
 
                         if (ShouldDrawChunk(curChunkPos, camera)) {
 
                             int curChunkPosLoc = GetShaderLocation(instanceShader, "curChunkPos");
-                            float curChunkPosValue[3] = { curChunkPos.x, curChunkPos.y, curChunkPos.z };
-                            SetShaderValue(instanceShader, curChunkPosLoc, curChunkPosValue, SHADER_UNIFORM_VEC3);
+                            int curChunkPosCoords[3] = { curChunkPos.x, curChunkPos.y, curChunkPos.z };
+                            SetShaderValue(instanceShader, curChunkPosLoc, curChunkPosCoords, SHADER_UNIFORM_VEC3);
 
                             DrawMeshInstancedFlattenedPositions(chunkMeshFacingParticularDir[BlockFaceDirection::UP]
                                 , instancedMaterial
@@ -223,7 +242,7 @@ int main()
     return 0;
 }
 
-static void GenMeshCustom(std::unordered_map<BlockFaceDirection, std::vector<int>>& transformOfVerticesOfFaceInParticularDir
+static void GenMeshCustom(std::unordered_map<BlockFaceDirection, std::vector<float3>> &transformOfVerticesOfFaceInParticularDir
     , Vector3 position)
 {
     const siv::PerlinNoise::seed_type seed = 123456u;
@@ -232,11 +251,11 @@ static void GenMeshCustom(std::unordered_map<BlockFaceDirection, std::vector<int
 
     float scale = 0.1f;
 
-    for (int y = -chunkSize + 1; y < chunkSize; y++)
+    for (int y = -chunkSize; y < chunkSize; y++)
     {
-        for (int x = -chunkSize + 1; x < chunkSize; x++)
+        for (int x = -chunkSize; x < chunkSize; x++)
         {
-            for (int z = -chunkSize + 1; z < chunkSize; z++)
+            for (int z = -chunkSize; z < chunkSize; z++)
             {
                 int _x = x + chunkSize + position.x;
                 int _y = y + chunkSize + position.y;
@@ -249,7 +268,8 @@ static void GenMeshCustom(std::unordered_map<BlockFaceDirection, std::vector<int
 
                 if (!curVoxelIsEmpty) {
 
-                    int curPosition = PackThreeNumbers(x + chunkSize, y + chunkSize, z + chunkSize);
+                    int curPositionPacked = PackThreeNumbers(x + chunkSize, y + chunkSize, z + chunkSize);
+                    float3 curPosition = {_x, _y, _z};
 
                     float curNoiseTop = perlin.noise3D_01((double)_x * scale, (double)_z * scale, (double)(_y + 1) * scale);
 
@@ -349,7 +369,7 @@ bool ShouldDrawChunk(Vector3 curChunkPos, Camera camera) {
     Plane farPlane = { position + (cameraDir * 100), cameraDir * -1 };
     Plane rightPlane = { position, Vector3CrossProduct(Vector3RotateByAxisAngle(cameraDir, {0, 1, 0}, DEG2RAD * camera.fovy * 0.5f), {0, 1, 0}) };
     Plane leftPlane = { position, Vector3CrossProduct({0, 1, 0}, Vector3RotateByAxisAngle(cameraDir, {0, 1, 0}, DEG2RAD * camera.fovy * -0.5f)) };
-    Plane topPlane = { position, Vector3CrossProduct(Vector3RotateByAxisAngle(cameraDir, cameraRight, DEG2RAD * camera.fovy * 0.5f), cameraRight) };
+    Plane topPlane = { position, Vector3CrossProduct(cameraRight, Vector3RotateByAxisAngle(cameraDir, cameraRight, DEG2RAD * camera.fovy * 0.5f)) };
     Plane bottomPlane = { position, Vector3CrossProduct(cameraRight, Vector3RotateByAxisAngle(cameraDir, cameraRight, DEG2RAD * camera.fovy * -0.5f)) };
 
     float dotProduct = Vector3DotProduct(cameraDir, Vector3Normalize(Vector3Subtract(curChunkPos, camera.position)));
@@ -367,14 +387,6 @@ bool ShouldDrawChunk(Vector3 curChunkPos, Camera camera) {
     }
 
     if (Vector3DotProduct(leftPlane.normal, Vector3Normalize(Vector3Subtract(curChunkPos, leftPlane.pointOnPlane))) < 0) {
-        return false;
-    }
-
-    if (Vector3DotProduct(topPlane.normal, Vector3Normalize(Vector3Subtract(curChunkPos, topPlane.pointOnPlane))) < 0) {
-        return false;
-    }
-
-    if (Vector3DotProduct(bottomPlane.normal, Vector3Normalize(Vector3Subtract(curChunkPos, bottomPlane.pointOnPlane))) < 0) {
         return false;
     }
 
