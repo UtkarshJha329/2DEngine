@@ -75,4 +75,5 @@ void main()
 
     // Gamma correction
     finalColor = pow(texelColor, vec4(1.0/2.2));
+    //finalColor = pow(texelColor * vec4(0.1), vec4(1.0/2.2));
 }

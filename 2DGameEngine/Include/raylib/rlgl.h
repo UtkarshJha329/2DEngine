@@ -746,6 +746,7 @@ RLAPI void rlSetVertexAttributeDefault(int locIndex, const void *value, int attr
 RLAPI void rlDrawVertexArray(int offset, int count);    // Draw vertex array (currently active vao)
 RLAPI void rlDrawVertexArrayElements(int offset, int count, const void *buffer); // Draw vertex array elements
 RLAPI void rlDrawVertexArrayInstanced(int offset, int count, int instances); // Draw vertex array (currently active vao) with instancing
+RLAPI void rlDrawVertexArrayInstancedTriangleStrip(int offset, int count, int instances); // Draw vertex array (currently active vao) with instancing
 RLAPI void rlDrawVertexArrayElementsInstanced(int offset, int count, const void *buffer, int instances); // Draw vertex array elements with instancing
 
 // Textures management
@@ -3957,11 +3958,19 @@ void rlDrawVertexArrayElements(int offset, int count, const void *buffer)
     glDrawElements(GL_TRIANGLES, count, GL_UNSIGNED_SHORT, (const unsigned short *)bufferPtr);
 }
 
-// Draw vertex array instanced
+// Draw vertex array instanced TRIANGLES
 void rlDrawVertexArrayInstanced(int offset, int count, int instances)
 {
 #if defined(GRAPHICS_API_OPENGL_33) || defined(GRAPHICS_API_OPENGL_ES2)
     glDrawArraysInstanced(GL_TRIANGLES, 0, count, instances);
+#endif
+}
+
+// Draw vertex array instanced TRIANGLE STRIPS
+void rlDrawVertexArrayInstancedTriangleStrip(int offset, int count, int instances)
+{
+#if defined(GRAPHICS_API_OPENGL_33) || defined(GRAPHICS_API_OPENGL_ES2)
+    glDrawArraysInstanced(GL_TRIANGLE_STRIP, 0, count, instances);
 #endif
 }
 

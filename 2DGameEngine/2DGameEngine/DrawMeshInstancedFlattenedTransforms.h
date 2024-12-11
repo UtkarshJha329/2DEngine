@@ -218,8 +218,13 @@ void DrawMeshInstancedFlattenedPositions(Mesh mesh, Material material, const int
         rlSetUniformMatrix(material.shader.locs[SHADER_LOC_MATRIX_MVP], matModelViewProjection);
 
         // Draw mesh instanced
-        if (mesh.indices != NULL) rlDrawVertexArrayElementsInstanced(0, mesh.triangleCount * 3, 0, instances);
-        else rlDrawVertexArrayInstanced(0, mesh.vertexCount, instances);
+        if (mesh.indices != NULL) {
+            rlDrawVertexArrayElementsInstanced(0, mesh.triangleCount * 3, 0, instances);
+        }
+        else {
+            //rlDrawVertexArrayInstanced(0, mesh.vertexCount, instances);
+            rlDrawVertexArrayInstancedTriangleStrip(0, mesh.vertexCount, instances);
+        }
     }
 
     // Unbind all bound texture maps
