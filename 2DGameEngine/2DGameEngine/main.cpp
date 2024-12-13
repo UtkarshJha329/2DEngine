@@ -107,7 +107,7 @@ int main()
 
     auto e = world.entity();
 
-    InitWindow(800, 450, "raylib [core] example - basic window");
+    InitWindow(1280, 720, "raylib [core] example - basic window");
 
     Camera camera = { { 5.0f, 5.0f, 5.0f }, { 0.0f, 0.0f, 0.0f }, { 0.0f, 1.0f, 0.0f }, 45.0f, 0 };
 

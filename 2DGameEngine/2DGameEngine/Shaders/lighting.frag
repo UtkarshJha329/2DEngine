@@ -79,28 +79,28 @@ void main()
     //finalColor = pow(texelColor * vec4(0.1), vec4(1.0/2.2));
 
     if(faceDir == 0){
-            //finalColor = pow(texelColor, vec4(1.0/2.2));
-            finalColor = pow(vec4(1.0, 1.0, 0.0, 1.0), vec4(1.0/2.2));
+            finalColor = pow(texelColor, vec4(1.0/2.2));
+            //finalColor = pow(vec4(1.0, 1.0, 0.0, 1.0), vec4(1.0/2.2));
     }
     else if(faceDir == 1){
-        //finalColor = pow(texelColor * vec4(1.0, 0.5, 0.5, 1.0), vec4(1.0/2.2));
-        finalColor = pow(vec4(1.0, 0.5, 0.5, 1.0), vec4(1.0/2.2));
+            finalColor = pow(texelColor * vec4(1.0, 0.5, 0.5, 1.0), vec4(1.0/2.2));
+            //finalColor = pow(vec4(1.0, 0.5, 0.5, 1.0), vec4(1.0/2.2));
     }
     else if(faceDir == 2){
-            //finalColor = pow(texelColor * vec4(0.0, 1.0, 0.0, 1.0), vec4(1.0/2.2));
-            finalColor = pow(vec4(0.0, 1.0, 0.0, 1.0), vec4(1.0/2.2));
+            finalColor = pow(texelColor * vec4(0.0, 1.0, 0.0, 1.0), vec4(1.0/2.2));
+            //finalColor = pow(vec4(0.0, 1.0, 0.0, 1.0), vec4(1.0/2.2));
     }
     else if(faceDir == 3){
-            //finalColor = pow(texelColor * vec4(0.0, 0.0, 1.0, 1.0), vec4(1.0/2.2));
-            finalColor = pow(vec4(0.0, 0.0, 1.0, 1.0), vec4(1.0/2.2));
+            finalColor = pow(texelColor * vec4(0.0, 0.0, 1.0, 1.0), vec4(1.0/2.2));
+            //finalColor = pow(vec4(0.0, 0.0, 1.0, 1.0), vec4(1.0/2.2));
     }
     else if(faceDir == 4){
-                //finalColor = pow(texelColor * vec4(1.0, 0.0, 1.0, 1.0), vec4(1.0/2.2));
-                finalColor = pow(vec4(1.0, 0.0, 1.0, 1.0), vec4(1.0/2.2));
+            finalColor = pow(texelColor * vec4(1.0, 0.0, 1.0, 1.0), vec4(1.0/2.2));
+            //finalColor = pow(vec4(1.0, 0.0, 1.0, 1.0), vec4(1.0/2.2));
     }
     else if(faceDir == 5){
-                //finalColor = pow(texelColor * vec4(0.0, 1.0, 1.0, 1.0), vec4(1.0/2.2));
-                finalColor = pow(vec4(0.0, 1.0, 1.0, 1.0), vec4(1.0/2.2));
+            finalColor = pow(texelColor * vec4(0.0, 1.0, 1.0, 1.0), vec4(1.0/2.2));
+            //finalColor = pow(vec4(0.0, 1.0, 1.0, 1.0), vec4(1.0/2.2));
     }
 
 }

@@ -313,17 +313,17 @@ void DrawMeshMultiInstancedDrawIndirect(GenerativeMesh& genMesh, Material materi
     }
 
     // Upload to shader material.colSpecular (if location available)
-    //if (material.shader.locs[SHADER_LOC_COLOR_SPECULAR] != -1)
-    //{
-    //    float values[4] = {
-    //        (float)material.maps[SHADER_LOC_COLOR_SPECULAR].color.r / 255.0f,
-    //        (float)material.maps[SHADER_LOC_COLOR_SPECULAR].color.g / 255.0f,
-    //        (float)material.maps[SHADER_LOC_COLOR_SPECULAR].color.b / 255.0f,
-    //        (float)material.maps[SHADER_LOC_COLOR_SPECULAR].color.a / 255.0f
-    //    };
+    if (material.shader.locs[SHADER_LOC_COLOR_SPECULAR] != -1)
+    {
+        float values[4] = {
+            (float)material.maps[SHADER_LOC_COLOR_SPECULAR].color.r / 255.0f,
+            (float)material.maps[SHADER_LOC_COLOR_SPECULAR].color.g / 255.0f,
+            (float)material.maps[SHADER_LOC_COLOR_SPECULAR].color.b / 255.0f,
+            (float)material.maps[SHADER_LOC_COLOR_SPECULAR].color.a / 255.0f
+        };
 
-    //    rlSetUniform(material.shader.locs[SHADER_LOC_COLOR_SPECULAR], values, SHADER_UNIFORM_VEC4, 1);
-    //}
+        rlSetUniform(material.shader.locs[SHADER_LOC_COLOR_SPECULAR], values, SHADER_UNIFORM_VEC4, 1);
+    }
 
     // Get a copy of current matrices to work with,
     // just in case stereo render is required, and we need to modify them
@@ -371,6 +371,23 @@ void DrawMeshMultiInstancedDrawIndirect(GenerativeMesh& genMesh, Material materi
     if (material.shader.locs[SHADER_LOC_MATRIX_NORMAL] != -1) rlSetUniformMatrix(material.shader.locs[SHADER_LOC_MATRIX_NORMAL], MatrixTranspose(MatrixInvert(matModel)));
 
     //-----------------------------------------------------
+
+    for (int i = 0; i < MAX_MATERIAL_MAPS; i++)
+    {
+        if (material.maps[i].texture.id > 0)
+        {
+            // Select current shader texture slot
+            rlActiveTextureSlot(i);
+
+            // Enable texture for active slot
+            if ((i == MATERIAL_MAP_IRRADIANCE) ||
+                (i == MATERIAL_MAP_PREFILTER) ||
+                (i == MATERIAL_MAP_CUBEMAP)) rlEnableTextureCubemap(material.maps[i].texture.id);
+            else rlEnableTexture(material.maps[i].texture.id);
+
+            rlSetUniform(material.shader.locs[SHADER_LOC_MAP_DIFFUSE + i], &i, SHADER_UNIFORM_INT, 1);
+        }
+    }
 
     // Try binding vertex array objects (VAO)
     // or use VBOs if not possible
@@ -483,11 +500,6 @@ void DrawMeshMultiInstancedDrawIndirect(GenerativeMesh& genMesh, Material materi
         //rlDrawVertexArrayInstanced(0, genMesh.mesh.vertexCount, instances);                   WORKS
 
         //rlDrawVertexArrayInstancedTriangleStrip(0, genMesh.mesh.vertexCount, instances);      WORKS
-
-        //for (int i = 0; i < numCommands; i++)
-        //{
-        //    rlDrawArraysInstancedBaseInstanceTriangleStrip(0, genMesh.mesh.vertexCount, commands[i].instanceCount, commands[i].baseInstance);
-        //}
 
         //rlDrawArraysInstancedBaseInstanceTriangleStrip(0, genMesh.mesh.vertexCount, instances, 0);        //WORKS
         //VVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVV
