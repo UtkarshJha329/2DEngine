@@ -1,10 +1,11 @@
-#version 330
+#version 430
 
 // Input vertex attributes (from vertex shader)
 in vec3 fragPosition;
 in vec2 fragTexCoord;
 in vec4 fragColor;
 in vec3 fragNormal;
+flat in int faceDir;
 
 // Input uniform values
 uniform sampler2D texture0;
@@ -74,6 +75,32 @@ void main()
     //finalColor += texelColor*(ambient/10.0)*tint;
 
     // Gamma correction
-    finalColor = pow(texelColor, vec4(1.0/2.2));
+    //finalColor = pow(texelColor, vec4(1.0/2.2));
     //finalColor = pow(texelColor * vec4(0.1), vec4(1.0/2.2));
+
+    if(faceDir == 0){
+            //finalColor = pow(texelColor, vec4(1.0/2.2));
+            finalColor = pow(vec4(1.0, 1.0, 0.0, 1.0), vec4(1.0/2.2));
+    }
+    else if(faceDir == 1){
+        //finalColor = pow(texelColor * vec4(1.0, 0.5, 0.5, 1.0), vec4(1.0/2.2));
+        finalColor = pow(vec4(1.0, 0.5, 0.5, 1.0), vec4(1.0/2.2));
+    }
+    else if(faceDir == 2){
+            //finalColor = pow(texelColor * vec4(0.0, 1.0, 0.0, 1.0), vec4(1.0/2.2));
+            finalColor = pow(vec4(0.0, 1.0, 0.0, 1.0), vec4(1.0/2.2));
+    }
+    else if(faceDir == 3){
+            //finalColor = pow(texelColor * vec4(0.0, 0.0, 1.0, 1.0), vec4(1.0/2.2));
+            finalColor = pow(vec4(0.0, 0.0, 1.0, 1.0), vec4(1.0/2.2));
+    }
+    else if(faceDir == 4){
+                //finalColor = pow(texelColor * vec4(1.0, 0.0, 1.0, 1.0), vec4(1.0/2.2));
+                finalColor = pow(vec4(1.0, 0.0, 1.0, 1.0), vec4(1.0/2.2));
+    }
+    else if(faceDir == 5){
+                //finalColor = pow(texelColor * vec4(0.0, 1.0, 1.0, 1.0), vec4(1.0/2.2));
+                finalColor = pow(vec4(0.0, 1.0, 1.0, 1.0), vec4(1.0/2.2));
+    }
+
 }

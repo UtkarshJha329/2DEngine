@@ -112,6 +112,8 @@
 
 #define RLGL_VERSION  "5.0"
 
+#define GRAPHICS_API_OPENGL_43
+
 // Function specifiers in case library is build/used as a shared library
 // NOTE: Microsoft specifiers to tell compiler that symbols are imported/exported from a .dll
 // NOTE: visibility(default) attribute makes symbols "visible" when compiled with -fvisibility=hidden
@@ -269,6 +271,7 @@
 #define RL_LINES                                0x0001      // GL_LINES
 #define RL_TRIANGLES                            0x0004      // GL_TRIANGLES
 #define RL_QUADS                                0x0007      // GL_QUADS
+#define RL_TRIANGLE_STRIP                       0x0005      // GL_TRIANGLE_STRIP
 
 // GL equivalent data types
 #define RL_UNSIGNED_BYTE                        0x1401      // GL_UNSIGNED_BYTE
@@ -325,6 +328,7 @@
 
 #define RL_READ_FRAMEBUFFER                     0x8CA8      // GL_READ_FRAMEBUFFER
 #define RL_DRAW_FRAMEBUFFER                     0x8CA9      // GL_DRAW_FRAMEBUFFER
+#define RL_DRAW_INDIRECT_BUFFER                 0x8F3F      // GL_DRAW_INDIRECT_BUFFER
 
 // Default shader vertex attribute locations
 #ifndef RL_DEFAULT_SHADER_ATTRIB_LOCATION_POSITION
@@ -748,6 +752,8 @@ RLAPI void rlDrawVertexArrayElements(int offset, int count, const void *buffer);
 RLAPI void rlDrawVertexArrayInstanced(int offset, int count, int instances); // Draw vertex array (currently active vao) with instancing
 RLAPI void rlDrawVertexArrayInstancedTriangleStrip(int offset, int count, int instances); // Draw vertex array (currently active vao) with instancing
 RLAPI void rlDrawVertexArrayElementsInstanced(int offset, int count, const void *buffer, int instances); // Draw vertex array elements with instancing
+RLAPI void rlDrawArraysInstancedBaseInstanceTriangleStrip(int first, int count, int instanceCount, int baseinstance); // Draw VAO with instancing by controlling instancing slices.
+RLAPI void rlMultiDrawArraysIndirectTriangleStrip(const void* indirect, int drawCount, int stride); // Stack render draw calls and send them to the GPU to be rendered at once.
 
 // Textures management
 RLAPI unsigned int rlLoadTexture(const void *data, int width, int height, int format, int mipmapCount); // Load texture data
@@ -792,6 +798,8 @@ RLAPI void rlBindShaderBuffer(unsigned int id, unsigned int index);             
 RLAPI void rlReadShaderBuffer(unsigned int id, void *dest, unsigned int count, unsigned int offset); // Read SSBO buffer data (GPU->CPU)
 RLAPI void rlCopyShaderBuffer(unsigned int destId, unsigned int srcId, unsigned int destOffset, unsigned int srcOffset, unsigned int count); // Copy SSBO data between buffers
 RLAPI unsigned int rlGetShaderBufferSize(unsigned int id);                      // Get SSBO buffer size
+RLAPI unsigned int rlLoadDrawBufferIndirect(unsigned int size, const void* data, bool dynamic);
+RLAPI void rlBindDrawBufferIndirect(unsigned int bufferID);
 
 // Buffer management
 RLAPI void rlBindImageTexture(unsigned int id, unsigned int index, int format, bool readonly);  // Bind image texture
@@ -3966,7 +3974,7 @@ void rlDrawVertexArrayInstanced(int offset, int count, int instances)
 #endif
 }
 
-// Draw vertex array instanced TRIANGLE STRIPS
+// PERSONAL ADDITION Draw vertex array instanced TRIANGLE STRIPS
 void rlDrawVertexArrayInstancedTriangleStrip(int offset, int count, int instances)
 {
 #if defined(GRAPHICS_API_OPENGL_33) || defined(GRAPHICS_API_OPENGL_ES2)
@@ -3974,7 +3982,7 @@ void rlDrawVertexArrayInstancedTriangleStrip(int offset, int count, int instance
 #endif
 }
 
-// Draw vertex array elements instanced
+// PERSONAL ADDITION Draw vertex array elements instanced
 void rlDrawVertexArrayElementsInstanced(int offset, int count, const void *buffer, int instances)
 {
 #if defined(GRAPHICS_API_OPENGL_33) || defined(GRAPHICS_API_OPENGL_ES2)
@@ -3985,6 +3993,19 @@ void rlDrawVertexArrayElementsInstanced(int offset, int count, const void *buffe
     glDrawElementsInstanced(GL_TRIANGLES, count, GL_UNSIGNED_SHORT, (const unsigned short *)bufferPtr, instances);
 #endif
 }
+
+//PERSONAL ADDITION Instancing a mesh from a large VBO using specific slices.
+void rlDrawArraysInstancedBaseInstanceTriangleStrip(int first, int count, int instanceCount, int baseinstance)
+{
+    glDrawArraysInstancedBaseInstance(GL_TRIANGLE_STRIP, first, count, instanceCount, baseinstance);
+}
+
+//PERSONAL ADDITION.
+void rlMultiDrawArraysIndirectTriangleStrip(const void* indirect, int drawCount, int stride)
+{
+    glMultiDrawArraysIndirect(GL_TRIANGLE_STRIP, indirect, drawCount, stride);
+}
+
 
 #if defined(GRAPHICS_API_OPENGL_11)
 // Enable vertex state pointer
@@ -4568,6 +4589,32 @@ void rlCopyShaderBuffer(unsigned int destId, unsigned int srcId, unsigned int de
     glBindBuffer(GL_COPY_READ_BUFFER, srcId);
     glBindBuffer(GL_COPY_WRITE_BUFFER, destId);
     glCopyBufferSubData(GL_COPY_READ_BUFFER, GL_COPY_WRITE_BUFFER, srcOffset, destOffset, count);
+#endif
+}
+
+// Load Indirect draw call Buffer
+unsigned int rlLoadDrawBufferIndirect(unsigned int size, const void* data, bool dynamic)
+{
+    unsigned int indirectDrawBuffer = 0;
+
+#if defined(GRAPHICS_API_OPENGL_43)
+    glGenBuffers(1, &indirectDrawBuffer);
+    glBindBuffer(GL_DRAW_INDIRECT_BUFFER, indirectDrawBuffer);
+    glBufferData(GL_DRAW_INDIRECT_BUFFER, size, data, dynamic ? GL_DYNAMIC_DRAW : GL_STATIC_DRAW);
+    glBindBuffer(GL_DRAW_INDIRECT_BUFFER, 0);
+#else
+    TRACELOG(RL_LOG_WARNING, "Indirect Draw Buffer: Indirect Draw Buffer not enabled. Define GRAPHICS_API_OPENGL_43");
+#endif
+
+    return indirectDrawBuffer;
+}
+
+void rlBindDrawBufferIndirect(unsigned int bufferID)
+{
+#if defined(GRAPHICS_API_OPENGL_43)
+    glBindBuffer(GL_DRAW_INDIRECT_BUFFER, bufferID);
+#else
+    TRACELOG(RL_LOG_WARNING, "Indirect Draw Buffer: Indirect Draw Buffer not enabled. Define GRAPHICS_API_OPENGL_43");
 #endif
 }
 
