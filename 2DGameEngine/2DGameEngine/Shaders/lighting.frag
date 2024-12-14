@@ -7,6 +7,7 @@ in vec4 fragColor;
 in vec3 fragNormal;
 flat in int faceDir;
 
+
 // Input uniform values
 uniform sampler2D texture0;
 uniform vec4 colDiffuse;

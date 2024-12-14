@@ -99,12 +99,10 @@ void main()
         curVertex = verticesLEFT[gl_VertexID];
     }
 
-
     fragPosition = vec3(translationMatrix * vec4(curVertex, 1.0));
     fragTexCoord = vertexTexCoord;
     //fragColor = vertexColor;
     fragNormal = normalize(vec3(matNormal * vec4(curVertex, 1.0)));
 
-    // Calculate final vertex position, note that we multiply mvp by instanceTransform
     gl_Position = mvp * translationMatrix  * vec4(curVertex, 1.0);
 }

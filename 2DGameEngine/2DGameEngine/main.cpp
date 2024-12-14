@@ -22,6 +22,8 @@
 #define FACE_RIGHT_INDEX 4
 #define FACE_LEFT_INDEX 5
 
+#define NUM_FACES 6
+
 #include "PerlinNoise.hpp"
 
 #include <vector>
@@ -37,19 +39,103 @@
 
 #define TwoDimensionalStdVector(_name, _type, _size) std::vector<std::vector<_type>> _name(_size, std::vector<_type>(_size));
 
+const int numChunks = 10;
+const int numChunksY = 3;
+const int chunkSize = 16;
+const int viewDistance = 5;
+const int viewDistanceY = 3;
+
+constexpr int totalNumChunks = numChunks * numChunks * numChunksY;
+constexpr int totalNumVoxelsPerChunk = chunkSize * chunkSize * chunkSize;
+constexpr int totalNumFaces = totalNumChunks * NUM_FACES * totalNumVoxelsPerChunk;
+
+struct VertexPositions {
+
+public:
+
+    std::vector<int> megaArrayOfAllPositions;
+
+    std::vector<int> upEndVoxelPositions;
+    std::vector<int> downEndVoxelPositions;
+    std::vector<int> frontEndVoxelPositions;
+    std::vector<int> backEndVoxelPositions;
+    std::vector<int> rightEndVoxelPositions;
+    std::vector<int> leftEndVoxelPositions;
+
+    int totalFilled = 0;
+
+    VertexPositions() : megaArrayOfAllPositions(totalNumFaces, 0)
+        , upEndVoxelPositions(totalNumChunks, 0)
+        , downEndVoxelPositions(totalNumChunks, 0)
+        , frontEndVoxelPositions(totalNumChunks, 0)
+        , backEndVoxelPositions(totalNumChunks, 0)
+        , rightEndVoxelPositions(totalNumChunks, 0)
+        , leftEndVoxelPositions(totalNumChunks, 0)
+    {
+
+    }
+
+    void AddUp(int toAdd, int chunkFlatIndex, Vector3 chunkIndex) {
+        megaArrayOfAllPositions[chunkFlatIndex + FACE_UP_INDEX * totalNumVoxelsPerChunk + upEndVoxelPositions[ChunkDirFaceFlatIndex(chunkIndex)]] = toAdd;
+        upEndVoxelPositions[ChunkDirFaceFlatIndex(chunkIndex)]++;
+        totalFilled++;
+    }
+
+    void AddDown(int toAdd, int chunkFlatIndex, Vector3 chunkIndex) {
+        megaArrayOfAllPositions[chunkFlatIndex + FACE_DOWN_INDEX * totalNumVoxelsPerChunk + downEndVoxelPositions[ChunkDirFaceFlatIndex(chunkIndex)]] = toAdd;
+        downEndVoxelPositions[ChunkDirFaceFlatIndex(chunkIndex)]++;
+        totalFilled++;
+    }
+
+    void AddFront(int toAdd, int chunkFlatIndex, Vector3 chunkIndex) {
+        megaArrayOfAllPositions[chunkFlatIndex + FACE_FRONT_INDEX * totalNumVoxelsPerChunk + frontEndVoxelPositions[ChunkDirFaceFlatIndex(chunkIndex)]] = toAdd;
+        frontEndVoxelPositions[ChunkDirFaceFlatIndex(chunkIndex)]++;
+        totalFilled++;
+    }
+
+    void AddBack(int toAdd, int chunkFlatIndex, Vector3 chunkIndex) {
+        megaArrayOfAllPositions[chunkFlatIndex + FACE_BACK_INDEX * totalNumVoxelsPerChunk + backEndVoxelPositions[ChunkDirFaceFlatIndex(chunkIndex)]] = toAdd;
+        backEndVoxelPositions[ChunkDirFaceFlatIndex(chunkIndex)]++;
+        totalFilled++;
+    }
+
+    void AddRight(int toAdd, int chunkFlatIndex, Vector3 chunkIndex) {
+        megaArrayOfAllPositions[chunkFlatIndex + FACE_RIGHT_INDEX * totalNumVoxelsPerChunk + rightEndVoxelPositions[ChunkDirFaceFlatIndex(chunkIndex)]] = toAdd;
+        rightEndVoxelPositions[ChunkDirFaceFlatIndex(chunkIndex)]++;
+        totalFilled++;
+    }
+
+    void AddLeft(int toAdd, int chunkFlatIndex, Vector3 chunkIndex) {
+        megaArrayOfAllPositions[chunkFlatIndex + FACE_LEFT_INDEX * totalNumVoxelsPerChunk + leftEndVoxelPositions[ChunkDirFaceFlatIndex(chunkIndex)]] = toAdd;
+        leftEndVoxelPositions[ChunkDirFaceFlatIndex(chunkIndex)]++;
+        totalFilled++;
+    }
+
+    int ChunkFlatIndex(Vector3 chunkIndex) {
+        return chunkIndex.x * numChunks * numChunksY * NUM_FACES * chunkSize * chunkSize * chunkSize
+            + chunkIndex.z * numChunksY * NUM_FACES * chunkSize * chunkSize * chunkSize
+            + chunkIndex.y * NUM_FACES * chunkSize * chunkSize * chunkSize;
+    }
+
+    int ChunkDirFaceFlatIndex(Vector3 chunkIndex) {
+        return chunkIndex.x * numChunks * numChunksY + chunkIndex.z * numChunksY + chunkIndex.y;
+    }
+
+};
+
 int PackThreeNumbers(int num1, int num2, int num3) {
     return num1 << 10 | num2 << 5 | num3;
 }
 
 static void MakeNoise3D(std::vector<std::vector<std::vector<std::vector<std::vector<std::vector<float>>>>>>& noiseStorage, int numChunks, int numChunksY, int chunksSize, float scale);
+static void MakeNoiseForChunk(std::vector<std::vector<std::vector<std::vector<std::vector<std::vector<float>>>>>>& noiseStorage, int chunksX, int chunksY, int chunksZ, int numChunks, int numChunksY, int chunksSize, float scale);
 static void MakeNoise2D(std::vector<std::vector<std::vector<std::vector<std::vector<std::vector<float>>>>>>& noiseStorage, int numChunks, int numChunksY, int chunksSize, float scale);
 
 static void GenMeshCustom3D(std::unordered_map<BlockFaceDirection, std::vector<int>>& transformOfVerticesOfFaceInParticularDir
     , std::vector<std::vector<std::vector<float>>>& noiseForCurrentChunk);
-static void GenMeshCustom2D(std::unordered_map<BlockFaceDirection, std::vector<int>>& transformOfVerticesOfFaceInParticularDir
-    , std::unordered_map<BlockFaceDirection, Vector2>& chunkTransformOfVerticesOfFaceInParticularDirOffsetCounts
-    , std::vector<std::vector<std::vector<float>>>& noiseForCurrentChunk
-    , std::vector<int>& megaArrayOfAllPositions);
+static void GenMeshCustom2D(std::vector<std::vector<std::vector<float>>>& noiseForCurrentChunk
+    , VertexPositions &megaVertPositions
+    , Vector3 chunkIndex);
 
 void PlaneFacingDir(Vector3 dir, GenerativeMesh & curMesh);
 
@@ -58,9 +144,7 @@ bool ShouldDrawChunk(Vector3 curChunkPos, Camera camera);
 static void ReadyIndirectDrawListOfDrawableChunksAndFaces(Vector3 chunkIndex, Camera camera, Vector3 cameraChunkIndex
     , bool chunkGenerated
     , Shader instanceShader, Material instancedMaterial
-    , std::vector<std::vector<std::vector<std::unordered_map<BlockFaceDirection, std::vector<int>>>>>& chunkTransformOfVerticesOfFaceInParticularDir
-    , std::vector<std::vector<std::vector<std::unordered_map<BlockFaceDirection, Vector2>>>>& chunkTransformOfVerticesOfFaceInParticularDirOffsetCounts
-    , std::vector<int> &megaArrayOfAllPosition
+    , VertexPositions& megaVertPositions
     , std::vector<float3>& chunkPositions
     , GenerativeMesh& renderQuad);
 
@@ -71,20 +155,16 @@ Vector3 back = { 0, 0, -1 };
 Vector3 right = { 1, 0, 0 };
 Vector3 left = { -1, 0, 0 };
 
-const int numChunks = 10;
-const int numChunksY = 3;
-const int chunkSize = 16;
 
 static std::mutex chunkGeneratedMutex;
 
-static void GenChunkMesh(std::unordered_map<BlockFaceDirection, std::vector<int>>& transformOfVerticesOfFaceInParticularDir
-    , std::unordered_map<BlockFaceDirection, Vector2>& chunkTransformOfVerticesOfFaceInParticularDirOffsetCounts
-    , std::vector<std::vector<std::vector<float>>> &noiseForCurChunk
-    , std::vector<int> &arrayOfAllPositions
-    , std::unordered_map<int, bool> &chunkGenerated, int chunkIndex) {
+static void GenChunkMesh(std::vector<std::vector<std::vector<float>>> &noiseForCurChunk
+    , VertexPositions &megaVertPositions
+    , std::unordered_map<int, bool> &chunkGenerated
+    , int chunkIndex, Vector3 chunkIndexVec) {
     
     //GenMeshCustom3D(transformOfVerticesOfFaceInParticularDir, noiseForCurChunk);
-    GenMeshCustom2D(transformOfVerticesOfFaceInParticularDir, chunkTransformOfVerticesOfFaceInParticularDirOffsetCounts, noiseForCurChunk, arrayOfAllPositions);
+    GenMeshCustom2D(noiseForCurChunk, megaVertPositions, chunkIndexVec);
 
     std::lock_guard<std::mutex> lock(chunkGeneratedMutex);
     chunkGenerated[chunkIndex] = true;
@@ -115,8 +195,6 @@ int main()
 
     Texture2D textureLoad = LoadTexture("texture_test_small.png");
 
-    ThreeDimensionalStdVectorUnorderedMap(chunkTransformOfVerticesOfFaceInParticularDir, BlockFaceDirection, std::vector<int>, chunkSize);
-    ThreeDimensionalStdVectorUnorderedMap(chunkTransformOfVerticesOfFaceInParticularDirOffsetCounts, BlockFaceDirection, Vector2, chunkSize);
     AllChunkVoxelStorage(noise3D, float, numChunks + 1, chunkSize + 3);
 
     std::unordered_map<int, bool> chunkGenerated;
@@ -126,8 +204,9 @@ int main()
     //MakeNoise3D(noise3D, numChunks, numChunksY, chunkSize, scale);
     MakeNoise2D(noise3D, numChunks, numChunksY, chunkSize, scale);
 
-    std::vector<int> megaArrayOfAllPositions;
     std::vector<float3> chunkPositions;
+
+    VertexPositions megaVertPositions;
 
     Vector3 curChunkPos = { 0, 0, 0 };
     for (int i = 0; i < numChunks; i++)
@@ -149,11 +228,9 @@ int main()
 
                 //why i,j,k instead of i, k, j? I don't know.
                 chunkMeshGenThreads.push_back(std::async(std::launch::async, GenChunkMesh
-                    , std::ref(chunkTransformOfVerticesOfFaceInParticularDir[i][j][k])
-                    , std::ref(chunkTransformOfVerticesOfFaceInParticularDirOffsetCounts[i][j][k])
                     , std::ref(noise3D[i][k][j])
-                    , std::ref(megaArrayOfAllPositions)
-                    , std::ref(chunkGenerated), curID));
+                    , std::ref(megaVertPositions)
+                    , std::ref(chunkGenerated), curID, Vector3 {(float)i, (float)k, (float)j}));
 
             }
 
@@ -170,9 +247,9 @@ int main()
     renderTraversalOrder.push_back(Vector3{ 0, 0, 0 });
 
     int curLayerNum = 1;
-    for (int y = 0; y < numChunksY; y++)
+    for (int y = 0; y < viewDistanceY; y++)
     {
-        while (curLayerNum < numChunks) {
+        while (curLayerNum < viewDistance) {
 
             for (int z = -curLayerNum; z <= curLayerNum; z++) {
                 Vector3 chunkIndex = Vector3{ (float)(curLayerNum), (float)(y), (float)z };
@@ -217,11 +294,8 @@ int main()
     
     DisableCursor();
 
-    int strayCounter = -1;
-
     while (!WindowShouldClose())
     {
-        strayCounter++;
         UpdateCamera(&camera, CAMERA_FREE);
 
         float cameraPos[3] = {camera.position.x, camera.position.y, camera.position.z};
@@ -241,7 +315,6 @@ int main()
 
             for (int i = 0; i < renderTraversalOrder.size(); i++)
             {
-
                 Vector3 curChunkTraversalIndex = Vector3{ renderTraversalOrder[i].x + cameraChunkPos.x, renderTraversalOrder[i].y, renderTraversalOrder[i].z + cameraChunkPos.z };
 
                 if (curChunkTraversalIndex.x < 0 || curChunkTraversalIndex.y < 0 || curChunkTraversalIndex.z < 0
@@ -249,11 +322,12 @@ int main()
                     //std::cout << "Skipping. " << curChunkTraversalIndex.x << ", " << curChunkTraversalIndex.y << ", " << curChunkTraversalIndex.z << std::endl;
                     continue;
                 }
+
                 Vector3 curChunkPos = { curChunkTraversalIndex.x * chunkSize, curChunkTraversalIndex.y * chunkSize, curChunkTraversalIndex.z * chunkSize };
 
                 int curID = (int)curChunkTraversalIndex.x << 10 | (int)curChunkTraversalIndex.y << 5 | (int)curChunkTraversalIndex.z;
                 //std::cout << "traversing: " << strayCounter << std::endl;
-                ReadyIndirectDrawListOfDrawableChunksAndFaces(curChunkTraversalIndex, camera, cameraChunkPos, chunkGenerated[curID], instanceShader, instancedMaterial, chunkTransformOfVerticesOfFaceInParticularDir, chunkTransformOfVerticesOfFaceInParticularDirOffsetCounts, megaArrayOfAllPositions, chunkPositions, renderQuad);
+                ReadyIndirectDrawListOfDrawableChunksAndFaces(curChunkTraversalIndex, camera, cameraChunkPos, chunkGenerated[curID], instanceShader, instancedMaterial, megaVertPositions, chunkPositions, renderQuad);
             }
 
             //std::cout << drawArraysIndirectCommands.size() << " : " << chunkPositions.size() << std::endl;
@@ -263,7 +337,8 @@ int main()
             //std::cout << chunkPositions.size() << std::endl;
             //std::cout << drawArraysIndirectCommands.size() << std::endl;
 
-            DrawMeshMultiInstancedDrawIndirect(renderQuad, instancedMaterial, megaArrayOfAllPositions.data(), megaArrayOfAllPositions.size(), drawArraysIndirectCommands, drawArraysIndirectCommands.size());
+            DrawMeshMultiInstancedDrawIndirect(renderQuad, instancedMaterial, megaVertPositions.megaArrayOfAllPositions.data(), megaVertPositions.megaArrayOfAllPositions.size(), drawArraysIndirectCommands, drawArraysIndirectCommands.size());
+            rlUnloadShaderBuffer(chunkPosSSBO);
 
             DrawGrid(10, 1.0);
 
@@ -299,15 +374,18 @@ int main()
 static void ReadyIndirectDrawListOfDrawableChunksAndFaces(Vector3 chunkIndex, Camera camera, Vector3 cameraChunkIndex
     , bool chunkGenerated
     , Shader instanceShader, Material instancedMaterial
-    , std::vector<std::vector<std::vector<std::unordered_map<BlockFaceDirection, std::vector<int>>>>> &chunkTransformOfVerticesOfFaceInParticularDir
-    , std::vector<std::vector<std::vector<std::unordered_map<BlockFaceDirection, Vector2>>>> &chunkTransformOfVerticesOfFaceInParticularDirOffsetCounts
-    , std::vector<int> &megaArrayOfAllPositions
+    , VertexPositions &megaVertPositions
     , std::vector<float3> &chunkPositions
     , GenerativeMesh &renderQuad) {
 
     int i = chunkIndex.x;
     int k = chunkIndex.y;
     int j = chunkIndex.z;
+
+    int curChunkIndexInBigArray = i * numChunks * numChunksY * NUM_FACES * chunkSize * chunkSize * chunkSize
+                                + j * numChunksY * NUM_FACES * chunkSize * chunkSize * chunkSize
+                                + k * NUM_FACES * chunkSize * chunkSize * chunkSize;
+
 
     Vector3 curChunkPos = { i * chunkSize, k * chunkSize, j * chunkSize };
 
@@ -336,8 +414,8 @@ static void ReadyIndirectDrawListOfDrawableChunksAndFaces(Vector3 chunkIndex, Ca
             float dotLeft = Vector3DotProduct(dirToChunkFromCamera, left);
 
             if (dotUp < 0 || cameraInThisChunkWidthAndBreadth) {
-                int start = chunkTransformOfVerticesOfFaceInParticularDirOffsetCounts[i][j][k][BlockFaceDirection::UP].x;
-                int numInstances = chunkTransformOfVerticesOfFaceInParticularDir[i][j][k][BlockFaceDirection::UP].size();
+                int start = curChunkIndexInBigArray + totalNumVoxelsPerChunk * FACE_UP_INDEX;
+                int numInstances = megaVertPositions.upEndVoxelPositions[megaVertPositions.ChunkDirFaceFlatIndex(chunkIndex)];
                 if (numInstances > 0) {
                     DrawArraysIndirectCommand curCommand = { 4, numInstances, 0, start};
                     drawArraysIndirectCommands.push_back(curCommand);
@@ -348,8 +426,8 @@ static void ReadyIndirectDrawListOfDrawableChunksAndFaces(Vector3 chunkIndex, Ca
             }
 
             if (dotDown < 0 || cameraInThisChunkWidthAndBreadth || true) {
-                int start = chunkTransformOfVerticesOfFaceInParticularDirOffsetCounts[i][j][k][BlockFaceDirection::DOWN].x;
-                int numInstances = chunkTransformOfVerticesOfFaceInParticularDir[i][j][k][BlockFaceDirection::DOWN].size();
+                int start = curChunkIndexInBigArray + totalNumVoxelsPerChunk * FACE_DOWN_INDEX;
+                int numInstances = megaVertPositions.downEndVoxelPositions[megaVertPositions.ChunkDirFaceFlatIndex(chunkIndex)];
                 if (numInstances > 0 || true) {
                     DrawArraysIndirectCommand curCommand = { 4, numInstances, 0, start };
                     drawArraysIndirectCommands.push_back(curCommand);
@@ -359,8 +437,8 @@ static void ReadyIndirectDrawListOfDrawableChunksAndFaces(Vector3 chunkIndex, Ca
             }
 
             if (dotFront < 0 || cameraInThisChunkWidthAndBreadth || true) {
-                int start = chunkTransformOfVerticesOfFaceInParticularDirOffsetCounts[i][j][k][BlockFaceDirection::FRONT].x;
-                int numInstances = chunkTransformOfVerticesOfFaceInParticularDir[i][j][k][BlockFaceDirection::FRONT].size();
+                int start = curChunkIndexInBigArray + totalNumVoxelsPerChunk * FACE_FRONT_INDEX;
+                int numInstances = megaVertPositions.frontEndVoxelPositions[megaVertPositions.ChunkDirFaceFlatIndex(chunkIndex)];
                 if (numInstances > 0 || true) {
                     DrawArraysIndirectCommand curCommand = { 4, numInstances, 0, start };
                     drawArraysIndirectCommands.push_back(curCommand);
@@ -370,8 +448,8 @@ static void ReadyIndirectDrawListOfDrawableChunksAndFaces(Vector3 chunkIndex, Ca
             }
 
             if (dotBack < 0 || cameraInThisChunkWidthAndBreadth || true) {
-                int start = chunkTransformOfVerticesOfFaceInParticularDirOffsetCounts[i][j][k][BlockFaceDirection::BACK].x;
-                int numInstances = chunkTransformOfVerticesOfFaceInParticularDir[i][j][k][BlockFaceDirection::BACK].size();
+                int start = curChunkIndexInBigArray + totalNumVoxelsPerChunk * FACE_BACK_INDEX;
+                int numInstances = megaVertPositions.backEndVoxelPositions[megaVertPositions.ChunkDirFaceFlatIndex(chunkIndex)];
                 if (numInstances > 0 || true) {
                     DrawArraysIndirectCommand curCommand = { 4, numInstances, 0, start };
                     drawArraysIndirectCommands.push_back(curCommand);
@@ -381,8 +459,8 @@ static void ReadyIndirectDrawListOfDrawableChunksAndFaces(Vector3 chunkIndex, Ca
             }
 
             if (dotRight < 0 || cameraInThisChunkWidthAndBreadth || true) {
-                int start = chunkTransformOfVerticesOfFaceInParticularDirOffsetCounts[i][j][k][BlockFaceDirection::RIGHT].x;
-                int numInstances = chunkTransformOfVerticesOfFaceInParticularDir[i][j][k][BlockFaceDirection::RIGHT].size();
+                int start = curChunkIndexInBigArray + totalNumVoxelsPerChunk * FACE_RIGHT_INDEX;
+                int numInstances = megaVertPositions.rightEndVoxelPositions[megaVertPositions.ChunkDirFaceFlatIndex(chunkIndex)];
                 if (numInstances > 0 || true) {
                     DrawArraysIndirectCommand curCommand = { 4, numInstances, 0, start };
                     drawArraysIndirectCommands.push_back(curCommand);
@@ -392,8 +470,8 @@ static void ReadyIndirectDrawListOfDrawableChunksAndFaces(Vector3 chunkIndex, Ca
             }
 
             if (dotLeft < 0 || cameraInThisChunkWidthAndBreadth || true) {
-                int start = chunkTransformOfVerticesOfFaceInParticularDirOffsetCounts[i][j][k][BlockFaceDirection::LEFT].x;
-                int numInstances = chunkTransformOfVerticesOfFaceInParticularDir[i][j][k][BlockFaceDirection::LEFT].size();
+                int start = curChunkIndexInBigArray + totalNumVoxelsPerChunk * FACE_LEFT_INDEX;
+                int numInstances = megaVertPositions.leftEndVoxelPositions[megaVertPositions.ChunkDirFaceFlatIndex(chunkIndex)];
                 if (numInstances > 0 || true) {
                     DrawArraysIndirectCommand curCommand = { 4, numInstances, 0, start };
                     drawArraysIndirectCommands.push_back(curCommand);
@@ -436,9 +514,45 @@ static void MakeNoise3D(std::vector<std::vector<std::vector<std::vector<std::vec
 
 }
 
-static void MakeNoise2D(std::vector<std::vector<std::vector<std::vector<std::vector<std::vector<float>>>>>>& noiseStorage, int numChunks, int numChunksY, int chunksSize, float scale) {
+static void MakeNoiseForChunk(std::vector<std::vector<std::vector<std::vector<std::vector<std::vector<float>>>>>>& noiseStorage, int chunksX, int chunksY, int chunksZ, int numChunks, int numChunksY, int chunksSize, float scale) {
 
     int _x, _y, _z = 0;
+
+    for (int x = 0; x <= chunkSize + 1; x++)
+    {
+        _x = x + chunksX * chunkSize;
+
+        for (int z = 0; z <= chunkSize + 1; z++)
+        {
+            _z = z + chunksZ * chunksSize;
+
+            float noise = perlin.noise2D_01((double)_x * scale, (double)_z * scale);
+
+            int scaledNoise = (int)(noise * chunksSize * numChunksY);
+
+            for (int y = 0; y <= chunkSize + 1; y++)
+            {
+                _y = y + chunksY * chunkSize;
+                if (_y < scaledNoise) {// This is the position under the noise height.
+                    noiseStorage[chunksX][chunksY][chunksZ][x][y][z] = 0; // STONE BLOCK
+                }
+                else if (_y == scaledNoise) {// This is the noise height.
+                    noiseStorage[chunksX][chunksY][chunksZ][x][y][z] = 1; // DIRT BLOCK
+                }
+                else if (_y > scaledNoise) {// This is the position above the noise height.
+                    noiseStorage[chunksX][chunksY][chunksZ][x][y][z] = 2; // AIR BLOCK
+                }
+
+                //float value = (float)_y / (float)scaledNoise;
+                //noiseStorage[chunksX][chunksY][chunksZ][x][y][z] = value > 1 ? ceil(value) : 0;
+
+            }
+        }
+    }
+
+}
+
+static void MakeNoise2D(std::vector<std::vector<std::vector<std::vector<std::vector<std::vector<float>>>>>>& noiseStorage, int numChunks, int numChunksY, int chunksSize, float scale) {
 
     for (int chunksX = 0; chunksX < numChunks; chunksX++)
     {
@@ -446,37 +560,7 @@ static void MakeNoise2D(std::vector<std::vector<std::vector<std::vector<std::vec
         {
             for (int chunksZ = 0; chunksZ < numChunks; chunksZ++)
             {
-                for (int x = 0; x <= chunkSize + 1; x++)
-                {
-                    _x = x + chunksX * chunkSize;
-
-                    for (int z = 0; z <= chunkSize + 1; z++)
-                    {
-                        _z = z + chunksZ * chunksSize;
-
-                        float noise = perlin.noise2D_01((double)_x * scale, (double)_z * scale);
-
-                        int scaledNoise = (int)(noise * chunksSize * numChunksY);
-
-                        for (int y = 0; y <= chunkSize + 1; y++)
-                        {
-                            _y = y + chunksY * chunkSize;
-                            if (_y < scaledNoise) {// This is the position under the noise height.
-                                noiseStorage[chunksX][chunksY][chunksZ][x][y][z] = 0; // STONE BLOCK
-                            }
-                            else if (_y == scaledNoise) {// This is the noise height.
-                                noiseStorage[chunksX][chunksY][chunksZ][x][y][z] = 1; // DIRT BLOCK
-                            }
-                            else if (_y > scaledNoise) {// This is the position above the noise height.
-                                noiseStorage[chunksX][chunksY][chunksZ][x][y][z] = 2; // AIR BLOCK
-                            }
-                            
-                            //float value = (float)_y / (float)scaledNoise;
-                            //noiseStorage[chunksX][chunksY][chunksZ][x][y][z] = value > 1 ? ceil(value) : 0;
-
-                        }
-                    }
-                }
+                MakeNoiseForChunk(noiseStorage, chunksX, chunksY, chunksZ, numChunks, numChunksY, chunkSize, scale);
             }
         }
     }
@@ -548,12 +632,13 @@ static void GenMeshCustom3D(std::unordered_map<BlockFaceDirection, std::vector<i
 
 static std::mutex megaArrayInsertionMutex;
 //Can be multithreaded to increase performance by doing one thread per face direction.
-static void GenMeshCustom2D(std::unordered_map<BlockFaceDirection, std::vector<int>>& transformOfVerticesOfFaceInParticularDir
-    , std::unordered_map<BlockFaceDirection, Vector2>& chunkTransformOfVerticesOfFaceInParticularDirOffsetCounts
-    , std::vector<std::vector<std::vector<float>>> &noiseForCurrentChunk
-    , std::vector<int> &megaArrayOfAllPositions)
+static void GenMeshCustom2D(std::vector<std::vector<std::vector<float>>> &noiseForCurrentChunk
+    , VertexPositions &megaVertPositions
+    , Vector3 chunkIndex)
 {
     float scale = 0.1f;
+
+    int curChunkIndexInBigArray = megaVertPositions.ChunkFlatIndex(chunkIndex);
 
     for (int y = 1; y <= chunkSize; y++)
     {
@@ -563,103 +648,67 @@ static void GenMeshCustom2D(std::unordered_map<BlockFaceDirection, std::vector<i
             {
                 float curNoise = noiseForCurrentChunk[x][y][z];
 
-                if (curNoise == 1 || curNoise == 0) {
+                //int curVoxelIndex = curChunkIndexInBigArray
+                //    + curFace * chunkSize * chunkSize * chunkSize
+                //    + (y - 1) * chunkSize * chunkSize
+                //    + (x - 1) * chunkSize
+                //    + (z - 1);
 
-                    int curPosition = PackThreeNumbers(x - 1, y - 1, z - 1);
+                int curPosition = PackThreeNumbers(x - 1, y - 1, z - 1);
+
+                if (curNoise == 1 || curNoise == 0) {
 
                     float curNoiseTop = noiseForCurrentChunk[x][y + 1][z];
 
                     if (curNoiseTop == 2) {
                         int curPositionTemp = curPosition + (FACE_UP_INDEX << FACE_DIRECTION_POSITION);
-                        transformOfVerticesOfFaceInParticularDir[BlockFaceDirection::UP].push_back(curPositionTemp);
+                        //transformOfVerticesOfFaceInParticularDir[BlockFaceDirection::UP].push_back(curPositionTemp);
+                        megaVertPositions.AddUp(curPositionTemp, curChunkIndexInBigArray, chunkIndex);
                     }
 
                     float curNoiseBottom = noiseForCurrentChunk[x][y - 1][z];
 
                     if (curNoiseBottom == 2) {
                         int curPositionTemp = curPosition + (FACE_DOWN_INDEX << FACE_DIRECTION_POSITION);
-                        transformOfVerticesOfFaceInParticularDir[BlockFaceDirection::DOWN].push_back(curPositionTemp);
+                        //transformOfVerticesOfFaceInParticularDir[BlockFaceDirection::DOWN].push_back(curPositionTemp);
+                        megaVertPositions.AddDown(curPositionTemp, curChunkIndexInBigArray, chunkIndex);
                     }
 
                     float curNoiseFront = noiseForCurrentChunk[x][y][z + 1];
 
                     if (curNoiseFront == 2) {
                         int curPositionTemp = curPosition + (FACE_FRONT_INDEX << FACE_DIRECTION_POSITION);
-                        transformOfVerticesOfFaceInParticularDir[BlockFaceDirection::FRONT].push_back(curPositionTemp);
+                        //transformOfVerticesOfFaceInParticularDir[BlockFaceDirection::FRONT].push_back(curPositionTemp);
+                        megaVertPositions.AddFront(curPositionTemp, curChunkIndexInBigArray, chunkIndex);
                     }
 
                     float curNoiseBack = noiseForCurrentChunk[x][y][z - 1];
 
                     if (curNoiseBack == 2) {
                         int curPositionTemp = curPosition + (FACE_BACK_INDEX << FACE_DIRECTION_POSITION);
-                        transformOfVerticesOfFaceInParticularDir[BlockFaceDirection::BACK].push_back(curPositionTemp);
+                        //transformOfVerticesOfFaceInParticularDir[BlockFaceDirection::BACK].push_back(curPositionTemp);
+                        megaVertPositions.AddBack(curPositionTemp, curChunkIndexInBigArray, chunkIndex);
                     }
 
                     float curNoiseRight = noiseForCurrentChunk[x + 1][y][z];
 
                     if (curNoiseRight == 2) {
                         int curPositionTemp = curPosition + (FACE_RIGHT_INDEX << FACE_DIRECTION_POSITION);
-                        transformOfVerticesOfFaceInParticularDir[BlockFaceDirection::RIGHT].push_back(curPositionTemp);
+                        //transformOfVerticesOfFaceInParticularDir[BlockFaceDirection::RIGHT].push_back(curPositionTemp);
+                        megaVertPositions.AddRight(curPositionTemp, curChunkIndexInBigArray, chunkIndex);
                     }
 
                     float curNoiseLeft = noiseForCurrentChunk[x - 1][y][z];
 
                     if (curNoiseLeft == 2) {
                         int curPositionTemp = curPosition + (FACE_LEFT_INDEX << FACE_DIRECTION_POSITION);
-                        transformOfVerticesOfFaceInParticularDir[BlockFaceDirection::LEFT].push_back(curPositionTemp);
+                        //transformOfVerticesOfFaceInParticularDir[BlockFaceDirection::LEFT].push_back(curPositionTemp);
+                        megaVertPositions.AddLeft(curPositionTemp, curChunkIndexInBigArray, chunkIndex);
                     }
-
                 }
             }
         }
     }
-
-    std::lock_guard<std::mutex> lock(megaArrayInsertionMutex);
-    auto endOfMegaArray = megaArrayOfAllPositions.end();
-
-    chunkTransformOfVerticesOfFaceInParticularDirOffsetCounts[BlockFaceDirection::UP].x = megaArrayOfAllPositions.size();
-    auto startOfUpArray = transformOfVerticesOfFaceInParticularDir[BlockFaceDirection::UP].begin();
-    auto endOfUpArray = transformOfVerticesOfFaceInParticularDir[BlockFaceDirection::UP].end();
-    megaArrayOfAllPositions.insert(endOfMegaArray, startOfUpArray, endOfUpArray);
-    chunkTransformOfVerticesOfFaceInParticularDirOffsetCounts[BlockFaceDirection::UP].y = megaArrayOfAllPositions.size();
-
-    //std::cout << transformOfVerticesOfFaceInParticularDir[BlockFaceDirection::UP].size() << " :- " << chunkTransformOfVerticesOfFaceInParticularDirOffsetCounts[BlockFaceDirection::UP].x << ", " << chunkTransformOfVerticesOfFaceInParticularDirOffsetCounts[BlockFaceDirection::UP].y << std::endl;
-
-    chunkTransformOfVerticesOfFaceInParticularDirOffsetCounts[BlockFaceDirection::DOWN].x = megaArrayOfAllPositions.size();
-    endOfMegaArray = megaArrayOfAllPositions.end();
-    auto startOfDownArray = transformOfVerticesOfFaceInParticularDir[BlockFaceDirection::DOWN].begin();
-    auto endOfDownArray = transformOfVerticesOfFaceInParticularDir[BlockFaceDirection::DOWN].end();
-    megaArrayOfAllPositions.insert(endOfMegaArray, startOfDownArray, endOfDownArray);
-    chunkTransformOfVerticesOfFaceInParticularDirOffsetCounts[BlockFaceDirection::DOWN].y = megaArrayOfAllPositions.size();
-
-    chunkTransformOfVerticesOfFaceInParticularDirOffsetCounts[BlockFaceDirection::FRONT].x = megaArrayOfAllPositions.size();
-    endOfMegaArray = megaArrayOfAllPositions.end();
-    auto startOfFrontArray = transformOfVerticesOfFaceInParticularDir[BlockFaceDirection::FRONT].begin();
-    auto endOfFrontArray = transformOfVerticesOfFaceInParticularDir[BlockFaceDirection::FRONT].end();
-    megaArrayOfAllPositions.insert(endOfMegaArray, startOfFrontArray, endOfFrontArray);
-    chunkTransformOfVerticesOfFaceInParticularDirOffsetCounts[BlockFaceDirection::FRONT].y = megaArrayOfAllPositions.size();
-
-    chunkTransformOfVerticesOfFaceInParticularDirOffsetCounts[BlockFaceDirection::BACK].x = megaArrayOfAllPositions.size();
-    endOfMegaArray = megaArrayOfAllPositions.end();
-    auto startOfBackArray = transformOfVerticesOfFaceInParticularDir[BlockFaceDirection::BACK].begin();
-    auto endOfBackArray = transformOfVerticesOfFaceInParticularDir[BlockFaceDirection::BACK].end();
-    megaArrayOfAllPositions.insert(endOfMegaArray, startOfBackArray, endOfBackArray);
-    chunkTransformOfVerticesOfFaceInParticularDirOffsetCounts[BlockFaceDirection::BACK].y = megaArrayOfAllPositions.size();
-
-    chunkTransformOfVerticesOfFaceInParticularDirOffsetCounts[BlockFaceDirection::RIGHT].x = megaArrayOfAllPositions.size();
-    endOfMegaArray = megaArrayOfAllPositions.end();
-    auto startOfRightArray = transformOfVerticesOfFaceInParticularDir[BlockFaceDirection::RIGHT].begin();
-    auto endOfRightArray = transformOfVerticesOfFaceInParticularDir[BlockFaceDirection::RIGHT].end();
-    megaArrayOfAllPositions.insert(endOfMegaArray, startOfRightArray, endOfRightArray);
-    chunkTransformOfVerticesOfFaceInParticularDirOffsetCounts[BlockFaceDirection::RIGHT].y = megaArrayOfAllPositions.size();
-
-    chunkTransformOfVerticesOfFaceInParticularDirOffsetCounts[BlockFaceDirection::LEFT].x = megaArrayOfAllPositions.size();
-    endOfMegaArray = megaArrayOfAllPositions.end();
-    auto startOfLeftArray = transformOfVerticesOfFaceInParticularDir[BlockFaceDirection::LEFT].begin();
-    auto endOfLeftArray = transformOfVerticesOfFaceInParticularDir[BlockFaceDirection::LEFT].end();
-    megaArrayOfAllPositions.insert(endOfMegaArray, startOfLeftArray, endOfLeftArray);
-    chunkTransformOfVerticesOfFaceInParticularDirOffsetCounts[BlockFaceDirection::LEFT].y = megaArrayOfAllPositions.size();
-
 }
 
 void PlaneFacingDir(Vector3 dir, GenerativeMesh &curMesh) {
