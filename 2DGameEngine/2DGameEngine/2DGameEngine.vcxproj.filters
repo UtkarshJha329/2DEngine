@@ -35,13 +35,19 @@
     <ClInclude Include="BlockType.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="DrawMeshInstancedFlattenedTransforms.h">
+    <ClInclude Include="InstancedDrawing.h">
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="rlights.h">
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="Plane.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="VertexPositions.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="WorldConstants.h">
       <Filter>Header Files</Filter>
     </ClInclude>
   </ItemGroup>

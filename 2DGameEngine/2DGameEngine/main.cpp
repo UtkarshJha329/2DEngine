@@ -5,123 +5,28 @@
 
 #include "flecs/flecs.h"
 
+#define GLSL_VERSION            430
 #define GRAPHICS_API_OPENGL_43
 #include "raylib/raylib.h"
-#include "raylib/raymath.h"
 
 #include "Plane.h"
-
-#define GLSL_VERSION            430
-
-#define FACE_DIRECTION_POSITION 16
-
-#define FACE_UP_INDEX 0
-#define FACE_DOWN_INDEX 1
-#define FACE_FRONT_INDEX 2
-#define FACE_BACK_INDEX 3
-#define FACE_RIGHT_INDEX 4
-#define FACE_LEFT_INDEX 5
-
-#define NUM_FACES 6
-
 #include "PerlinNoise.hpp"
 
 #include <vector>
 #include <string>
 #include <map>
 
+#include "WorldConstants.h"
+#include "VertexPositions.h"
+
 #include "CubeMeshData.h"
-#include "DrawMeshInstancedFlattenedTransforms.h"
+#include "InstancedDrawing.h"
 
 #define AllChunkVoxelStorage(_name, _type, _numChunks, _chunkSize) std::vector<std::vector<std::vector<std::vector<std::vector<std::vector<_type>>>>>> _name(_numChunks, std::vector<std::vector<std::vector<std::vector<std::vector<_type>>>>>(_numChunks, std::vector<std::vector<std::vector<std::vector<_type>>>>(_numChunks, std::vector<std::vector<std::vector<_type>>>(_chunkSize, std::vector<std::vector<_type>>(_chunkSize, std::vector<_type>(_chunkSize))))))
 #define ThreeDimensionalStdVector(_name, _type, _size) std::vector<std::vector<std::vector<_type>>> _name(_size, std::vector<std::vector<_type>>(_size, std::vector<_type>(_size)));
 #define ThreeDimensionalStdVectorUnorderedMap(_name, _type1, _type2, _size) std::vector<std::vector<std::vector<std::unordered_map<_type1, _type2>>>> _name(_size, std::vector<std::vector<std::unordered_map<_type1, _type2>>>(_size, std::vector<std::unordered_map<_type1, _type2>>(_size)));
 
 #define TwoDimensionalStdVector(_name, _type, _size) std::vector<std::vector<_type>> _name(_size, std::vector<_type>(_size));
-
-const int numChunks = 10;
-const int numChunksY = 3;
-const int chunkSize = 16;
-const int viewDistance = 5;
-const int viewDistanceY = 3;
-
-constexpr int totalNumChunks = numChunks * numChunks * numChunksY;
-constexpr int totalNumVoxelsPerChunk = chunkSize * chunkSize * chunkSize;
-constexpr int totalNumFaces = totalNumChunks * NUM_FACES * totalNumVoxelsPerChunk;
-
-struct VertexPositions {
-
-public:
-
-    std::vector<int> megaArrayOfAllPositions;
-
-    std::vector<int> upEndVoxelPositions;
-    std::vector<int> downEndVoxelPositions;
-    std::vector<int> frontEndVoxelPositions;
-    std::vector<int> backEndVoxelPositions;
-    std::vector<int> rightEndVoxelPositions;
-    std::vector<int> leftEndVoxelPositions;
-
-    int totalFilled = 0;
-
-    VertexPositions() : megaArrayOfAllPositions(totalNumFaces, 0)
-        , upEndVoxelPositions(totalNumChunks, 0)
-        , downEndVoxelPositions(totalNumChunks, 0)
-        , frontEndVoxelPositions(totalNumChunks, 0)
-        , backEndVoxelPositions(totalNumChunks, 0)
-        , rightEndVoxelPositions(totalNumChunks, 0)
-        , leftEndVoxelPositions(totalNumChunks, 0)
-    {
-
-    }
-
-    void AddUp(int toAdd, int chunkFlatIndex, Vector3 chunkIndex) {
-        megaArrayOfAllPositions[chunkFlatIndex + FACE_UP_INDEX * totalNumVoxelsPerChunk + upEndVoxelPositions[ChunkDirFaceFlatIndex(chunkIndex)]] = toAdd;
-        upEndVoxelPositions[ChunkDirFaceFlatIndex(chunkIndex)]++;
-        totalFilled++;
-    }
-
-    void AddDown(int toAdd, int chunkFlatIndex, Vector3 chunkIndex) {
-        megaArrayOfAllPositions[chunkFlatIndex + FACE_DOWN_INDEX * totalNumVoxelsPerChunk + downEndVoxelPositions[ChunkDirFaceFlatIndex(chunkIndex)]] = toAdd;
-        downEndVoxelPositions[ChunkDirFaceFlatIndex(chunkIndex)]++;
-        totalFilled++;
-    }
-
-    void AddFront(int toAdd, int chunkFlatIndex, Vector3 chunkIndex) {
-        megaArrayOfAllPositions[chunkFlatIndex + FACE_FRONT_INDEX * totalNumVoxelsPerChunk + frontEndVoxelPositions[ChunkDirFaceFlatIndex(chunkIndex)]] = toAdd;
-        frontEndVoxelPositions[ChunkDirFaceFlatIndex(chunkIndex)]++;
-        totalFilled++;
-    }
-
-    void AddBack(int toAdd, int chunkFlatIndex, Vector3 chunkIndex) {
-        megaArrayOfAllPositions[chunkFlatIndex + FACE_BACK_INDEX * totalNumVoxelsPerChunk + backEndVoxelPositions[ChunkDirFaceFlatIndex(chunkIndex)]] = toAdd;
-        backEndVoxelPositions[ChunkDirFaceFlatIndex(chunkIndex)]++;
-        totalFilled++;
-    }
-
-    void AddRight(int toAdd, int chunkFlatIndex, Vector3 chunkIndex) {
-        megaArrayOfAllPositions[chunkFlatIndex + FACE_RIGHT_INDEX * totalNumVoxelsPerChunk + rightEndVoxelPositions[ChunkDirFaceFlatIndex(chunkIndex)]] = toAdd;
-        rightEndVoxelPositions[ChunkDirFaceFlatIndex(chunkIndex)]++;
-        totalFilled++;
-    }
-
-    void AddLeft(int toAdd, int chunkFlatIndex, Vector3 chunkIndex) {
-        megaArrayOfAllPositions[chunkFlatIndex + FACE_LEFT_INDEX * totalNumVoxelsPerChunk + leftEndVoxelPositions[ChunkDirFaceFlatIndex(chunkIndex)]] = toAdd;
-        leftEndVoxelPositions[ChunkDirFaceFlatIndex(chunkIndex)]++;
-        totalFilled++;
-    }
-
-    int ChunkFlatIndex(Vector3 chunkIndex) {
-        return chunkIndex.x * numChunks * numChunksY * NUM_FACES * chunkSize * chunkSize * chunkSize
-            + chunkIndex.z * numChunksY * NUM_FACES * chunkSize * chunkSize * chunkSize
-            + chunkIndex.y * NUM_FACES * chunkSize * chunkSize * chunkSize;
-    }
-
-    int ChunkDirFaceFlatIndex(Vector3 chunkIndex) {
-        return chunkIndex.x * numChunks * numChunksY + chunkIndex.z * numChunksY + chunkIndex.y;
-    }
-
-};
 
 int PackThreeNumbers(int num1, int num2, int num3) {
     return num1 << 10 | num2 << 5 | num3;
@@ -147,14 +52,6 @@ static void ReadyIndirectDrawListOfDrawableChunksAndFaces(Vector3 chunkIndex, Ca
     , VertexPositions& megaVertPositions
     , std::vector<float3>& chunkPositions
     , GenerativeMesh& renderQuad);
-
-Vector3 up = { 0, 1, 0 };
-Vector3 down = { 0, -1, 0 };
-Vector3 front = { 0, 0, 1 };
-Vector3 back = { 0, 0, -1 };
-Vector3 right = { 1, 0, 0 };
-Vector3 left = { -1, 0, 0 };
-
 
 static std::mutex chunkGeneratedMutex;
 
@@ -200,8 +97,7 @@ int main()
     std::unordered_map<int, bool> chunkGenerated;
     std::vector<std::future<void>> chunkMeshGenThreads;
 
-    float scale = 0.1f;
-    //MakeNoise3D(noise3D, numChunks, numChunksY, chunkSize, scale);
+   //MakeNoise3D(noise3D, numChunks, numChunksY, chunkSize, scale);
     MakeNoise2D(noise3D, numChunks, numChunksY, chunkSize, scale);
 
     std::vector<float3> chunkPositions;
@@ -382,9 +278,7 @@ static void ReadyIndirectDrawListOfDrawableChunksAndFaces(Vector3 chunkIndex, Ca
     int k = chunkIndex.y;
     int j = chunkIndex.z;
 
-    int curChunkIndexInBigArray = i * numChunks * numChunksY * NUM_FACES * chunkSize * chunkSize * chunkSize
-                                + j * numChunksY * NUM_FACES * chunkSize * chunkSize * chunkSize
-                                + k * NUM_FACES * chunkSize * chunkSize * chunkSize;
+    int curChunkIndexInBigArray = megaVertPositions.ChunkFlatIndex(chunkIndex);
 
 
     Vector3 curChunkPos = { i * chunkSize, k * chunkSize, j * chunkSize };
@@ -630,14 +524,11 @@ static void GenMeshCustom3D(std::unordered_map<BlockFaceDirection, std::vector<i
     }
 }
 
-static std::mutex megaArrayInsertionMutex;
 //Can be multithreaded to increase performance by doing one thread per face direction.
 static void GenMeshCustom2D(std::vector<std::vector<std::vector<float>>> &noiseForCurrentChunk
     , VertexPositions &megaVertPositions
     , Vector3 chunkIndex)
 {
-    float scale = 0.1f;
-
     int curChunkIndexInBigArray = megaVertPositions.ChunkFlatIndex(chunkIndex);
 
     for (int y = 1; y <= chunkSize; y++)

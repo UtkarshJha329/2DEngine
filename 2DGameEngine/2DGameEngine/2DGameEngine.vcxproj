@@ -147,11 +147,13 @@
   <ItemGroup>
     <ClInclude Include="BlockType.h" />
     <ClInclude Include="CubeMeshData.h" />
-    <ClInclude Include="DrawMeshInstancedFlattenedTransforms.h" />
+    <ClInclude Include="InstancedDrawing.h" />
     <ClInclude Include="flecs\flecs.h" />
     <ClInclude Include="PerlinNoise.hpp" />
     <ClInclude Include="Plane.h" />
     <ClInclude Include="rlights.h" />
+    <ClInclude Include="VertexPositions.h" />
+    <ClInclude Include="WorldConstants.h" />
   </ItemGroup>
   <ItemGroup>
     <None Include="Shaders\SimpleShader.frag" />

@@ -105,4 +105,6 @@ void main()
     fragNormal = normalize(vec3(matNormal * vec4(curVertex, 1.0)));
 
     gl_Position = mvp * translationMatrix  * vec4(curVertex, 1.0);
+
+    //using current position X Y and Z coordinates scale appropriately?
 }
