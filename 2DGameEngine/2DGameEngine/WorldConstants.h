@@ -14,11 +14,11 @@
 #define NUM_FACES 6
 
 
-const int numChunks = 10;
-const int numChunksY = 3;
-const int chunkSize = 16;
-const int viewDistance = 10;
-const int viewDistanceY = 3;
+const int numChunks = 2;
+const int numChunksY = 1;
+const int chunkSize = 8;
+const int viewDistance = 2;
+const int viewDistanceY = 1;
 const float scale = 0.1f;
 
 constexpr int totalNumChunks = numChunks * numChunks * numChunksY;

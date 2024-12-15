@@ -354,7 +354,7 @@ void DrawMeshMultiInstancedDrawIndirect(GenerativeMesh& genMesh, Material materi
         // It isn't clear which would be reliably faster in all cases and on all platforms,
         // anecdotally glMapBuffer() seems very slow (syncs) while glBufferSubData() seems
         // no faster, since we're transferring all the transform matrices anyway
-        genMesh.instanceVBOID = rlLoadVertexBuffer(instancePositions, instances * sizeof(int), false);
+        genMesh.instanceVBOID = rlLoadVertexBuffer(instancePositions, instances * sizeof(int), true);
 
         rlEnableVertexAttribute(3);
         rlSetVertexAttributeI(3, 1, RL_INT, 0, 0, 0);

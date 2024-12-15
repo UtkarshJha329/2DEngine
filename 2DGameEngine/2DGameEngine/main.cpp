@@ -3,6 +3,8 @@
 #include <chrono>
 #include <future>
 
+#include <queue>
+
 #include "flecs/flecs.h"
 
 #define GLSL_VERSION            430
@@ -14,13 +16,19 @@
 
 #include <vector>
 #include <string>
-#include <map>
+#include <fstream>
 
 #include "WorldConstants.h"
 #include "VertexPositions.h"
 
 #include "CubeMeshData.h"
 #include "InstancedDrawing.h"
+
+struct ChangesToMegaPositionsArray {
+    int start   = 0;
+    int size    = 0;
+    int offset  = 0;
+};
 
 #define AllChunkVoxelStorage(_name, _type, _numChunks, _chunkSize) std::vector<std::vector<std::vector<std::vector<std::vector<std::vector<_type>>>>>> _name(_numChunks, std::vector<std::vector<std::vector<std::vector<std::vector<_type>>>>>(_numChunks, std::vector<std::vector<std::vector<std::vector<_type>>>>(_numChunks, std::vector<std::vector<std::vector<_type>>>(_chunkSize, std::vector<std::vector<_type>>(_chunkSize, std::vector<_type>(_chunkSize))))))
 #define ThreeDimensionalStdVector(_name, _type, _size) std::vector<std::vector<std::vector<_type>>> _name(_size, std::vector<std::vector<_type>>(_size, std::vector<_type>(_size)));
@@ -33,14 +41,14 @@ int PackThreeNumbers(int num1, int num2, int num3) {
 }
 
 static void MakeNoise3D(std::vector<std::vector<std::vector<std::vector<std::vector<std::vector<float>>>>>>& noiseStorage, int numChunks, int numChunksY, int chunksSize, float scale);
-static void MakeNoiseForChunk(std::vector<std::vector<std::vector<std::vector<std::vector<std::vector<float>>>>>>& noiseStorage, int chunksX, int chunksY, int chunksZ, int numChunks, int numChunksY, int chunksSize, float scale);
+static void MakeNoiseForChunk(std::vector<std::vector<std::vector<float>>>& noiseStorage, int chunksX, int chunksY, int chunksZ, int numChunks, int numChunksY, int chunksSize, float scale);
 static void MakeNoise2D(std::vector<std::vector<std::vector<std::vector<std::vector<std::vector<float>>>>>>& noiseStorage, int numChunks, int numChunksY, int chunksSize, float scale);
 
 static void GenMeshCustom3D(std::unordered_map<BlockFaceDirection, std::vector<int>>& transformOfVerticesOfFaceInParticularDir
     , std::vector<std::vector<std::vector<float>>>& noiseForCurrentChunk);
 static void GenMeshCustom2D(std::vector<std::vector<std::vector<float>>>& noiseForCurrentChunk
     , VertexPositions &megaVertPositions
-    , Vector3 chunkIndex);
+    , Vector3 rescopedChunkIndex);
 
 void PlaneFacingDir(Vector3 dir, GenerativeMesh & curMesh);
 
@@ -54,17 +62,91 @@ static void ReadyIndirectDrawListOfDrawableChunksAndFaces(Vector3 chunkIndex, Ca
     , GenerativeMesh& renderQuad);
 
 static std::mutex chunkGeneratedMutex;
-
 static void GenChunkMesh(std::vector<std::vector<std::vector<float>>> &noiseForCurChunk
     , VertexPositions &megaVertPositions
     , std::unordered_map<int, bool> &chunkGenerated
-    , int chunkIndex, Vector3 chunkIndexVec) {
+    , Vector3 chunkIndexVec) {
     
-    //GenMeshCustom3D(transformOfVerticesOfFaceInParticularDir, noiseForCurChunk);
+
+    //VVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVV Works fine.
+    //std::vector<std::vector<std::vector<float>>> _noiseForCurChunk(chunkSize + 3, std::vector<std::vector<float>>(chunkSize + 3, std::vector<float>(chunkSize + 3)));
+    //MakeNoiseForChunk(_noiseForCurChunk, chunkIndexVec.x, chunkIndexVec.y, chunkIndexVec.z, numChunks, numChunksY, chunkSize, scale);
+    //GenMeshCustom2D(_noiseForCurChunk, megaVertPositions, chunkIndexVec);
+
+    ////GenMeshCustom3D(transformOfVerticesOfFaceInParticularDir, noiseForCurChunk);
+
     GenMeshCustom2D(noiseForCurChunk, megaVertPositions, chunkIndexVec);
 
     std::lock_guard<std::mutex> lock(chunkGeneratedMutex);
+
+    int chunkIndex = megaVertPositions.RescopedChunkFlatIndexWithoutVoxels(chunkIndexVec);
     chunkGenerated[chunkIndex] = true;
+}
+
+std::queue<ChangesToMegaPositionsArray> changesToMegaPositionsArray;
+
+static void GenChunkMeshWithNoise(GenerativeMesh &genMesh
+    , VertexPositions& megaVertPositions
+    , std::unordered_map<int, bool>& chunkGenerated
+    , std::unordered_map<int, bool>& generatingMeshForChunk
+    , std::unordered_map<int, bool>& newThreadUsingChunk
+    , Vector3 nonRescopedChunkIndex) {
+
+
+    int curChunkRescopedIndex = megaVertPositions.RescopedChunkFlatIndexWithoutVoxels(nonRescopedChunkIndex);
+    newThreadUsingChunk[curChunkRescopedIndex] = false;
+
+    std::vector<std::vector<std::vector<float>>> noiseForCurChunk(chunkSize + 3, std::vector<std::vector<float>>(chunkSize + 3, std::vector<float>(chunkSize + 3)));
+    MakeNoiseForChunk(noiseForCurChunk, nonRescopedChunkIndex.x, nonRescopedChunkIndex.y, nonRescopedChunkIndex.z, numChunks, numChunksY, chunkSize, scale);
+
+
+    Vector3 mappedChunkIndexVec = megaVertPositions.RescopeChunkIndex(nonRescopedChunkIndex);
+    if (!newThreadUsingChunk[curChunkRescopedIndex]) {
+        std::lock_guard<std::mutex> lock(chunkGeneratedMutex);
+        GenMeshCustom2D(noiseForCurChunk, megaVertPositions, mappedChunkIndexVec);
+        //int start = 0;
+        //int end = megaVertPositions.megaArrayOfAllPositions.size();
+        //for (int i = start; i < end; i++)
+        //{
+        //    megaVertPositions.megaArrayOfAllPositions[i] = 0;
+        //}
+    }
+
+
+    if (!newThreadUsingChunk[curChunkRescopedIndex]) {
+
+        ChangesToMegaPositionsArray curChange = { megaVertPositions.RescopedChunkTotalFlatIndexWithVoxels(mappedChunkIndexVec) , totalNumVoxelsPerChunk * NUM_FACES * sizeof(int), megaVertPositions.RescopedChunkTotalFlatIndexWithVoxels(mappedChunkIndexVec) * sizeof(int) };
+
+        {
+            std::lock_guard<std::mutex> lock(chunkGeneratedMutex);
+            changesToMegaPositionsArray.push(curChange);
+        }
+        //STUPID THIS DOESN'T WORK ON A DIFFERENT THREAD!
+        //rlUpdateVertexBuffer(genMesh.instanceVBOID, &megaVertPositions.megaArrayOfAllPositions[megaVertPositions.RescopedChunkTotalFlatIndexWithVoxels(mappedChunkIndexVec)], totalNumVoxelsPerChunk * NUM_FACES * sizeof(int), megaVertPositions.RescopedChunkTotalFlatIndexWithVoxels(mappedChunkIndexVec) * sizeof(int));
+
+        //std::cout << "Nothing was rescoped." << std::endl;
+        int curChunkIndexUnmapped = megaVertPositions.NonRescopedChunkFlatIndexWithoutVoxels(nonRescopedChunkIndex);
+        generatingMeshForChunk[curChunkIndexUnmapped] = false;
+
+        std::lock_guard<std::mutex> lock(chunkGeneratedMutex);
+        chunkGenerated[curChunkIndexUnmapped] = true;
+    }
+
+}
+
+static void MirrorAllChangesToMegaArray(GenerativeMesh& genMesh
+    , VertexPositions& megaVertPositions) {
+    while (!changesToMegaPositionsArray.empty()) {
+        
+        ChangesToMegaPositionsArray curChange = changesToMegaPositionsArray.front();
+
+        std::cout << curChange.start << std::endl;
+
+        rlUpdateVertexBuffer(genMesh.instanceVBOID, &megaVertPositions.megaArrayOfAllPositions[curChange.start], curChange.size, curChange.offset);
+
+        changesToMegaPositionsArray.pop();
+
+    }
 }
 
 const siv::PerlinNoise::seed_type seed = 76554893u;
@@ -75,7 +157,7 @@ const int farPlaneDistance = 1000;
 
 std::vector<DrawArraysIndirectCommand> drawArraysIndirectCommands;
 
-//std::vector<float> chunkPositionsFlattened;
+static std::mutex strayMutex;
 
 int main()
 {
@@ -92,41 +174,56 @@ int main()
 
     Texture2D textureLoad = LoadTexture("texture_test_small.png");
 
-    AllChunkVoxelStorage(noise3D, float, numChunks + 1, chunkSize + 3);
+    AllChunkVoxelStorage(noise3D, float, numChunks, chunkSize + 3);
 
     std::unordered_map<int, bool> chunkGenerated;
+    std::unordered_map<int, bool> generatingMeshForChunk;
+    std::unordered_map<int, bool> borrowedChunk;
+
     std::vector<std::future<void>> chunkMeshGenThreads;
 
-   //MakeNoise3D(noise3D, numChunks, numChunksY, chunkSize, scale);
+    //MakeNoise3D(noise3D, numChunks, numChunksY, chunkSize, scale);
     MakeNoise2D(noise3D, numChunks, numChunksY, chunkSize, scale);
 
     std::vector<float3> chunkPositions;
 
     VertexPositions megaVertPositions;
 
+    //std::ifstream is("out.cereal", std::ios::binary);
+    //cereal::BinaryInputArchive iarchive(is);
+
+    //iarchive(megaVertPositions);
+
     Vector3 curChunkPos = { 0, 0, 0 };
+    Vector3 chunkIndex = { 0, 0, 0 };
     for (int i = 0; i < numChunks; i++)
     {
+        chunkIndex.x = i;
         curChunkPos.x = i * chunkSize;
 
         for (int j = 0; j < numChunks; j++)
         {
+            chunkIndex.z = j;
             curChunkPos.z = j * chunkSize;
 
             for (int k = 0; k < numChunksY; k++)
             {
+                chunkIndex.y = k;
                 curChunkPos.y = k * chunkSize;
 
                 //chunkPositions.push_back(float3{ curChunkPos.x, curChunkPos.y, curChunkPos.z });
 
-                int curID = i << 10 | k << 5 | j;
+                int curID = megaVertPositions.RescopedChunkFlatIndexWithoutVoxels(chunkIndex);
                 //std::cout << chunkIndex << std::endl;
 
                 //why i,j,k instead of i, k, j? I don't know.
+
                 chunkMeshGenThreads.push_back(std::async(std::launch::async, GenChunkMesh
                     , std::ref(noise3D[i][k][j])
                     , std::ref(megaVertPositions)
-                    , std::ref(chunkGenerated), curID, Vector3 {(float)i, (float)k, (float)j}));
+                    , std::ref(chunkGenerated), chunkIndex));
+
+                //chunkGenerated[curID] = true;
 
             }
 
@@ -192,6 +289,37 @@ int main()
 
     while (!WindowShouldClose())
     {
+
+        if (IsKeyDown(KEY_RIGHT_ALT) && IsKeyDown(KEY_P)) {
+            std::ofstream os("WorldData/WorldVertexPositions.cereal", std::ios::binary);
+            cereal::BinaryOutputArchive archive(os);
+            archive(megaVertPositions);
+        }
+
+        if (IsKeyDown(KEY_RIGHT_ALT) && IsKeyDown(KEY_L)) {
+
+            std::ifstream is("WorldData/WorldVertexPositions.cereal", std::ios::binary);
+
+            if (is) {
+
+                cereal::BinaryInputArchive iarchive(is);
+                iarchive(megaVertPositions);
+
+                for (int i = 0; i < numChunks; i++)
+                {
+                    for (int j = 0; j < numChunks; j++)
+                    {
+                        for (int k = 0; k < numChunksY; k++)
+                        {
+                            int curID = i << 10 | k << 5 | j;
+                            chunkGenerated[curID] = true;
+
+                        }
+                    }
+                }
+            }
+        }
+
         UpdateCamera(&camera, CAMERA_FREE);
 
         float cameraPos[3] = {camera.position.x, camera.position.y, camera.position.z};
@@ -213,25 +341,91 @@ int main()
             {
                 Vector3 curChunkTraversalIndex = Vector3{ renderTraversalOrder[i].x + cameraChunkPos.x, renderTraversalOrder[i].y, renderTraversalOrder[i].z + cameraChunkPos.z };
 
-                if (curChunkTraversalIndex.x < 0 || curChunkTraversalIndex.y < 0 || curChunkTraversalIndex.z < 0
-                    || curChunkTraversalIndex.x >= numChunks || curChunkTraversalIndex.y >= numChunksY || curChunkTraversalIndex.z >= numChunks) {
-                    //std::cout << "Skipping. " << curChunkTraversalIndex.x << ", " << curChunkTraversalIndex.y << ", " << curChunkTraversalIndex.z << std::endl;
+                if (curChunkTraversalIndex.x < 0 || curChunkTraversalIndex.y < 0 || curChunkTraversalIndex.z < 0/* || curChunkTraversalIndex.y >= numChunksY*/) {
                     continue;
                 }
 
-                Vector3 curChunkPos = { curChunkTraversalIndex.x * chunkSize, curChunkTraversalIndex.y * chunkSize, curChunkTraversalIndex.z * chunkSize };
+                int curChunkNonRescopedID = megaVertPositions.NonRescopedChunkFlatIndexWithoutVoxels(curChunkTraversalIndex);
 
-                int curID = (int)curChunkTraversalIndex.x << 10 | (int)curChunkTraversalIndex.y << 5 | (int)curChunkTraversalIndex.z;
-                //std::cout << "traversing: " << strayCounter << std::endl;
-                ReadyIndirectDrawListOfDrawableChunksAndFaces(curChunkTraversalIndex, camera, cameraChunkPos, chunkGenerated[curID], instanceShader, instancedMaterial, megaVertPositions, chunkPositions, renderQuad);
+                if (curChunkTraversalIndex.x >= numChunks || curChunkTraversalIndex.z >= numChunks) {
+
+                    if (!generatingMeshForChunk.contains(curChunkNonRescopedID)) {
+
+                        generatingMeshForChunk[curChunkNonRescopedID] = true;
+
+                        borrowedChunk[megaVertPositions.RescopedChunkFlatIndexWithoutVoxels(curChunkTraversalIndex)] = true;
+
+                        chunkMeshGenThreads.push_back(std::async(std::launch::async, GenChunkMeshWithNoise
+                            , std::ref(renderQuad)
+                            , std::ref(megaVertPositions)
+                            , std::ref(chunkGenerated)
+                            , std::ref(generatingMeshForChunk)
+                            , std::ref(borrowedChunk)
+                            , curChunkTraversalIndex));
+                    }
+                }
+
+                bool hasTheCurrentChunkBeenGenerated = false;
+                {
+                    std::lock_guard<std::mutex> lock(chunkGeneratedMutex);
+                    hasTheCurrentChunkBeenGenerated = chunkGenerated.contains(curChunkNonRescopedID);
+                
+                }
+
+                if (hasTheCurrentChunkBeenGenerated) {
+                    Vector3 curChunkPos = { curChunkTraversalIndex.x * chunkSize, curChunkTraversalIndex.y * chunkSize, curChunkTraversalIndex.z * chunkSize };
+
+                    std::lock_guard<std::mutex> lock(chunkGeneratedMutex);
+
+                    ReadyIndirectDrawListOfDrawableChunksAndFaces(curChunkTraversalIndex
+                                                                , camera, cameraChunkPos
+                                                                , chunkGenerated[curChunkNonRescopedID]
+                                                                , instanceShader, instancedMaterial
+                                                                , megaVertPositions, chunkPositions
+                                                                , renderQuad);
+                }
             }
-
-            //std::cout << drawArraysIndirectCommands.size() << " : " << chunkPositions.size() << std::endl;
 
             unsigned int chunkPosSSBO = rlLoadShaderBuffer(chunkPositions.size() * sizeof(float3), chunkPositions.data(), RL_DYNAMIC_DRAW);
             rlBindShaderBuffer(chunkPosSSBO, 3);
-            //std::cout << chunkPositions.size() << std::endl;
-            //std::cout << drawArraysIndirectCommands.size() << std::endl;
+
+            bool generatingMesh = false;
+            for (auto& it : generatingMeshForChunk) {
+                if (it.second == true) {
+                    generatingMesh = true;
+                    break;
+                }
+            }
+            if(!generatingMesh)
+            {
+                //generatingMeshForChunk.clear();
+                //std::lock_guard<std::mutex> lock(chunkGeneratedMutex);
+                //MirrorAllChangesToMegaArray(renderQuad, megaVertPositions);
+                //rlUpdateVertexBuffer(renderQuad.instanceVBOID, 0, megaVertPositions.megaArrayOfAllPositions.size() * sizeof(int), 0);
+                rlEnableVertexArray(renderQuad.mesh.vaoId);
+
+                rlUpdateVertexBuffer(renderQuad.instanceVBOID, megaVertPositions.megaArrayOfAllPositions.data(), megaVertPositions.megaArrayOfAllPositions.size() * sizeof(int), 0);
+                //while (!changesToMegaPositionsArray.empty()) {
+
+                //    ChangesToMegaPositionsArray curChange = changesToMegaPositionsArray.front();
+
+                //    std::cout << curChange.start << std::endl;
+
+                //    rlUpdateVertexBuffer(renderQuad.instanceVBOID, &megaVertPositions.megaArrayOfAllPositions[curChange.start], curChange.size, curChange.offset);
+
+                //    changesToMegaPositionsArray.pop();
+
+                //}
+
+                rlEnableVertexAttribute(3);
+                rlSetVertexAttributeI(3, 1, RL_INT, 0, 0, 0);
+                rlSetVertexAttributeDivisor(3, 1);
+
+                rlDisableVertexBuffer();
+                rlDisableVertexArray();
+            }
+            
+            //renderQuad.instanceVBOID = 0;
 
             DrawMeshMultiInstancedDrawIndirect(renderQuad, instancedMaterial, megaVertPositions.megaArrayOfAllPositions.data(), megaVertPositions.megaArrayOfAllPositions.size(), drawArraysIndirectCommands, drawArraysIndirectCommands.size());
             rlUnloadShaderBuffer(chunkPosSSBO);
@@ -274,25 +468,21 @@ static void ReadyIndirectDrawListOfDrawableChunksAndFaces(Vector3 chunkIndex, Ca
     , std::vector<float3> &chunkPositions
     , GenerativeMesh &renderQuad) {
 
-    int i = chunkIndex.x;
-    int k = chunkIndex.y;
-    int j = chunkIndex.z;
-
-    int curChunkIndexInBigArray = megaVertPositions.ChunkFlatIndex(chunkIndex);
-
-
-    Vector3 curChunkPos = { i * chunkSize, k * chunkSize, j * chunkSize };
-
-    bool cameraInThisChunkWidthAndBreadth = chunkIndex.x <= cameraChunkIndex.x || chunkIndex.z <= cameraChunkIndex.z;
-    Vector3 dirToChunkFromCamera = curChunkPos - camera.position;
-
-    dirToChunkFromCamera = Vector3Normalize(dirToChunkFromCamera);
-
-    bool shouldDrawChunk = ShouldDrawChunk(curChunkPos, camera);
     //std::cout << shouldDrawChunk << std::endl;
-    if (shouldDrawChunk) {
+    if (chunkGenerated) {
 
-        if (chunkGenerated) {
+        int curChunkIndexInBigArray = megaVertPositions.RescopedChunkTotalFlatIndexWithVoxels(chunkIndex);
+
+        Vector3 curChunkPos = { chunkIndex.x * chunkSize, chunkIndex.y * chunkSize, chunkIndex.z * chunkSize };
+
+        bool cameraInThisChunkWidthAndBreadth = chunkIndex.x <= cameraChunkIndex.x || chunkIndex.z <= cameraChunkIndex.z;
+        Vector3 dirToChunkFromCamera = curChunkPos - camera.position;
+
+        dirToChunkFromCamera = Vector3Normalize(dirToChunkFromCamera);
+
+        bool shouldDrawChunk = ShouldDrawChunk(curChunkPos, camera);
+
+        if (shouldDrawChunk) {
 
             //std::cout << "Chunk Created." << std::endl;
 
@@ -309,7 +499,7 @@ static void ReadyIndirectDrawListOfDrawableChunksAndFaces(Vector3 chunkIndex, Ca
 
             if (dotUp < 0 || cameraInThisChunkWidthAndBreadth) {
                 int start = curChunkIndexInBigArray + totalNumVoxelsPerChunk * FACE_UP_INDEX;
-                int numInstances = megaVertPositions.upEndVoxelPositions[megaVertPositions.ChunkDirFaceFlatIndex(chunkIndex)];
+                int numInstances = megaVertPositions.upEndVoxelPositions[megaVertPositions.RescopedChunkFlatIndexWithoutVoxels(chunkIndex)];
                 if (numInstances > 0) {
                     DrawArraysIndirectCommand curCommand = { 4, numInstances, 0, start};
                     drawArraysIndirectCommands.push_back(curCommand);
@@ -321,7 +511,7 @@ static void ReadyIndirectDrawListOfDrawableChunksAndFaces(Vector3 chunkIndex, Ca
 
             if (dotDown < 0 || cameraInThisChunkWidthAndBreadth || true) {
                 int start = curChunkIndexInBigArray + totalNumVoxelsPerChunk * FACE_DOWN_INDEX;
-                int numInstances = megaVertPositions.downEndVoxelPositions[megaVertPositions.ChunkDirFaceFlatIndex(chunkIndex)];
+                int numInstances = megaVertPositions.downEndVoxelPositions[megaVertPositions.RescopedChunkFlatIndexWithoutVoxels(chunkIndex)];
                 if (numInstances > 0 || true) {
                     DrawArraysIndirectCommand curCommand = { 4, numInstances, 0, start };
                     drawArraysIndirectCommands.push_back(curCommand);
@@ -332,7 +522,7 @@ static void ReadyIndirectDrawListOfDrawableChunksAndFaces(Vector3 chunkIndex, Ca
 
             if (dotFront < 0 || cameraInThisChunkWidthAndBreadth || true) {
                 int start = curChunkIndexInBigArray + totalNumVoxelsPerChunk * FACE_FRONT_INDEX;
-                int numInstances = megaVertPositions.frontEndVoxelPositions[megaVertPositions.ChunkDirFaceFlatIndex(chunkIndex)];
+                int numInstances = megaVertPositions.frontEndVoxelPositions[megaVertPositions.RescopedChunkFlatIndexWithoutVoxels(chunkIndex)];
                 if (numInstances > 0 || true) {
                     DrawArraysIndirectCommand curCommand = { 4, numInstances, 0, start };
                     drawArraysIndirectCommands.push_back(curCommand);
@@ -343,7 +533,7 @@ static void ReadyIndirectDrawListOfDrawableChunksAndFaces(Vector3 chunkIndex, Ca
 
             if (dotBack < 0 || cameraInThisChunkWidthAndBreadth || true) {
                 int start = curChunkIndexInBigArray + totalNumVoxelsPerChunk * FACE_BACK_INDEX;
-                int numInstances = megaVertPositions.backEndVoxelPositions[megaVertPositions.ChunkDirFaceFlatIndex(chunkIndex)];
+                int numInstances = megaVertPositions.backEndVoxelPositions[megaVertPositions.RescopedChunkFlatIndexWithoutVoxels(chunkIndex)];
                 if (numInstances > 0 || true) {
                     DrawArraysIndirectCommand curCommand = { 4, numInstances, 0, start };
                     drawArraysIndirectCommands.push_back(curCommand);
@@ -354,7 +544,7 @@ static void ReadyIndirectDrawListOfDrawableChunksAndFaces(Vector3 chunkIndex, Ca
 
             if (dotRight < 0 || cameraInThisChunkWidthAndBreadth || true) {
                 int start = curChunkIndexInBigArray + totalNumVoxelsPerChunk * FACE_RIGHT_INDEX;
-                int numInstances = megaVertPositions.rightEndVoxelPositions[megaVertPositions.ChunkDirFaceFlatIndex(chunkIndex)];
+                int numInstances = megaVertPositions.rightEndVoxelPositions[megaVertPositions.RescopedChunkFlatIndexWithoutVoxels(chunkIndex)];
                 if (numInstances > 0 || true) {
                     DrawArraysIndirectCommand curCommand = { 4, numInstances, 0, start };
                     drawArraysIndirectCommands.push_back(curCommand);
@@ -365,7 +555,7 @@ static void ReadyIndirectDrawListOfDrawableChunksAndFaces(Vector3 chunkIndex, Ca
 
             if (dotLeft < 0 || cameraInThisChunkWidthAndBreadth || true) {
                 int start = curChunkIndexInBigArray + totalNumVoxelsPerChunk * FACE_LEFT_INDEX;
-                int numInstances = megaVertPositions.leftEndVoxelPositions[megaVertPositions.ChunkDirFaceFlatIndex(chunkIndex)];
+                int numInstances = megaVertPositions.leftEndVoxelPositions[megaVertPositions.RescopedChunkFlatIndexWithoutVoxels(chunkIndex)];
                 if (numInstances > 0 || true) {
                     DrawArraysIndirectCommand curCommand = { 4, numInstances, 0, start };
                     drawArraysIndirectCommands.push_back(curCommand);
@@ -408,7 +598,7 @@ static void MakeNoise3D(std::vector<std::vector<std::vector<std::vector<std::vec
 
 }
 
-static void MakeNoiseForChunk(std::vector<std::vector<std::vector<std::vector<std::vector<std::vector<float>>>>>>& noiseStorage, int chunksX, int chunksY, int chunksZ, int numChunks, int numChunksY, int chunksSize, float scale) {
+static void MakeNoiseForChunk(std::vector<std::vector<std::vector<float>>> &noiseStorage, int chunksX, int chunksY, int chunksZ, int numChunks, int numChunksY, int chunksSize, float scale) {
 
     int _x, _y, _z = 0;
 
@@ -428,21 +618,25 @@ static void MakeNoiseForChunk(std::vector<std::vector<std::vector<std::vector<st
             {
                 _y = y + chunksY * chunkSize;
                 if (_y < scaledNoise) {// This is the position under the noise height.
-                    noiseStorage[chunksX][chunksY][chunksZ][x][y][z] = 0; // STONE BLOCK
+                    noiseStorage[x][y][z] = 0; // STONE BLOCK
                 }
                 else if (_y == scaledNoise) {// This is the noise height.
-                    noiseStorage[chunksX][chunksY][chunksZ][x][y][z] = 1; // DIRT BLOCK
+                    noiseStorage[x][y][z] = 1; // DIRT BLOCK
                 }
                 else if (_y > scaledNoise) {// This is the position above the noise height.
-                    noiseStorage[chunksX][chunksY][chunksZ][x][y][z] = 2; // AIR BLOCK
+                    noiseStorage[x][y][z] = 2; // AIR BLOCK
                 }
-
                 //float value = (float)_y / (float)scaledNoise;
                 //noiseStorage[chunksX][chunksY][chunksZ][x][y][z] = value > 1 ? ceil(value) : 0;
 
             }
         }
     }
+
+    //{
+    //    std::lock_guard<std::mutex> lock(strayMutex);
+    //    std::cout << "Made Noise." << std::endl;
+    //}
 
 }
 
@@ -454,7 +648,7 @@ static void MakeNoise2D(std::vector<std::vector<std::vector<std::vector<std::vec
         {
             for (int chunksZ = 0; chunksZ < numChunks; chunksZ++)
             {
-                MakeNoiseForChunk(noiseStorage, chunksX, chunksY, chunksZ, numChunks, numChunksY, chunkSize, scale);
+                MakeNoiseForChunk(noiseStorage[chunksX][chunksY][chunksZ], chunksX, chunksY, chunksZ, numChunks, numChunksY, chunkSize, scale);
             }
         }
     }
@@ -527,9 +721,23 @@ static void GenMeshCustom3D(std::unordered_map<BlockFaceDirection, std::vector<i
 //Can be multithreaded to increase performance by doing one thread per face direction.
 static void GenMeshCustom2D(std::vector<std::vector<std::vector<float>>> &noiseForCurrentChunk
     , VertexPositions &megaVertPositions
-    , Vector3 chunkIndex)
+    , Vector3 rescopedChunkIndex)
 {
-    int curChunkIndexInBigArray = megaVertPositions.ChunkFlatIndex(chunkIndex);
+    //{
+    //    std::lock_guard<std::mutex> lock(strayMutex);
+    //    std::cout << rescopedChunkIndex.x << ", " << rescopedChunkIndex.y << ", " << rescopedChunkIndex.z << std::endl;
+    //}
+
+    //std::cout << std::endl;
+    //std::cout << "Generating New Mesh." << std::endl;
+    //std::cout << std::endl;
+
+    int curChunkIndexInBigArray = megaVertPositions.RescopedChunkTotalFlatIndexWithVoxels(rescopedChunkIndex);
+    //std::cout << std::endl;
+    //std::cout << curChunkIndexInBigArray << std::endl;
+    //std::cout << rescopedChunkIndex.x << ", " << rescopedChunkIndex.y << ", " << rescopedChunkIndex.z << std::endl;
+
+    megaVertPositions.ClearChunkData(rescopedChunkIndex);
 
     for (int y = 1; y <= chunkSize; y++)
     {
@@ -554,7 +762,7 @@ static void GenMeshCustom2D(std::vector<std::vector<std::vector<float>>> &noiseF
                     if (curNoiseTop == 2) {
                         int curPositionTemp = curPosition + (FACE_UP_INDEX << FACE_DIRECTION_POSITION);
                         //transformOfVerticesOfFaceInParticularDir[BlockFaceDirection::UP].push_back(curPositionTemp);
-                        megaVertPositions.AddUp(curPositionTemp, curChunkIndexInBigArray, chunkIndex);
+                        megaVertPositions.AddUp(curPositionTemp, curChunkIndexInBigArray, rescopedChunkIndex);
                     }
 
                     float curNoiseBottom = noiseForCurrentChunk[x][y - 1][z];
@@ -562,7 +770,7 @@ static void GenMeshCustom2D(std::vector<std::vector<std::vector<float>>> &noiseF
                     if (curNoiseBottom == 2) {
                         int curPositionTemp = curPosition + (FACE_DOWN_INDEX << FACE_DIRECTION_POSITION);
                         //transformOfVerticesOfFaceInParticularDir[BlockFaceDirection::DOWN].push_back(curPositionTemp);
-                        megaVertPositions.AddDown(curPositionTemp, curChunkIndexInBigArray, chunkIndex);
+                        megaVertPositions.AddDown(curPositionTemp, curChunkIndexInBigArray, rescopedChunkIndex);
                     }
 
                     float curNoiseFront = noiseForCurrentChunk[x][y][z + 1];
@@ -570,7 +778,7 @@ static void GenMeshCustom2D(std::vector<std::vector<std::vector<float>>> &noiseF
                     if (curNoiseFront == 2) {
                         int curPositionTemp = curPosition + (FACE_FRONT_INDEX << FACE_DIRECTION_POSITION);
                         //transformOfVerticesOfFaceInParticularDir[BlockFaceDirection::FRONT].push_back(curPositionTemp);
-                        megaVertPositions.AddFront(curPositionTemp, curChunkIndexInBigArray, chunkIndex);
+                        megaVertPositions.AddFront(curPositionTemp, curChunkIndexInBigArray, rescopedChunkIndex);
                     }
 
                     float curNoiseBack = noiseForCurrentChunk[x][y][z - 1];
@@ -578,7 +786,7 @@ static void GenMeshCustom2D(std::vector<std::vector<std::vector<float>>> &noiseF
                     if (curNoiseBack == 2) {
                         int curPositionTemp = curPosition + (FACE_BACK_INDEX << FACE_DIRECTION_POSITION);
                         //transformOfVerticesOfFaceInParticularDir[BlockFaceDirection::BACK].push_back(curPositionTemp);
-                        megaVertPositions.AddBack(curPositionTemp, curChunkIndexInBigArray, chunkIndex);
+                        megaVertPositions.AddBack(curPositionTemp, curChunkIndexInBigArray, rescopedChunkIndex);
                     }
 
                     float curNoiseRight = noiseForCurrentChunk[x + 1][y][z];
@@ -586,7 +794,7 @@ static void GenMeshCustom2D(std::vector<std::vector<std::vector<float>>> &noiseF
                     if (curNoiseRight == 2) {
                         int curPositionTemp = curPosition + (FACE_RIGHT_INDEX << FACE_DIRECTION_POSITION);
                         //transformOfVerticesOfFaceInParticularDir[BlockFaceDirection::RIGHT].push_back(curPositionTemp);
-                        megaVertPositions.AddRight(curPositionTemp, curChunkIndexInBigArray, chunkIndex);
+                        megaVertPositions.AddRight(curPositionTemp, curChunkIndexInBigArray, rescopedChunkIndex);
                     }
 
                     float curNoiseLeft = noiseForCurrentChunk[x - 1][y][z];
@@ -594,7 +802,7 @@ static void GenMeshCustom2D(std::vector<std::vector<std::vector<float>>> &noiseF
                     if (curNoiseLeft == 2) {
                         int curPositionTemp = curPosition + (FACE_LEFT_INDEX << FACE_DIRECTION_POSITION);
                         //transformOfVerticesOfFaceInParticularDir[BlockFaceDirection::LEFT].push_back(curPositionTemp);
-                        megaVertPositions.AddLeft(curPositionTemp, curChunkIndexInBigArray, chunkIndex);
+                        megaVertPositions.AddLeft(curPositionTemp, curChunkIndexInBigArray, rescopedChunkIndex);
                     }
                 }
             }
