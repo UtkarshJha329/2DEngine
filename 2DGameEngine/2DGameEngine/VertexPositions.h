@@ -23,8 +23,6 @@ public:
 
     int totalFilled = 0;
 
-    inline static int totalSize = totalNumFaces * sizeof(int) + NUM_FACES * totalNumChunks * sizeof(int) + sizeof(int);
-
     VertexPositions() : megaArrayOfAllPositions(totalNumFaces, 0)
         , upEndVoxelPositions(totalNumChunks, 0)
         , downEndVoxelPositions(totalNumChunks, 0)
@@ -50,23 +48,27 @@ public:
             , totalFilled);
     }
 
-    void ClearChunkData(Vector3 chunkIndex) {
+    const int numToCheck = 16;
 
-        totalFilled -= upEndVoxelPositions[RescopedChunkFlatIndexWithoutVoxels(chunkIndex)];
-        totalFilled -= downEndVoxelPositions[RescopedChunkFlatIndexWithoutVoxels(chunkIndex)];
-        totalFilled -= frontEndVoxelPositions[RescopedChunkFlatIndexWithoutVoxels(chunkIndex)];
-        totalFilled -= backEndVoxelPositions[RescopedChunkFlatIndexWithoutVoxels(chunkIndex)];
-        totalFilled -= rightEndVoxelPositions[RescopedChunkFlatIndexWithoutVoxels(chunkIndex)];
-        totalFilled -= leftEndVoxelPositions[RescopedChunkFlatIndexWithoutVoxels(chunkIndex)];
+    void ClearChunkData(Vector3 innerChunkIndex) {
 
-        upEndVoxelPositions[RescopedChunkFlatIndexWithoutVoxels(chunkIndex)] = 0;
-        downEndVoxelPositions[RescopedChunkFlatIndexWithoutVoxels(chunkIndex)] = 0;
-        frontEndVoxelPositions[RescopedChunkFlatIndexWithoutVoxels(chunkIndex)] = 0;
-        backEndVoxelPositions[RescopedChunkFlatIndexWithoutVoxels(chunkIndex)] = 0;
-        rightEndVoxelPositions[RescopedChunkFlatIndexWithoutVoxels(chunkIndex)] = 0;
-        leftEndVoxelPositions[RescopedChunkFlatIndexWithoutVoxels(chunkIndex)] = 0;
+        int chunkFlatIndexWithoutVoxels = ChunkFlatIndexWithoutVoxels(innerChunkIndex);
 
-        int start = RescopedChunkTotalFlatIndexWithVoxels(RescopeChunkIndex(chunkIndex));
+        totalFilled -= upEndVoxelPositions[chunkFlatIndexWithoutVoxels];
+        totalFilled -= downEndVoxelPositions[chunkFlatIndexWithoutVoxels];
+        totalFilled -= frontEndVoxelPositions[chunkFlatIndexWithoutVoxels];
+        totalFilled -= backEndVoxelPositions[chunkFlatIndexWithoutVoxels];
+        totalFilled -= rightEndVoxelPositions[chunkFlatIndexWithoutVoxels];
+        totalFilled -= leftEndVoxelPositions[chunkFlatIndexWithoutVoxels];
+
+        upEndVoxelPositions[chunkFlatIndexWithoutVoxels] = 0;
+        downEndVoxelPositions[chunkFlatIndexWithoutVoxels] = 0;
+        frontEndVoxelPositions[chunkFlatIndexWithoutVoxels] = 0;
+        backEndVoxelPositions[chunkFlatIndexWithoutVoxels] = 0;
+        rightEndVoxelPositions[chunkFlatIndexWithoutVoxels] = 0;
+        leftEndVoxelPositions[chunkFlatIndexWithoutVoxels] = 0;
+
+        int start = ChunkTotalFlatIndexWithVoxels(innerChunkIndex);
         int end = start + totalNumVoxelsPerChunk * NUM_FACES;
         for (int i = start; i < end; i++)
         {
@@ -74,76 +76,62 @@ public:
         }
     }
 
-    void AddUp(int toAdd, int chunkFlatIndex, Vector3 chunkIndex) {
-        megaArrayOfAllPositions[chunkFlatIndex + FACE_UP_INDEX * totalNumVoxelsPerChunk + upEndVoxelPositions[RescopedChunkFlatIndexWithoutVoxels(chunkIndex)]] = toAdd;
-        upEndVoxelPositions[RescopedChunkFlatIndexWithoutVoxels(chunkIndex)]++;
+    void AddUp(int toAdd, Vector3 innerChunkIndex) {
+        megaArrayOfAllPositions[ChunkTotalFlatIndexWithVoxels(innerChunkIndex) + FACE_UP_INDEX * totalNumVoxelsPerChunk + upEndVoxelPositions[ChunkFlatIndexWithoutVoxels(innerChunkIndex)]] = toAdd;
+        upEndVoxelPositions[ChunkFlatIndexWithoutVoxels(innerChunkIndex)]++;
+
+        //std::cout << upEndVoxelPositions[ChunkFlatIndexWithoutVoxels(innerChunkIndex)] << std::endl;
         totalFilled++;
     }
 
-    void AddDown(int toAdd, int chunkFlatIndex, Vector3 chunkIndex) {
-        megaArrayOfAllPositions[chunkFlatIndex + FACE_DOWN_INDEX * totalNumVoxelsPerChunk + downEndVoxelPositions[RescopedChunkFlatIndexWithoutVoxels(chunkIndex)]] = toAdd;
-        downEndVoxelPositions[RescopedChunkFlatIndexWithoutVoxels(chunkIndex)]++;
+    void AddDown(int toAdd, Vector3 innerChunkIndex) {
+        megaArrayOfAllPositions[ChunkTotalFlatIndexWithVoxels(innerChunkIndex) + FACE_DOWN_INDEX * totalNumVoxelsPerChunk + downEndVoxelPositions[ChunkFlatIndexWithoutVoxels(innerChunkIndex)]] = toAdd;
+        downEndVoxelPositions[ChunkFlatIndexWithoutVoxels(innerChunkIndex)]++;
         totalFilled++;
     }
 
-    void AddFront(int toAdd, int chunkFlatIndex, Vector3 chunkIndex) {
-        megaArrayOfAllPositions[chunkFlatIndex + FACE_FRONT_INDEX * totalNumVoxelsPerChunk + frontEndVoxelPositions[RescopedChunkFlatIndexWithoutVoxels(chunkIndex)]] = toAdd;
-        frontEndVoxelPositions[RescopedChunkFlatIndexWithoutVoxels(chunkIndex)]++;
+    void AddFront(int toAdd, Vector3 innerChunkIndex) {
+        megaArrayOfAllPositions[ChunkTotalFlatIndexWithVoxels(innerChunkIndex) + FACE_FRONT_INDEX * totalNumVoxelsPerChunk + frontEndVoxelPositions[ChunkFlatIndexWithoutVoxels(innerChunkIndex)]] = toAdd;
+        frontEndVoxelPositions[ChunkFlatIndexWithoutVoxels(innerChunkIndex)]++;
         totalFilled++;
     }
 
-    void AddBack(int toAdd, int chunkFlatIndex, Vector3 chunkIndex) {
-        megaArrayOfAllPositions[chunkFlatIndex + FACE_BACK_INDEX * totalNumVoxelsPerChunk + backEndVoxelPositions[RescopedChunkFlatIndexWithoutVoxels(chunkIndex)]] = toAdd;
-        backEndVoxelPositions[RescopedChunkFlatIndexWithoutVoxels(chunkIndex)]++;
+    void AddBack(int toAdd, Vector3 innerChunkIndex) {
+        megaArrayOfAllPositions[ChunkTotalFlatIndexWithVoxels(innerChunkIndex) + FACE_BACK_INDEX * totalNumVoxelsPerChunk + backEndVoxelPositions[ChunkFlatIndexWithoutVoxels(innerChunkIndex)]] = toAdd;
+        backEndVoxelPositions[ChunkFlatIndexWithoutVoxels(innerChunkIndex)]++;
         totalFilled++;
     }
 
-    void AddRight(int toAdd, int chunkFlatIndex, Vector3 chunkIndex) {
-        megaArrayOfAllPositions[chunkFlatIndex + FACE_RIGHT_INDEX * totalNumVoxelsPerChunk + rightEndVoxelPositions[RescopedChunkFlatIndexWithoutVoxels(chunkIndex)]] = toAdd;
-        rightEndVoxelPositions[RescopedChunkFlatIndexWithoutVoxels(chunkIndex)]++;
+    void AddRight(int toAdd, Vector3 innerChunkIndex) {
+        megaArrayOfAllPositions[ChunkTotalFlatIndexWithVoxels(innerChunkIndex) + FACE_RIGHT_INDEX * totalNumVoxelsPerChunk + rightEndVoxelPositions[ChunkFlatIndexWithoutVoxels(innerChunkIndex)]] = toAdd;
+        rightEndVoxelPositions[ChunkFlatIndexWithoutVoxels(innerChunkIndex)]++;
         totalFilled++;
     }
 
-    void AddLeft(int toAdd, int chunkFlatIndex, Vector3 chunkIndex) {
-        megaArrayOfAllPositions[chunkFlatIndex + FACE_LEFT_INDEX * totalNumVoxelsPerChunk + leftEndVoxelPositions[RescopedChunkFlatIndexWithoutVoxels(chunkIndex)]] = toAdd;
-        leftEndVoxelPositions[RescopedChunkFlatIndexWithoutVoxels(chunkIndex)]++;
+    void AddLeft(int toAdd, Vector3 innerChunkIndex) {
+        megaArrayOfAllPositions[ChunkTotalFlatIndexWithVoxels(innerChunkIndex) + FACE_LEFT_INDEX * totalNumVoxelsPerChunk + leftEndVoxelPositions[ChunkFlatIndexWithoutVoxels(innerChunkIndex)]] = toAdd;
+        leftEndVoxelPositions[ChunkFlatIndexWithoutVoxels(innerChunkIndex)]++;
         totalFilled++;
     }
 
-    int RescopedChunkTotalFlatIndexWithVoxels(Vector3 chunkIndex) {
+    int ChunkTotalFlatIndexWithVoxels(Vector3 innerChunkIndex) {
 
-        chunkIndex = RescopeChunkIndex(chunkIndex);
+        innerChunkIndex = innerChunkIndex + Vector3{ (float)numChunksHalfWidth, (float)0, (float)numChunksHalfWidth };
 
-        return chunkIndex.x * numChunks * numChunksY * NUM_FACES * chunkSize * chunkSize * chunkSize
-            + chunkIndex.z * numChunksY * NUM_FACES * chunkSize * chunkSize * chunkSize
-            + chunkIndex.y * NUM_FACES * chunkSize * chunkSize * chunkSize;
+        return innerChunkIndex.x * numChunksFullWidth * numChunksYFullWidth * NUM_FACES * chunkSize * chunkSize * chunkSize
+            + innerChunkIndex.z * numChunksYFullWidth * NUM_FACES * chunkSize * chunkSize * chunkSize
+            + innerChunkIndex.y * NUM_FACES * chunkSize * chunkSize * chunkSize;
     }
 
-    int RescopedChunkFlatIndexWithoutVoxels(Vector3 chunkIndex) {
+    int ChunkFlatIndexWithoutVoxels(Vector3 innerChunkIndex) {
 
-        chunkIndex = RescopeChunkIndex(chunkIndex);
-        return chunkIndex.x * numChunks * numChunksY + chunkIndex.z * numChunksY + chunkIndex.y;
+        innerChunkIndex = innerChunkIndex + Vector3{ (float)numChunksHalfWidth, (float)0, (float)numChunksHalfWidth };
+        return innerChunkIndex.x * numChunksFullWidth * numChunksYFullWidth + innerChunkIndex.z * numChunksYFullWidth + innerChunkIndex.y;
     }
 
-    int NonRescopedChunkFlatIndexWithoutVoxels(Vector3 chunkIndex) {
+    int ImaginaryChunkFlatIndexWithoutVoxels(Vector3 chunkIndex) {
 
-        return chunkIndex.x * numChunks * numChunksY + chunkIndex.z * numChunksY + chunkIndex.y;
+        chunkIndex = chunkIndex + Vector3{ (float)numChunksHalfWidth, (float)0, (float)numChunksHalfWidth };
+        return chunkIndex.x * numChunksFullWidth * numChunksYFullWidth + chunkIndex.z * numChunksYFullWidth + chunkIndex.y;
     }
-
-    Vector3 RescopeChunkIndex(Vector3 chunkIndex) {
-
-        if (chunkIndex.x >= numChunks) {
-            chunkIndex.x = (int)chunkIndex.x % numChunks;
-        }
-
-        if (chunkIndex.y >= numChunksY) {
-            chunkIndex.y = (int)chunkIndex.y % numChunksY;
-        }
-
-        if (chunkIndex.z >= numChunks) {
-            chunkIndex.z = (int)chunkIndex.z % numChunks;
-        }
-        return chunkIndex;
-    }
-
 };

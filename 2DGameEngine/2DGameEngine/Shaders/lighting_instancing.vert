@@ -31,6 +31,7 @@ out vec2 fragTexCoord;
 out vec4 fragColor;
 out vec3 fragNormal;
 out int faceDir;
+out vec3 chunkPos;
 
 // NOTE: Add here your custom variables
 
@@ -71,7 +72,7 @@ void main()
     vec3 curVoxelPos = vec3((instancePosition >> 10) & 31, (instancePosition >> 5) & 31, instancePosition & 31);
     faceDir = (instancePosition >> 16) & 7;
 
-
+    chunkPos = vec3(chunkPosition[gl_DrawIDARB].x, chunkPosition[gl_DrawIDARB].y, chunkPosition[gl_DrawIDARB].z);
 
     vec3 curPos = vec3(chunkPosition[gl_DrawIDARB].x, chunkPosition[gl_DrawIDARB].y, chunkPosition[gl_DrawIDARB].z) + curVoxelPos;
     //vec3 curPos = chunkPosition + curVoxelPos;
