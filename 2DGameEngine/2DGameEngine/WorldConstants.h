@@ -13,17 +13,17 @@
 
 #define NUM_FACES 6
 
-const int numChunksHalfWidth = 10;
-const int numChunksYHalfWidth = 3;
-const int chunkSize = 16;
+const int numChunksHalfWidth = 2;
+const int numChunksHalfWidth_Y = 1;
+const int chunkSize = 8;
 const float scale = 0.1f;
 
 constexpr int numChunksFullWidth = (2 * numChunksHalfWidth) + 1;
 //constexpr int numChunksYFullWidth = (2 * numChunksYHalfWidth) + 1;
-constexpr int numChunksYFullWidth = numChunksYHalfWidth;
+constexpr int numChunksFullWidth_Y = numChunksHalfWidth_Y;
 constexpr int totalNumVoxelsPerChunk = chunkSize * chunkSize * chunkSize;
 
-constexpr int totalNumChunks =  numChunksFullWidth * numChunksFullWidth * numChunksYFullWidth;
+constexpr int totalNumChunks =  numChunksFullWidth * numChunksFullWidth * numChunksFullWidth_Y;
 constexpr int totalNumFaces = totalNumChunks * NUM_FACES * totalNumVoxelsPerChunk;
 
 Vector3 up = { 0, 1, 0 };
