@@ -138,7 +138,7 @@ public:
     int InnerIndexFlattened(Vector3 innerIndex) {
 
         innerIndex = innerIndex + Vector3{ (float)numChunksHalfWidth, (float)0, (float(numChunksHalfWidth)) };
-        return innerIndex.x * numChunksFullWidth + numChunksFullWidth_Y + innerIndex.z * numChunksFullWidth_Y + innerIndex.y;
+        return innerIndex.x * numChunksFullWidth * numChunksFullWidth_Y + innerIndex.z * numChunksFullWidth_Y + innerIndex.y;
 
     }
 };
