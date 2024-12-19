@@ -256,19 +256,19 @@ int main()
 
                 it.second = Vector3{ it.second.x + offset.x, it.second.y, it.second.z + offset.z };
 
-                if (it.second.x >= numChunksHalfWidth) {
+                if (it.second.x > numChunksHalfWidth) {
                     it.second.x = (it.second.x * -1) + 1;
                 }
 
-                if (it.second.x <= -numChunksHalfWidth) {
+                if (it.second.x < -numChunksHalfWidth) {
                     it.second.x = (it.second.x * -1) - 1;
                 }
 
-                if (it.second.z >= numChunksHalfWidth) {
+                if (it.second.z > numChunksHalfWidth) {
                     it.second.z = (it.second.z * -1) + 1;
                 }
 
-                if (it.second.z <= -numChunksHalfWidth) {
+                if (it.second.z < -numChunksHalfWidth) {
                     it.second.z = (it.second.z * -1) - 1;
                 }
 
@@ -417,7 +417,7 @@ int main()
             unsigned int chunkPosSSBO = rlLoadShaderBuffer(chunkPositions.size() * sizeof(float3), chunkPositions.data(), RL_DYNAMIC_DRAW);
             rlBindShaderBuffer(chunkPosSSBO, 3);
 
-            if (chunkBeingGeneratedCount == 0 && chunksChanged || IsKeyPressed(KEY_U)) {
+            if ((chunkBeingGeneratedCount == 0 && chunksChanged) || IsKeyPressed(KEY_U)) {
                 rlEnableVertexArray(renderQuad.mesh.vaoId);
 
                 renderQuad.instanceVBOID = rlLoadVertexBuffer(megaVertPositions.megaArrayOfAllPositions.data(), megaVertPositions.megaArrayOfAllPositions.size() * sizeof(int), true);

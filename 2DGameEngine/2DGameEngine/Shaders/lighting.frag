@@ -21,8 +21,8 @@ uniform vec4 ambient;
 //uniform vec3 viewPos;
 uniform float switchColours;
 
-int numChunks = 3;
-int numChunksY = 2;
+int numChunks = 10;
+int numChunksY = 3;
 
 void main()
 {
