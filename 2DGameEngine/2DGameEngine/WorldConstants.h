@@ -13,9 +13,9 @@
 
 #define NUM_FACES 6
 
-const int numChunksHalfWidth = 4;
-const int numChunksHalfWidth_Y = 2;
-const int chunkSize = 8;
+const int numChunksHalfWidth = 10;
+const int numChunksHalfWidth_Y = 3;
+const int chunkSize = 31;
 const float scale = 0.1f;
 
 constexpr int numChunksFullWidth = (2 * numChunksHalfWidth) + 1; //<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<< THIS DOESN'T MATCH WITH THE RENDER TRAVERSAL ORDER COORDINATES!!!!

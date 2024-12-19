@@ -118,27 +118,27 @@ public:
 
         innerChunkIndex = innerChunkIndex + Vector3{ (float)numChunksHalfWidth, (float)0, (float)numChunksHalfWidth };
 
-        return innerChunkIndex.x * numChunksFullWidth * numChunksFullWidth_Y * NUM_FACES * chunkSize * chunkSize * chunkSize
-            + innerChunkIndex.z * numChunksFullWidth_Y * NUM_FACES * chunkSize * chunkSize * chunkSize
-            + innerChunkIndex.y * NUM_FACES * chunkSize * chunkSize * chunkSize;
+        return innerChunkIndex.y * numChunksFullWidth * numChunksFullWidth * NUM_FACES * chunkSize * chunkSize * chunkSize
+            + innerChunkIndex.z * numChunksFullWidth * NUM_FACES * chunkSize * chunkSize * chunkSize
+            + innerChunkIndex.x * NUM_FACES * chunkSize * chunkSize * chunkSize;
     }
 
     int ChunkFlatIndexWithoutVoxels(Vector3 innerChunkIndex) {
 
         innerChunkIndex = innerChunkIndex + Vector3{ (float)numChunksHalfWidth, (float)0, (float)numChunksHalfWidth };
-        return innerChunkIndex.x * numChunksFullWidth * numChunksFullWidth_Y + innerChunkIndex.z * numChunksFullWidth_Y + innerChunkIndex.y;
+        return innerChunkIndex.y * numChunksFullWidth * numChunksFullWidth + innerChunkIndex.z * numChunksFullWidth + innerChunkIndex.x;
     }
 
     int ImaginaryChunkFlatIndexWithoutVoxels(Vector3 chunkIndex) {
 
         chunkIndex = chunkIndex + Vector3{ (float)numChunksHalfWidth, (float)0, (float)numChunksHalfWidth };
-        return chunkIndex.x * numChunksFullWidth * numChunksFullWidth_Y + chunkIndex.z * numChunksFullWidth_Y + chunkIndex.y;
+        return chunkIndex.y * numChunksFullWidth * numChunksFullWidth + chunkIndex.z * numChunksFullWidth + chunkIndex.x;
     }
 
     int InnerIndexFlattened(Vector3 innerIndex) {
 
-        innerIndex = innerIndex + Vector3{ (float)numChunksHalfWidth, (float)0, (float(numChunksHalfWidth)) };
-        return innerIndex.x * numChunksFullWidth * numChunksFullWidth_Y + innerIndex.z * numChunksFullWidth_Y + innerIndex.y;
+        innerIndex = innerIndex + Vector3{ (float)numChunksHalfWidth, (float)0, (float)numChunksHalfWidth };
+        return innerIndex.y * numChunksFullWidth * numChunksFullWidth + innerIndex.z * numChunksFullWidth + innerIndex.x;
 
     }
 };
