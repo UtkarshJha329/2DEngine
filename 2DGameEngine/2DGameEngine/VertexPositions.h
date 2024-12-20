@@ -68,12 +68,12 @@ public:
         rightEndVoxelPositions[chunkFlatIndexWithoutVoxels] = 0;
         leftEndVoxelPositions[chunkFlatIndexWithoutVoxels] = 0;
 
-        int start = ChunkTotalFlatIndexWithVoxels(innerChunkIndex);
-        int end = start + totalNumVoxelsPerChunk * NUM_FACES;
-        for (int i = start; i < end; i++)
-        {
-            megaArrayOfAllPositions[i] = 0;
-        }
+        //int start = ChunkTotalFlatIndexWithVoxels(innerChunkIndex);
+        //int end = start + totalNumVoxelsPerChunk * NUM_FACES;
+        //for (int i = start; i < end; i++)
+        //{
+        //    megaArrayOfAllPositions[i] = 0;
+        //}
     }
 
     void AddUp(int toAdd, Vector3 innerChunkIndex) {
