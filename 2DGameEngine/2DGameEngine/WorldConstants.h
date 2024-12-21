@@ -13,7 +13,7 @@
 
 #define NUM_FACES 6
 
-const int numChunksHalfWidth = 10;
+const int numChunksHalfWidth = 5;
 const int numChunksHalfWidth_Y = 3;
 const int chunkSize = 31;
 const float scale = 0.1f;
