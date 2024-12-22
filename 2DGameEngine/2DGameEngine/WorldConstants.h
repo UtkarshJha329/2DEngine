@@ -16,7 +16,7 @@
 const int numChunksHalfWidth = 5;
 const int numChunksHalfWidth_Y = 3;
 const int chunkSize = 31;
-const float scale = 0.1f;
+const float scale = 0.01f;
 
 constexpr int numChunksFullWidth = (2 * numChunksHalfWidth) + 1; //<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<< THIS DOESN'T MATCH WITH THE RENDER TRAVERSAL ORDER COORDINATES!!!!
 constexpr int numChunksFullWidth_Y = numChunksHalfWidth_Y;

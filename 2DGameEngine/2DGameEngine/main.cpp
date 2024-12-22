@@ -61,12 +61,13 @@ static void ReadyIndirectDrawListOfDrawableChunksAndFaces(Vector3 innerChunkInde
                                                         , std::vector<float3>& chunkPositions
                                                         , GenerativeMesh& renderQuad);
 
-std::unordered_map<int, Vector2> sameYHasSameXZ;
+static std::vector<int> chunkWithVoxelIndexUpdated;
 
 static std::mutex chunkGeneratedMutex;
 static std::mutex chunkBeingGeneratedCountMutex;
 static void GenChunkMeshWithNoise(VertexPositions &megaVertPositions
                                 , std::unordered_map<int, bool> &chunkGenerated
+                                , std::vector<int> &chunkUpdatedIndexWithVoxel
                                 , int &chunkBeingGeneratedCount
                                 , Vector3 chunkIndex, Vector3 innerChunkIndex)
 {
@@ -76,8 +77,10 @@ static void GenChunkMeshWithNoise(VertexPositions &megaVertPositions
     GenMeshCustom2D(_noiseForCurChunk, megaVertPositions, innerChunkIndex);
 
     std::lock_guard<std::mutex> lock(chunkGeneratedMutex);
-
     {
+
+        chunkUpdatedIndexWithVoxel.push_back(megaVertPositions.ChunkTotalFlatIndexWithVoxels(innerChunkIndex));
+
         //std::cout << chunkIndex.x << ", " << chunkIndex.y << ", " << chunkIndex.z << std::endl;
         int imaginaryChunkIndex = megaVertPositions.ImaginaryChunkFlatIndexWithoutVoxels(chunkIndex);
         chunkGenerated[imaginaryChunkIndex] = true;
@@ -347,18 +350,26 @@ int main()
                     //                                        << ")\n\t RenderTraversalOrder ("
                     //                                        << renderTraversalOrder[i].x << ", " << renderTraversalOrder[i].y << ", " << renderTraversalOrder[i].z << ")" << std::endl;
 
-                    //chunkMeshGenThreads.push_back(std::async(std::launch::async, GenChunkMeshWithNoise
-                    //    , std::ref(megaVertPositions)
+                    //std::string curChunkSaveFileName = "Chunk-" + std::to_string(oldChunkTraversalIndex.x) + "-" + std::to_string(oldChunkTraversalIndex.y) + "-" + std::to_string(oldChunkTraversalIndex.z) + "-Data";
+
+                    //std::ofstream os("WorldData/" + curChunkSaveFileName, std::ios::binary);
+                    //cereal::BinaryOutputArchive archive(os);
+                    //int start = megaVertPositions.ChunkTotalFlatIndexWithVoxels(offsetRenderTraversalOrder);
+                    //archive(cereal::binary_data(megaVertPositions.megaArrayOfAllPositions.data() + start, sizeof(Vector3) * totalNumVoxelsPerChunk * NUM_FACES));
+
+                    chunkMeshGenThreads.push_back(std::async(std::launch::async, GenChunkMeshWithNoise
+                        , std::ref(megaVertPositions)
+                        , std::ref(chunkGenerated)
+                        , std::ref(chunkWithVoxelIndexUpdated)
+                        , std::ref(chunkBeingGeneratedCount)
+                        , curChunkTraversalIndex
+                        , offsetRenderTraversalOrder));
+
+                    //GenChunkMeshWithNoise(std::ref(megaVertPositions)
                     //    , std::ref(chunkGenerated)
                     //    , std::ref(chunkBeingGeneratedCount)
                     //    , curChunkTraversalIndex
-                    //    , offsetRenderTraversalOrder));
-
-                    GenChunkMeshWithNoise(std::ref(megaVertPositions)
-                        , std::ref(chunkGenerated)
-                        , std::ref(chunkBeingGeneratedCount)
-                        , curChunkTraversalIndex
-                        , offsetRenderTraversalOrder);
+                    //    , offsetRenderTraversalOrder);
 
                     chunksChanged = true;
                     innerIndexWhereNewMeshNeedsToBeCalculated[renderTraversalIndexFlattened] = false;
@@ -426,7 +437,14 @@ int main()
             if ((chunkBeingGeneratedCount == 0 && chunksChanged) || IsKeyPressed(KEY_U)) {
                 rlEnableVertexArray(renderQuad.mesh.vaoId);
 
-                renderQuad.instanceVBOID = rlLoadVertexBuffer(megaVertPositions.megaArrayOfAllPositions.data(), megaVertPositions.megaArrayOfAllPositions.size() * sizeof(int), true);
+                //renderQuad.instanceVBOID = rlLoadVertexBuffer(megaVertPositions.megaArrayOfAllPositions.data(), megaVertPositions.megaArrayOfAllPositions.size() * sizeof(int), true);
+
+                for (int i = 0; i < chunkWithVoxelIndexUpdated.size(); i++) {
+                    int start = chunkWithVoxelIndexUpdated[i];
+                    int size = totalNumVoxelsPerChunk * NUM_FACES;
+                    rlUpdateVertexBuffer(renderQuad.instanceVBOID, megaVertPositions.megaArrayOfAllPositions.data() + start, size * sizeof(int), start * sizeof(int));
+                }
+
 
                 rlEnableVertexAttribute(3);
                 rlSetVertexAttributeI(3, 1, RL_INT, 0, 0, 0);
@@ -435,6 +453,7 @@ int main()
                 rlDisableVertexBuffer();
                 rlDisableVertexArray();
                 chunksChanged = false;
+                chunkWithVoxelIndexUpdated.clear();
             }
 
 
@@ -493,7 +512,7 @@ static void ReadyIndirectDrawListOfDrawableChunksAndFaces(Vector3 innerChunkInde
     dirToChunkFromCamera = Vector3Normalize(dirToChunkFromCamera);
     bool shouldDrawChunk = ShouldDrawChunk(drawCurChunkPos, camera);
 
-    bool drawAll = true;
+    bool drawAll = false;
 
     if (shouldDrawChunk) {
 
