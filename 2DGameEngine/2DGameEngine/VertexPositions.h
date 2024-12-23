@@ -131,7 +131,7 @@ public:
 
     int ImaginaryChunkFlatIndexWithoutVoxels(Vector3 chunkIndex) {
 
-        chunkIndex = chunkIndex + Vector3{ (float)numChunksHalfWidth, (float)0, (float)numChunksHalfWidth };
+        //chunkIndex = chunkIndex + Vector3{ (float)numChunksHalfWidth, (float)0, (float)numChunksHalfWidth };
         return chunkIndex.y * numChunksFullWidth * numChunksFullWidth + chunkIndex.z * numChunksFullWidth + chunkIndex.x;
     }
 

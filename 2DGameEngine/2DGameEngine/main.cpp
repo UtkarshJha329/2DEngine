@@ -2,6 +2,7 @@
 #include <iostream>
 #include <chrono>
 #include <future>
+#include <filesystem>
 
 #include <queue>
 
@@ -13,6 +14,8 @@
 
 #include "Plane.h"
 #include "PerlinNoise.hpp"
+
+#include "nlohmann/json.hpp"
 
 #include <vector>
 #include <string>
@@ -65,6 +68,7 @@ static std::vector<int> chunkWithVoxelIndexUpdated;
 
 static std::mutex chunkGeneratedMutex;
 static std::mutex chunkBeingGeneratedCountMutex;
+static std::mutex chunkUpdatedIndexWithVoxelMutex;
 static void GenChunkMeshWithNoise(VertexPositions &megaVertPositions
                                 , std::unordered_map<int, bool> &chunkGenerated
                                 , std::vector<int> &chunkUpdatedIndexWithVoxel
@@ -76,18 +80,65 @@ static void GenChunkMeshWithNoise(VertexPositions &megaVertPositions
 
     GenMeshCustom2D(_noiseForCurChunk, megaVertPositions, innerChunkIndex);
 
-    std::lock_guard<std::mutex> lock(chunkGeneratedMutex);
     {
-
-        chunkUpdatedIndexWithVoxel.push_back(megaVertPositions.ChunkTotalFlatIndexWithVoxels(innerChunkIndex));
+        {
+            std::lock_guard<std::mutex> lockChunkUpdatedIndex(chunkUpdatedIndexWithVoxelMutex);
+            chunkUpdatedIndexWithVoxel.push_back(megaVertPositions.ChunkTotalFlatIndexWithVoxels(innerChunkIndex));
+        }
 
         //std::cout << chunkIndex.x << ", " << chunkIndex.y << ", " << chunkIndex.z << std::endl;
-        int imaginaryChunkIndex = megaVertPositions.ImaginaryChunkFlatIndexWithoutVoxels(chunkIndex);
-        chunkGenerated[imaginaryChunkIndex] = true;
+        {
+            std::lock_guard<std::mutex> lockChunkGenerated(chunkGeneratedMutex);
+            int imaginaryChunkIndex = megaVertPositions.ImaginaryChunkFlatIndexWithoutVoxels(chunkIndex);
+            chunkGenerated[imaginaryChunkIndex] = true;
+        }
 
-        std::lock_guard<std::mutex> lock(chunkBeingGeneratedCountMutex);
-        chunkBeingGeneratedCount--;
+        {
+            std::lock_guard<std::mutex> lockChunkBeingGeneratedCount(chunkBeingGeneratedCountMutex);
+            chunkBeingGeneratedCount--;
+        }
     }
+}
+
+static void SavePreviousMeshAndGenChunkMeshWithNoise(VertexPositions& megaVertPositions
+    , std::unordered_map<int, bool>& chunkGenerated
+    , std::vector<int>& chunkUpdatedIndexWithVoxel
+    , int& chunkBeingGeneratedCount
+    , Vector3 chunkIndex, Vector3 innerChunkIndex) {
+
+    GenChunkMeshWithNoise(megaVertPositions, chunkGenerated, chunkUpdatedIndexWithVoxel, chunkBeingGeneratedCount, chunkIndex, innerChunkIndex);
+
+    std::string curChunkSaveFileName = CHUNK_SAVE_STRING(chunkIndex);
+
+    //std::cout << "SAVED: " << curChunkSaveFileName << std::endl;
+
+    std::ofstream os(worldDataDir + curChunkSaveFileName, std::ios::binary);
+    cereal::BinaryOutputArchive archive(os);
+
+    int chunkFlatIndexWithoutVoxels = megaVertPositions.ChunkFlatIndexWithoutVoxels(innerChunkIndex);
+
+    int start = megaVertPositions.ChunkTotalFlatIndexWithVoxels(innerChunkIndex);
+    std::span<int> curChunkSlice(megaVertPositions.megaArrayOfAllPositions.begin() + start, totalNumVoxelsPerChunk * NUM_FACES);
+
+    //cereal::binary_data(curChunkSlice.data(), sizeof(int) * curChunkSlice.size())
+
+    archive(cereal::binary_data(curChunkSlice.data(), sizeof(int) * curChunkSlice.size())
+        , megaVertPositions.upEndVoxelPositions[chunkFlatIndexWithoutVoxels]
+        , megaVertPositions.downEndVoxelPositions[chunkFlatIndexWithoutVoxels]
+        , megaVertPositions.frontEndVoxelPositions[chunkFlatIndexWithoutVoxels]
+        , megaVertPositions.backEndVoxelPositions[chunkFlatIndexWithoutVoxels]
+        , megaVertPositions.rightEndVoxelPositions[chunkFlatIndexWithoutVoxels]
+        , megaVertPositions.leftEndVoxelPositions[chunkFlatIndexWithoutVoxels]);
+
+    //if (chunkIndex.x == 0 && chunkIndex.y == 0 && chunkIndex.z == 0) {
+
+    //    std::cout << megaVertPositions.upEndVoxelPositions[chunkFlatIndexWithoutVoxels] << ", "
+    //        << megaVertPositions.downEndVoxelPositions[chunkFlatIndexWithoutVoxels] << ", "
+    //        << megaVertPositions.frontEndVoxelPositions[chunkFlatIndexWithoutVoxels] << ", "
+    //        << megaVertPositions.backEndVoxelPositions[chunkFlatIndexWithoutVoxels] << ", "
+    //        << megaVertPositions.rightEndVoxelPositions[chunkFlatIndexWithoutVoxels] << ", "
+    //        << megaVertPositions.leftEndVoxelPositions[chunkFlatIndexWithoutVoxels] << std::endl;
+    //}
 }
 
 const siv::PerlinNoise::seed_type seed = 76554893u;
@@ -116,7 +167,6 @@ int main()
     AllChunkVoxelStorage(noise3D, float, numChunksFullWidth, chunkSize + 3);
 
     std::unordered_map<int, bool> chunkGenerated;
-    std::unordered_map<int, bool> generatingMeshForChunk;
 
     std::vector<std::future<void>> chunkMeshGenThreads;
 
@@ -214,36 +264,6 @@ int main()
             SetShaderValue(instanceShader, randValueLoc, &randValue, SHADER_UNIFORM_FLOAT);
         }
 
-        if (IsKeyDown(KEY_RIGHT_ALT) && IsKeyDown(KEY_P)) {
-            std::ofstream os("WorldData/WorldVertexPositions.cereal", std::ios::binary);
-            cereal::BinaryOutputArchive archive(os);
-            archive(megaVertPositions);
-        }
-
-        if (IsKeyDown(KEY_RIGHT_ALT) && IsKeyDown(KEY_L)) {
-
-            std::ifstream is("WorldData/WorldVertexPositions.cereal", std::ios::binary);
-
-            if (is) {
-
-                cereal::BinaryInputArchive iarchive(is);
-                iarchive(megaVertPositions);
-
-                for (int i = 0; i < numChunksFullWidth; i++)
-                {
-                    for (int j = 0; j < numChunksFullWidth; j++)
-                    {
-                        for (int k = 0; k < numChunksFullWidth_Y; k++)
-                        {
-                            int curID = megaVertPositions.ImaginaryChunkFlatIndexWithoutVoxels(Vector3{ (float)i, (float)k, (float)j });
-                            chunkGenerated[curID] = true;
-
-                        }
-                    }
-                }
-            }
-        }
-
         UpdateCamera(&camera, CAMERA_FREE);
 
         float cameraPos[3] = { camera.position.x, camera.position.y, camera.position.z };
@@ -322,8 +342,7 @@ int main()
                 //std::cout << offsetRenderTraversalOrder.x << ", " << offsetRenderTraversalOrder.y << ", " << offsetRenderTraversalOrder.z << std::endl;
                 Vector3 curChunkTraversalIndex = Vector3{ renderTraversalOrder[i].x + cameraChunkIndex.x, renderTraversalOrder[i].y, renderTraversalOrder[i].z + cameraChunkIndex.z};
 
-                //Wrong when the old camera pos == cur camera pos
-                Vector3 oldChunkTraversalIndex = Vector3{ offsetRenderTraversalOrder.x + oldCameraChunkPosition.x, offsetRenderTraversalOrder.y, offsetRenderTraversalOrder.z + oldCameraChunkPosition.z};
+                Vector3 oldChunkTraversalIndex = Vector3{ renderTraversalOrder[i].x + oldCameraChunkPosition.x, renderTraversalOrder[i].y, renderTraversalOrder[i].z + oldCameraChunkPosition.z};
 
                 int renderTraversalIndexFlattened = megaVertPositions.InnerIndexFlattened(renderTraversalOrder[i]);
                 int offsetFlattenedIndex = megaVertPositions.InnerIndexFlattened(offsetRenderTraversalOrder);
@@ -335,12 +354,13 @@ int main()
                     {
                         std::lock_guard<std::mutex> lock(chunkBeingGeneratedCountMutex);
                         chunkBeingGeneratedCount++;
-
-                        {
-                            std::lock_guard<std::mutex> lock(chunkGeneratedMutex);
-                            chunkGenerated[curPosInChunkStatusMegaArray] = false;
-                        }
                     }
+
+                    {
+                        std::lock_guard<std::mutex> lock(chunkGeneratedMutex);
+                        chunkGenerated[curPosInChunkStatusMegaArray] = false;
+                    }
+
 
                     //std::cout << "Generating New Chunk: \n\t CurChunkTraversalIndex (" << curChunkTraversalIndex.x << ", " << curChunkTraversalIndex.y << ", " << curChunkTraversalIndex.z
                     //                                        << ")\n\t OffsetRenderTraversalOrder (" 
@@ -350,83 +370,110 @@ int main()
                     //                                        << ")\n\t RenderTraversalOrder ("
                     //                                        << renderTraversalOrder[i].x << ", " << renderTraversalOrder[i].y << ", " << renderTraversalOrder[i].z << ")" << std::endl;
 
-                    //std::string curChunkSaveFileName = "Chunk-" + std::to_string(oldChunkTraversalIndex.x) + "-" + std::to_string(oldChunkTraversalIndex.y) + "-" + std::to_string(oldChunkTraversalIndex.z) + "-Data";
+                    std::string curChunkFileName = worldDataDir + CHUNK_SAVE_STRING(curChunkTraversalIndex);
+                    if (std::filesystem::exists(curChunkFileName)) {
+                        //std::cout << "CHUNK FILE FOUND!!" << std::endl;
 
-                    //std::ofstream os("WorldData/" + curChunkSaveFileName, std::ios::binary);
-                    //cereal::BinaryOutputArchive archive(os);
-                    //int start = megaVertPositions.ChunkTotalFlatIndexWithVoxels(offsetRenderTraversalOrder);
-                    //archive(cereal::binary_data(megaVertPositions.megaArrayOfAllPositions.data() + start, sizeof(Vector3) * totalNumVoxelsPerChunk * NUM_FACES));
+                        //std::cout << "LOADED : " << curChunkFileName << std::endl;
 
-                    chunkMeshGenThreads.push_back(std::async(std::launch::async, GenChunkMeshWithNoise
-                        , std::ref(megaVertPositions)
-                        , std::ref(chunkGenerated)
-                        , std::ref(chunkWithVoxelIndexUpdated)
-                        , std::ref(chunkBeingGeneratedCount)
-                        , curChunkTraversalIndex
-                        , offsetRenderTraversalOrder));
+                        std::ifstream is(curChunkFileName, std::ios::binary);
+                        cereal::BinaryInputArchive iarchive(is);
 
-                    //GenChunkMeshWithNoise(std::ref(megaVertPositions)
-                    //    , std::ref(chunkGenerated)
-                    //    , std::ref(chunkBeingGeneratedCount)
-                    //    , curChunkTraversalIndex
-                    //    , offsetRenderTraversalOrder);
+                        int chunkFlatIndexWithoutVoxels = megaVertPositions.ChunkFlatIndexWithoutVoxels(offsetRenderTraversalOrder);
+                        int start = megaVertPositions.ChunkTotalFlatIndexWithVoxels(offsetRenderTraversalOrder);
+                        std::span<int> curChunkSlice(megaVertPositions.megaArrayOfAllPositions.begin() + start, totalNumVoxelsPerChunk * NUM_FACES);
+
+                        iarchive(cereal::binary_data(curChunkSlice.data(), sizeof(int) * curChunkSlice.size())
+                                , megaVertPositions.upEndVoxelPositions[chunkFlatIndexWithoutVoxels]
+                                , megaVertPositions.downEndVoxelPositions[chunkFlatIndexWithoutVoxels]
+                                , megaVertPositions.frontEndVoxelPositions[chunkFlatIndexWithoutVoxels]
+                                , megaVertPositions.backEndVoxelPositions[chunkFlatIndexWithoutVoxels]
+                                , megaVertPositions.rightEndVoxelPositions[chunkFlatIndexWithoutVoxels]
+                                , megaVertPositions.leftEndVoxelPositions[chunkFlatIndexWithoutVoxels]);
+
+                        {
+                            {
+                                std::lock_guard<std::mutex> lockChunkUpdatedIndex(chunkUpdatedIndexWithVoxelMutex);
+                                chunkWithVoxelIndexUpdated.push_back(megaVertPositions.ChunkTotalFlatIndexWithVoxels(offsetRenderTraversalOrder));
+                            }
+
+                            //std::cout << chunkIndex.x << ", " << chunkIndex.y << ", " << chunkIndex.z << std::endl;
+                            {
+                                std::lock_guard<std::mutex> lockChunkGenerated(chunkGeneratedMutex);
+                                int imaginaryChunkIndex = megaVertPositions.ImaginaryChunkFlatIndexWithoutVoxels(curChunkTraversalIndex);
+                                chunkGenerated[imaginaryChunkIndex] = true;
+                            }
+
+                            {
+                                std::lock_guard<std::mutex> lockChunkBeingGeneratedCount(chunkBeingGeneratedCountMutex);
+                                chunkBeingGeneratedCount--;
+                            }
+                        }
+
+
+                        //chunkMeshGenThreads.push_back(std::async(std::launch::async, SavePreviousMeshAndGenChunkMeshWithNoise
+                        //    , std::ref(megaVertPositions)
+                        //    , std::ref(chunkGenerated)
+                        //    , std::ref(chunkWithVoxelIndexUpdated)
+                        //    , std::ref(chunkBeingGeneratedCount)
+                        //    , curChunkTraversalIndex
+                        //    , offsetRenderTraversalOrder
+                        //    , oldChunkTraversalIndex));
+
+                    }
+                    else {
+
+                        //std::string curChunkSaveFileName = CHUNK_SAVE_STRING(oldChunkTraversalIndex);
+
+                        //std::ofstream os(worldDataDir + curChunkSaveFileName, std::ios::binary);
+                        //cereal::BinaryOutputArchive archive(os);
+                        //int start = megaVertPositions.ChunkTotalFlatIndexWithVoxels(offsetRenderTraversalOrder);
+                        //std::span<int> curChunkSlice(megaVertPositions.megaArrayOfAllPositions.begin() + start, totalNumVoxelsPerChunk * NUM_FACES);
+                        //archive(cereal::binary_data(curChunkSlice.data(), sizeof(int) * curChunkSlice.size()));
+
+                        chunkMeshGenThreads.push_back(std::async(std::launch::async, SavePreviousMeshAndGenChunkMeshWithNoise
+                            , std::ref(megaVertPositions)
+                            , std::ref(chunkGenerated)
+                            , std::ref(chunkWithVoxelIndexUpdated)
+                            , std::ref(chunkBeingGeneratedCount)
+                            , curChunkTraversalIndex
+                            , offsetRenderTraversalOrder));
+
+                        //GenChunkMeshWithNoise(std::ref(megaVertPositions)
+                        //    , std::ref(chunkGenerated)
+                        //    , std::ref(chunkBeingGeneratedCount)
+                        //    , curChunkTraversalIndex
+                        //    , offsetRenderTraversalOrder);
+                    }
+
 
                     chunksChanged = true;
                     innerIndexWhereNewMeshNeedsToBeCalculated[renderTraversalIndexFlattened] = false;
                 }
 
-                if (oldCameraChunkPosition.x != cameraChunkIndex.x || oldCameraChunkPosition.z != cameraChunkIndex.z) {
+                {
+                    int curPosInChunkStatusMegaArray = megaVertPositions.ImaginaryChunkFlatIndexWithoutVoxels(curChunkTraversalIndex);
+                    int renderChunk = false;
 
                     {
-                        int oldPosInChunkStatusMegaArray = megaVertPositions.ImaginaryChunkFlatIndexWithoutVoxels(oldChunkTraversalIndex);
-                        int curPosInChunkStatusMegaArray = megaVertPositions.ImaginaryChunkFlatIndexWithoutVoxels(curChunkTraversalIndex);
-                        int renderChunk = false;
-
-                        {
-                            std::lock_guard<std::mutex> lock(chunkGeneratedMutex);
-                            renderChunk = chunkGenerated.contains(oldPosInChunkStatusMegaArray) && chunkGenerated[oldPosInChunkStatusMegaArray];
-                            chunkGenerated[curPosInChunkStatusMegaArray] = true;
-                        }
+                        std::lock_guard<std::mutex> lock(chunkGeneratedMutex);
+                        renderChunk = chunkGenerated.contains(curPosInChunkStatusMegaArray) && chunkGenerated[curPosInChunkStatusMegaArray];
+                    }
 
 
-                        if (renderChunk) {
+                    if (renderChunk) {
 
-                            ReadyIndirectDrawListOfDrawableChunksAndFaces(/*renderTraversalOrder[i]*/
-                                offsetRenderTraversalOrder, curChunkTraversalIndex
-                                , camera, cameraChunkIndex
-                                , instanceShader, instancedMaterial
-                                , megaVertPositions, chunkPositions
-                                , renderQuad);
+                        ReadyIndirectDrawListOfDrawableChunksAndFaces(/*renderTraversalOrder[i]*/
+                            offsetRenderTraversalOrder, curChunkTraversalIndex
+                            , camera, cameraChunkIndex
+                            , instanceShader, instancedMaterial
+                            , megaVertPositions, chunkPositions
+                            , renderQuad);
 
-                            //std::cout << curChunkTraversalIndex.x << ", " << curChunkTraversalIndex.y << ", " <<curChunkTraversalIndex.z << std::endl;
-                        }
+                        //std::cout << curChunkTraversalIndex.x << ", " << curChunkTraversalIndex.y << ", " <<curChunkTraversalIndex.z << std::endl;
                     }
                 }
-                else {
 
-                    {
-                        int curPosInChunkStatusMegaArray = megaVertPositions.ImaginaryChunkFlatIndexWithoutVoxels(curChunkTraversalIndex);
-                        int renderChunk = false;
-
-                        {
-                            std::lock_guard<std::mutex> lock(chunkGeneratedMutex);
-                            renderChunk = chunkGenerated.contains(curPosInChunkStatusMegaArray) && chunkGenerated[curPosInChunkStatusMegaArray];
-                        }
-
-
-                        if (renderChunk) {
-
-                            ReadyIndirectDrawListOfDrawableChunksAndFaces(/*renderTraversalOrder[i]*/
-                                offsetRenderTraversalOrder, curChunkTraversalIndex
-                                , camera, cameraChunkIndex
-                                , instanceShader, instancedMaterial
-                                , megaVertPositions, chunkPositions
-                                , renderQuad);
-
-                            //std::cout << curChunkTraversalIndex.x << ", " << curChunkTraversalIndex.y << ", " <<curChunkTraversalIndex.z << std::endl;
-                        }
-                    }
-                }
 
             }
 

@@ -13,10 +13,16 @@
 
 #define NUM_FACES 6
 
-const int numChunksHalfWidth = 5;
+#define CHUNK_SAVE_STRING(chunkIndex) "Chunk" + CHUNK_FILE_DELIMITER + std::to_string(chunkIndex.x) + CHUNK_FILE_DELIMITER + std::to_string(chunkIndex.y) + CHUNK_FILE_DELIMITER + std::to_string(chunkIndex.z) + CHUNK_FILE_DELIMITER + "Data"
+
+const std::string CHUNK_FILE_DELIMITER = ".";
+
+const std::string worldDataDir = "WorldData/";
+
+const int numChunksHalfWidth = 1;
 const int numChunksHalfWidth_Y = 3;
 const int chunkSize = 31;
-const float scale = 0.01f;
+const float scale = 0.1f;
 
 constexpr int numChunksFullWidth = (2 * numChunksHalfWidth) + 1; //<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<< THIS DOESN'T MATCH WITH THE RENDER TRAVERSAL ORDER COORDINATES!!!!
 constexpr int numChunksFullWidth_Y = numChunksHalfWidth_Y;
