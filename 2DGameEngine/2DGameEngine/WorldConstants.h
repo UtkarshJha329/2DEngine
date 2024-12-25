@@ -13,7 +13,7 @@
 
 #define NUM_FACES 6
 
-#define CHUNK_SAVE_STRING(chunkIndex) "Chunk" + CHUNK_FILE_DELIMITER + std::to_string(chunkIndex.x) + CHUNK_FILE_DELIMITER + std::to_string(chunkIndex.y) + CHUNK_FILE_DELIMITER + std::to_string(chunkIndex.z) + CHUNK_FILE_DELIMITER + "Data"
+#define CHUNK_SAVE_STRING(chunkIndex) "Chunk" + CHUNK_FILE_DELIMITER + std::to_string(chunkIndex.x) + CHUNK_FILE_DELIMITER + std::to_string(chunkIndex.y) + CHUNK_FILE_DELIMITER + std::to_string(chunkIndex.z) + CHUNK_FILE_DELIMITER + "LOD.LEVEL" + CHUNK_FILE_DELIMITER + std::to_string(lodLevel) + CHUNK_FILE_DELIMITER + "Data"
 
 const std::string CHUNK_FILE_DELIMITER = ".";
 
@@ -21,7 +21,7 @@ const std::string worldDataDir = "WorldData/";
 
 const int numChunksHalfWidth = 1;
 const int numChunksHalfWidth_Y = 1;
-const int chunkSize = 7;
+const int chunkSize = 8;
 const float scale = 0.1f;
 
 constexpr int numChunksFullWidth = (2 * numChunksHalfWidth) + 1;

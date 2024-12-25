@@ -692,7 +692,7 @@ static void ReadyIndirectDrawListOfDrawableChunksAndFaces(Vector3 innerChunkInde
 
     bool shouldDrawChunk = ShouldDrawChunk(drawCurChunkPos, camera, nearPlane, farPlane, rightPlane, leftPlane, topPlane, bottomPlane);
 
-    constexpr bool drawAll = false;
+    constexpr bool drawAll = true;
 
     if (shouldDrawChunk) {
 
@@ -812,7 +812,7 @@ static void MakeNoise3D(std::vector<std::vector<std::vector<std::vector<std::vec
 
 static void ConvolutionSum(std::vector<std::vector<std::vector<float>>>& noiseStorage, int convolutionSize, int convolutionPositionX, int convolutionPositionY, int convolutionPositionZ, int lodLevel) {
 
-    int adjustedConvolutionSize = convolutionSize - 1;
+    int adjustedConvolutionSize = convolutionSize;
     int convolutionStartX = convolutionPositionX - adjustedConvolutionSize;
     int convolutionEndX = convolutionPositionX;
 
@@ -836,8 +836,8 @@ static void ConvolutionSum(std::vector<std::vector<std::vector<float>>>& noiseSt
             }
         }
     }
-
-    noiseStorage[convolutionPositionX][convolutionPositionY][convolutionPositionZ] = (sum >= (pow(2, lodLevel) * pow(2, lodLevel))) ? noiseStorage[convolutionPositionX][convolutionPositionY][convolutionPositionZ] : 2;
+    //(pow(2, lodLevel) * pow(2, lodLevel))
+    noiseStorage[convolutionPositionX][convolutionPositionY][convolutionPositionZ] = (sum >= 1) ? noiseStorage[convolutionPositionX][convolutionPositionY][convolutionPositionZ] : 2;
 
 }
 
@@ -1052,7 +1052,7 @@ static void GenMeshCustom2D(std::vector<std::vector<std::vector<float>>> &noiseF
 
                 if (curNoise == 1 || curNoise == 0) {
 
-                    float curNoiseTop = noiseForCurrentChunk[x][y + 1][z];
+                    float curNoiseTop = (y + stepSizeForConvolution <= endY) ? noiseForCurrentChunk[x][y + stepSizeForConvolution][z] : 2;
 
                     if (curNoiseTop == 2) {
                         int curPositionTemp = curPosition + (FACE_UP_INDEX << FACE_DIRECTION_POSITION);
@@ -1061,7 +1061,7 @@ static void GenMeshCustom2D(std::vector<std::vector<std::vector<float>>> &noiseF
                         //std::cout << innerChunkIndex.y << std::endl;
                     }
 
-                    float curNoiseBottom = noiseForCurrentChunk[x][y - 1][z];
+                    float curNoiseBottom = (y - stepSizeForConvolution >= startY - 1) ? noiseForCurrentChunk[x][y - stepSizeForConvolution][z] : 2;
 
                     if (curNoiseBottom == 2) {
                         int curPositionTemp = curPosition + (FACE_DOWN_INDEX << FACE_DIRECTION_POSITION);
@@ -1069,7 +1069,7 @@ static void GenMeshCustom2D(std::vector<std::vector<std::vector<float>>> &noiseF
                         megaVertPositions.AddDown(curPositionTemp, innerChunkIndex);
                     }
 
-                    float curNoiseFront = noiseForCurrentChunk[x][y][z + 1];
+                    float curNoiseFront = (z + stepSizeForConvolution <= endZ) ? noiseForCurrentChunk[x][y][z + stepSizeForConvolution] : 2;
 
                     if (curNoiseFront == 2) {
                         int curPositionTemp = curPosition + (FACE_FRONT_INDEX << FACE_DIRECTION_POSITION);
@@ -1077,7 +1077,7 @@ static void GenMeshCustom2D(std::vector<std::vector<std::vector<float>>> &noiseF
                         megaVertPositions.AddFront(curPositionTemp, innerChunkIndex);
                     }
 
-                    float curNoiseBack = noiseForCurrentChunk[x][y][z - 1];
+                    float curNoiseBack = (z - stepSizeForConvolution >= startZ - 1) ? noiseForCurrentChunk[x][y][z - stepSizeForConvolution] : 2;
 
                     if (curNoiseBack == 2) {
                         int curPositionTemp = curPosition + (FACE_BACK_INDEX << FACE_DIRECTION_POSITION);
@@ -1085,7 +1085,7 @@ static void GenMeshCustom2D(std::vector<std::vector<std::vector<float>>> &noiseF
                         megaVertPositions.AddBack(curPositionTemp, innerChunkIndex);
                     }
 
-                    float curNoiseRight = noiseForCurrentChunk[x + 1][y][z];
+                    float curNoiseRight = (x + stepSizeForConvolution <= endX) ? noiseForCurrentChunk[x + stepSizeForConvolution][y][z] : 2;
 
                     if (curNoiseRight == 2) {
                         int curPositionTemp = curPosition + (FACE_RIGHT_INDEX << FACE_DIRECTION_POSITION);
@@ -1093,7 +1093,7 @@ static void GenMeshCustom2D(std::vector<std::vector<std::vector<float>>> &noiseF
                         megaVertPositions.AddRight(curPositionTemp, innerChunkIndex);
                     }
 
-                    float curNoiseLeft = noiseForCurrentChunk[x - 1][y][z];
+                    float curNoiseLeft = (x - stepSizeForConvolution >= startX - 1) ? noiseForCurrentChunk[x - stepSizeForConvolution][y][z] : 2;
 
                     if (curNoiseLeft == 2) {
                         int curPositionTemp = curPosition + (FACE_LEFT_INDEX << FACE_DIRECTION_POSITION);
