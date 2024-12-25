@@ -12265,12 +12265,12 @@ void ecs_sleepf(
 double ecs_time_measure(
     ecs_time_t *start)
 {
-    ecs_time_t stop, temp;
-    ecs_os_get_time(&stop);
-    temp = stop;
-    stop = ecs_time_sub(stop, *start);
+    ecs_time_t Stop, temp;
+    ecs_os_get_time(&Stop);
+    temp = Stop;
+    Stop = ecs_time_sub(Stop, *start);
     *start = temp;
-    return ecs_time_to_double(stop);
+    return ecs_time_to_double(Stop);
 }
 
 void* ecs_os_memdup(
@@ -19739,12 +19739,12 @@ void flecs_type_info_free(
 static
 ecs_ftime_t flecs_insert_sleep(
     ecs_world_t *world,
-    ecs_time_t *stop)
+    ecs_time_t *Stop)
 {
     flecs_poly_assert(world, ecs_world_t);  
 
-    ecs_time_t start = *stop, now = start;
-    ecs_ftime_t delta_time = (ecs_ftime_t)ecs_time_measure(stop);
+    ecs_time_t start = *Stop, now = start;
+    ecs_ftime_t delta_time = (ecs_ftime_t)ecs_time_measure(Stop);
 
     if (ECS_EQZERO(world->info.target_fps)) {
         return delta_time;
@@ -19777,7 +19777,7 @@ ecs_ftime_t flecs_insert_sleep(
 
     ecs_os_perf_trace_pop("flecs.insert_sleep");
 
-    *stop = now;
+    *Stop = now;
     return delta_time;
 }
 

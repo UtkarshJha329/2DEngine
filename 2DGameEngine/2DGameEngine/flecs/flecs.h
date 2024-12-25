@@ -31242,7 +31242,7 @@ void start();
 /** Stop timer.
  * @see ecs_start_timer
  */
-void stop();
+void Stop();
 
 /** Set external tick source.
  * @see ecs_set_tick_source
@@ -31470,7 +31470,7 @@ struct timer final : entity {
         ecs_start_timer(world_, id_);
     }
 
-    void stop() {
+    void Stop() {
         ecs_stop_timer(world_, id_);
     }
 };
@@ -31513,7 +31513,7 @@ inline void system::start() {
     ecs_start_timer(world_, id_);
 }
 
-inline void system::stop() {
+inline void system::Stop() {
     ecs_stop_timer(world_, id_);
 }
 

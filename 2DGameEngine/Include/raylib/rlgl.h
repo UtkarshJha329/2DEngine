@@ -799,6 +799,7 @@ RLAPI void rlReadShaderBuffer(unsigned int id, void *dest, unsigned int count, u
 RLAPI void rlCopyShaderBuffer(unsigned int destId, unsigned int srcId, unsigned int destOffset, unsigned int srcOffset, unsigned int count); // Copy SSBO data between buffers
 RLAPI unsigned int rlGetShaderBufferSize(unsigned int id);                      // Get SSBO buffer size
 RLAPI unsigned int rlLoadDrawBufferIndirect(unsigned int size, const void* data, bool dynamic);
+RLAPI void rlUpdateDrawBufferIndirect(unsigned int id, const void *data, unsigned int dataSize, unsigned int offset); // Update SSBO draw buffer indirect data
 RLAPI void rlBindDrawBufferIndirect(unsigned int bufferID);
 
 // Buffer management
@@ -4608,6 +4609,19 @@ unsigned int rlLoadDrawBufferIndirect(unsigned int size, const void* data, bool 
 
     return indirectDrawBuffer;
 }
+
+// Update Indirect draw call Buffer
+void rlUpdateDrawBufferIndirect(unsigned int id, const void *data, unsigned int dataSize, unsigned int offset)
+{
+#if defined(GRAPHICS_API_OPENGL_43)
+    glBindBuffer(GL_DRAW_INDIRECT_BUFFER, id);
+    glBufferSubData(GL_DRAW_INDIRECT_BUFFER, offset, dataSize, data);
+    glBindBuffer(GL_DRAW_INDIRECT_BUFFER, 0);
+#else
+    TRACELOG(RL_LOG_WARNING, "Indirect Draw Buffer: Indirect Draw Buffer not enabled. Define GRAPHICS_API_OPENGL_43");
+#endif
+}
+
 
 void rlBindDrawBufferIndirect(unsigned int bufferID)
 {

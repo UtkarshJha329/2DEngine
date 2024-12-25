@@ -67,6 +67,8 @@ vec3 verticesLEFT[4] = vec3[4]( vec3(-0.5, -0.5, -0.5),
                                 vec3(-0.5, 0.5, -0.5),
                                 vec3(-0.5, 0.5, 0.5));
 
+uniform float lodScale;
+
 void main()
 {
     vec3 curVoxelPos = vec3((instancePosition >> 10) & 31, (instancePosition >> 5) & 31, instancePosition & 31);
@@ -99,6 +101,9 @@ void main()
     else if(faceDir == 5){
         curVertex = verticesLEFT[gl_VertexID];
     }
+
+    curVertex += 0.5;
+    curVertex *= lodScale;
 
     fragPosition = vec3(translationMatrix * vec4(curVertex, 1.0));
     fragTexCoord = vertexTexCoord;

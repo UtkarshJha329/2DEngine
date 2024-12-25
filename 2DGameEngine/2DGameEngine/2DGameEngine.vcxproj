@@ -149,6 +149,7 @@
     <ClInclude Include="CubeMeshData.h" />
     <ClInclude Include="InstancedDrawing.h" />
     <ClInclude Include="flecs\flecs.h" />
+    <ClInclude Include="Instrumentor.h" />
     <ClInclude Include="PerlinNoise.hpp" />
     <ClInclude Include="Plane.h" />
     <ClInclude Include="rlights.h" />

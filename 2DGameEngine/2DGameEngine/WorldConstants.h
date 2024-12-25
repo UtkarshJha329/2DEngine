@@ -20,16 +20,20 @@ const std::string CHUNK_FILE_DELIMITER = ".";
 const std::string worldDataDir = "WorldData/";
 
 const int numChunksHalfWidth = 1;
-const int numChunksHalfWidth_Y = 3;
-const int chunkSize = 31;
+const int numChunksHalfWidth_Y = 1;
+const int chunkSize = 7;
 const float scale = 0.1f;
 
-constexpr int numChunksFullWidth = (2 * numChunksHalfWidth) + 1; //<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<< THIS DOESN'T MATCH WITH THE RENDER TRAVERSAL ORDER COORDINATES!!!!
+constexpr int numChunksFullWidth = (2 * numChunksHalfWidth) + 1;
 constexpr int numChunksFullWidth_Y = numChunksHalfWidth_Y;
 constexpr int totalNumVoxelsPerChunk = chunkSize * chunkSize * chunkSize;
 
 constexpr int totalNumChunks =  numChunksFullWidth * numChunksFullWidth * numChunksFullWidth_Y;
 constexpr int totalNumFaces = totalNumChunks * NUM_FACES * totalNumVoxelsPerChunk;
+
+const int farPlaneDistance = 10000;
+
+float lodLevel = 0.0f;
 
 Vector3 up = { 0, 1, 0 };
 Vector3 down = { 0, -1, 0 };

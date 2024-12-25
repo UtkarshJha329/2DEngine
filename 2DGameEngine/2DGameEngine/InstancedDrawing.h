@@ -17,6 +17,7 @@ public:
     Mesh mesh;
     unsigned int instanceVBOID = 0;
     unsigned int chunkPositionsVBOID = 0;
+    unsigned int commandsBufferVBOID = 0;
 };
 
 typedef  struct {
@@ -510,9 +511,11 @@ void DrawMeshMultiInstancedDrawIndirect(GenerativeMesh& genMesh, Material materi
 
         if (numCommands > 0) {
 
-            unsigned int indirectBufferVBO = rlLoadDrawBufferIndirect(commands.size() * sizeof(DrawArraysIndirectCommand), commands.data(), false);
+            genMesh.commandsBufferVBOID = rlLoadDrawBufferIndirect(commands.size() * sizeof(DrawArraysIndirectCommand), commands.data(), true);
 
-            rlBindDrawBufferIndirect(indirectBufferVBO);
+            //genMesh.commandsBufferVBOID = rlLoadDrawBufferIndirect(commands.size() * sizeof(DrawArraysIndirectCommand), commands.data(), false);
+
+            rlBindDrawBufferIndirect(genMesh.commandsBufferVBOID);
             //VVVVVVVVVVVVVVVVVVVVVVVV
             //void rlBindDrawBufferIndirect(unsigned int bufferID)
             //{
@@ -528,7 +531,7 @@ void DrawMeshMultiInstancedDrawIndirect(GenerativeMesh& genMesh, Material materi
             //{
             //    glMultiDrawArraysIndirect(GL_TRIANGLE_STRIP, indirect, drawCount, stride);
             //}
-            rlUnloadVertexBuffer(indirectBufferVBO);
+            rlUnloadVertexBuffer(genMesh.commandsBufferVBOID);
         }
     }
 

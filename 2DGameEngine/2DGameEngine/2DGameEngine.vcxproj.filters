@@ -50,6 +50,9 @@
     <ClInclude Include="WorldConstants.h">
       <Filter>Header Files</Filter>
     </ClInclude>
+    <ClInclude Include="Instrumentor.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <None Include="Shaders\SimpleShader.vert" />
