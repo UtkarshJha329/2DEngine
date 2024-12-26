@@ -136,43 +136,47 @@ static void GenChunkMeshWithNoiseAndSaveToFile(VertexPositions& megaVertPosition
     , std::vector<int>& chunkUpdatedIndexWithVoxel
     , int& chunkBeingGeneratedCount
     , Vector3 chunkIndex, Vector3 innerChunkIndex
-    , int lodLevel) {
+    , int lodLevel
+    , bool saveChunkToFile) {
 
     PROFILE_FUNCTION();
 
     GenChunkMeshWithNoise(megaVertPositions, chunkGenerated, chunkUpdatedIndexWithVoxel, chunkBeingGeneratedCount, chunkIndex, innerChunkIndex, lodLevel);
 
-    std::string curChunkSaveFileName = CHUNK_SAVE_STRING(chunkIndex);
+    if (saveChunkToFile) {
 
-    //std::cout << "SAVED: " << curChunkSaveFileName << std::endl;
+        std::string curChunkSaveFileName = CHUNK_SAVE_STRING(chunkIndex);
 
-    std::ofstream os(worldDataDir + curChunkSaveFileName, std::ios::binary);
-    cereal::BinaryOutputArchive archive(os);
+        //std::cout << "SAVED: " << curChunkSaveFileName << std::endl;
 
-    int chunkFlatIndexWithoutVoxels = megaVertPositions.ChunkFlatIndexWithoutVoxels(innerChunkIndex);
+        std::ofstream os(worldDataDir + curChunkSaveFileName, std::ios::binary);
+        cereal::BinaryOutputArchive archive(os);
 
-    int start = megaVertPositions.ChunkTotalFlatIndexWithVoxels(innerChunkIndex);
-    std::span<int> curChunkSlice(megaVertPositions.megaArrayOfAllPositions.begin() + start, totalNumVoxelsPerChunk * NUM_FACES);
+        int chunkFlatIndexWithoutVoxels = megaVertPositions.ChunkFlatIndexWithoutVoxels(innerChunkIndex);
 
-    //cereal::binary_data(curChunkSlice.data(), sizeof(int) * curChunkSlice.size())
+        int start = megaVertPositions.ChunkTotalFlatIndexWithVoxels(innerChunkIndex);
+        std::span<int> curChunkSlice(megaVertPositions.megaArrayOfAllPositions.begin() + start, totalNumVoxelsPerChunk * NUM_FACES);
 
-    archive(cereal::binary_data(curChunkSlice.data(), sizeof(int) * curChunkSlice.size())
-        , megaVertPositions.upEndVoxelPositions[chunkFlatIndexWithoutVoxels]
-        , megaVertPositions.downEndVoxelPositions[chunkFlatIndexWithoutVoxels]
-        , megaVertPositions.frontEndVoxelPositions[chunkFlatIndexWithoutVoxels]
-        , megaVertPositions.backEndVoxelPositions[chunkFlatIndexWithoutVoxels]
-        , megaVertPositions.rightEndVoxelPositions[chunkFlatIndexWithoutVoxels]
-        , megaVertPositions.leftEndVoxelPositions[chunkFlatIndexWithoutVoxels]);
+        //cereal::binary_data(curChunkSlice.data(), sizeof(int) * curChunkSlice.size())
 
-    //if (chunkIndex.x == 0 && chunkIndex.y == 0 && chunkIndex.z == 0) {
+        archive(cereal::binary_data(curChunkSlice.data(), sizeof(int) * curChunkSlice.size())
+            , megaVertPositions.upEndVoxelPositions[chunkFlatIndexWithoutVoxels]
+            , megaVertPositions.downEndVoxelPositions[chunkFlatIndexWithoutVoxels]
+            , megaVertPositions.frontEndVoxelPositions[chunkFlatIndexWithoutVoxels]
+            , megaVertPositions.backEndVoxelPositions[chunkFlatIndexWithoutVoxels]
+            , megaVertPositions.rightEndVoxelPositions[chunkFlatIndexWithoutVoxels]
+            , megaVertPositions.leftEndVoxelPositions[chunkFlatIndexWithoutVoxels]);
 
-    //    std::cout << megaVertPositions.upEndVoxelPositions[chunkFlatIndexWithoutVoxels] << ", "
-    //        << megaVertPositions.downEndVoxelPositions[chunkFlatIndexWithoutVoxels] << ", "
-    //        << megaVertPositions.frontEndVoxelPositions[chunkFlatIndexWithoutVoxels] << ", "
-    //        << megaVertPositions.backEndVoxelPositions[chunkFlatIndexWithoutVoxels] << ", "
-    //        << megaVertPositions.rightEndVoxelPositions[chunkFlatIndexWithoutVoxels] << ", "
-    //        << megaVertPositions.leftEndVoxelPositions[chunkFlatIndexWithoutVoxels] << std::endl;
-    //}
+        //if (chunkIndex.x == 0 && chunkIndex.y == 0 && chunkIndex.z == 0) {
+
+        //    std::cout << megaVertPositions.upEndVoxelPositions[chunkFlatIndexWithoutVoxels] << ", "
+        //        << megaVertPositions.downEndVoxelPositions[chunkFlatIndexWithoutVoxels] << ", "
+        //        << megaVertPositions.frontEndVoxelPositions[chunkFlatIndexWithoutVoxels] << ", "
+        //        << megaVertPositions.backEndVoxelPositions[chunkFlatIndexWithoutVoxels] << ", "
+        //        << megaVertPositions.rightEndVoxelPositions[chunkFlatIndexWithoutVoxels] << ", "
+        //        << megaVertPositions.leftEndVoxelPositions[chunkFlatIndexWithoutVoxels] << std::endl;
+        //}
+    }
 }
 
 static void ReloadChunkDataFromFile(std::string curChunkFileName
@@ -551,7 +555,8 @@ int main()
                                 , std::ref(chunkBeingGeneratedCount)
                                 , curChunkTraversalIndex
                                 , offsetRenderTraversalOrder
-                                , (int)lodLevel));
+                                , (int)lodLevel
+                                , saveChunkToFile));
 
                             //GenChunkMeshWithNoise(std::ref(megaVertPositions)
                             //    , std::ref(chunkGenerated)
@@ -812,7 +817,7 @@ static void MakeNoise3D(std::vector<std::vector<std::vector<std::vector<std::vec
 
 static void ConvolutionSum(std::vector<std::vector<std::vector<float>>>& noiseStorage, int convolutionSize, int convolutionPositionX, int convolutionPositionY, int convolutionPositionZ, int lodLevel) {
 
-    int adjustedConvolutionSize = convolutionSize;
+    int adjustedConvolutionSize = convolutionSize - 1;
     int convolutionStartX = convolutionPositionX - adjustedConvolutionSize;
     int convolutionEndX = convolutionPositionX;
 
@@ -837,7 +842,9 @@ static void ConvolutionSum(std::vector<std::vector<std::vector<float>>>& noiseSt
         }
     }
     //(pow(2, lodLevel) * pow(2, lodLevel))
-    noiseStorage[convolutionPositionX][convolutionPositionY][convolutionPositionZ] = (sum >= 1) ? noiseStorage[convolutionPositionX][convolutionPositionY][convolutionPositionZ] : 2;
+    //noiseStorage[convolutionPositionX][convolutionPositionY][convolutionPositionZ]
+    //1
+    noiseStorage[convolutionPositionX][convolutionPositionY][convolutionPositionZ] = (sum >= 1) ? 1 : 2;
 
 }
 
@@ -899,33 +906,9 @@ static void MakeNoiseForChunk(std::vector<std::vector<std::vector<float>>> &nois
                 else if (_y > scaledNoise) {// This is the position above the noise height.
                     noiseStorage[x + 1][y + 1][z + 1] = 2; // AIR BLOCK
                 }
-                ////float value = (float)_y / (float)scaledNoise;
-                ////noiseStorage[chunksX][chunksY][chunksZ][x][y][z] = value > 1 ? ceil(value) : 0;
-
-                //if (_y < 13) {// This is the position under the noise height.
-                //    noiseStorage[x + 1][y + 1][z + 1] = 2; // AIR BLOCK
-                //}
-                //else if (_y == 13) {// This is the noise height.
-                //    noiseStorage[x + 1][y + 1][z + 1] = 1; // DIRT BLOCK
-
-                //    if (chunksY == 0) {
-                //        std::cout << "What is this?" << std::endl;
-                //    }
-
-                //    //std::cout << chunksY << std::endl;
-                //}
-                //else if (_y > 13) {// This is the position above the noise height.
-                //    noiseStorage[x + 1][y + 1][z + 1] = 2; // AIR BLOCK
-                //}
             }
         }
     }
-
-    //{
-    //    std::lock_guard<std::mutex> lock(strayMutex);
-    //    std::cout << "Made Noise." << std::endl;
-    //}
-
 }
 
 static void MakeNoise2D(std::vector<std::vector<std::vector<std::vector<std::vector<std::vector<float>>>>>>& noiseStorage, int numChunks, int numChunksY, int chunksSize, float scale) {
@@ -1048,11 +1031,11 @@ static void GenMeshCustom2D(std::vector<std::vector<std::vector<float>>> &noiseF
                 //    + (x - 1) * chunkSize
                 //    + (z - 1);
 
-                int curPosition = PackThreeNumbers(x - 1, y - 1, z - 1);
+                int curPosition = PackThreeNumbers(x - stepSizeForConvolution, y - stepSizeForConvolution, z - stepSizeForConvolution);
 
                 if (curNoise == 1 || curNoise == 0) {
 
-                    float curNoiseTop = (y + stepSizeForConvolution <= endY) ? noiseForCurrentChunk[x][y + stepSizeForConvolution][z] : 2;
+                    float curNoiseTop = (y + stepSizeForConvolution <= endY) ? noiseForCurrentChunk[x][y + stepSizeForConvolution][z] : ((stepSizeForConvolution > 1) ? 2 : noiseForCurrentChunk[x][y + 1][z]);
 
                     if (curNoiseTop == 2) {
                         int curPositionTemp = curPosition + (FACE_UP_INDEX << FACE_DIRECTION_POSITION);
@@ -1061,7 +1044,7 @@ static void GenMeshCustom2D(std::vector<std::vector<std::vector<float>>> &noiseF
                         //std::cout << innerChunkIndex.y << std::endl;
                     }
 
-                    float curNoiseBottom = (y - stepSizeForConvolution >= startY - 1) ? noiseForCurrentChunk[x][y - stepSizeForConvolution][z] : 2;
+                    float curNoiseBottom = (y - stepSizeForConvolution >= startY - 1) ? noiseForCurrentChunk[x][y - stepSizeForConvolution][z] : ((stepSizeForConvolution > 1) ? 2 : noiseForCurrentChunk[x][y - 1][z]);
 
                     if (curNoiseBottom == 2) {
                         int curPositionTemp = curPosition + (FACE_DOWN_INDEX << FACE_DIRECTION_POSITION);
@@ -1069,7 +1052,7 @@ static void GenMeshCustom2D(std::vector<std::vector<std::vector<float>>> &noiseF
                         megaVertPositions.AddDown(curPositionTemp, innerChunkIndex);
                     }
 
-                    float curNoiseFront = (z + stepSizeForConvolution <= endZ) ? noiseForCurrentChunk[x][y][z + stepSizeForConvolution] : 2;
+                    float curNoiseFront = (z + stepSizeForConvolution <= endZ) ? noiseForCurrentChunk[x][y][z + stepSizeForConvolution] : ((stepSizeForConvolution > 1) ? 2 : noiseForCurrentChunk[x][y][z + 1]);
 
                     if (curNoiseFront == 2) {
                         int curPositionTemp = curPosition + (FACE_FRONT_INDEX << FACE_DIRECTION_POSITION);
@@ -1077,7 +1060,7 @@ static void GenMeshCustom2D(std::vector<std::vector<std::vector<float>>> &noiseF
                         megaVertPositions.AddFront(curPositionTemp, innerChunkIndex);
                     }
 
-                    float curNoiseBack = (z - stepSizeForConvolution >= startZ - 1) ? noiseForCurrentChunk[x][y][z - stepSizeForConvolution] : 2;
+                    float curNoiseBack = (z - stepSizeForConvolution >= startZ - 1) ? noiseForCurrentChunk[x][y][z - stepSizeForConvolution] : ((stepSizeForConvolution > 1) ? 2 : noiseForCurrentChunk[x][y][z - 1]);
 
                     if (curNoiseBack == 2) {
                         int curPositionTemp = curPosition + (FACE_BACK_INDEX << FACE_DIRECTION_POSITION);
@@ -1085,7 +1068,7 @@ static void GenMeshCustom2D(std::vector<std::vector<std::vector<float>>> &noiseF
                         megaVertPositions.AddBack(curPositionTemp, innerChunkIndex);
                     }
 
-                    float curNoiseRight = (x + stepSizeForConvolution <= endX) ? noiseForCurrentChunk[x + stepSizeForConvolution][y][z] : 2;
+                    float curNoiseRight = (x + stepSizeForConvolution <= endX) ? noiseForCurrentChunk[x + stepSizeForConvolution][y][z] : ((stepSizeForConvolution > 1) ? 2 : noiseForCurrentChunk[x + 1][y][z]);
 
                     if (curNoiseRight == 2) {
                         int curPositionTemp = curPosition + (FACE_RIGHT_INDEX << FACE_DIRECTION_POSITION);
@@ -1093,7 +1076,7 @@ static void GenMeshCustom2D(std::vector<std::vector<std::vector<float>>> &noiseF
                         megaVertPositions.AddRight(curPositionTemp, innerChunkIndex);
                     }
 
-                    float curNoiseLeft = (x - stepSizeForConvolution >= startX - 1) ? noiseForCurrentChunk[x - stepSizeForConvolution][y][z] : 2;
+                    float curNoiseLeft = (x - stepSizeForConvolution >= startX - 1) ? noiseForCurrentChunk[x - stepSizeForConvolution][y][z] : ((stepSizeForConvolution > 1) ? 2 : noiseForCurrentChunk[x - 1][y][z]);
 
                     if (curNoiseLeft == 2) {
                         int curPositionTemp = curPosition + (FACE_LEFT_INDEX << FACE_DIRECTION_POSITION);
