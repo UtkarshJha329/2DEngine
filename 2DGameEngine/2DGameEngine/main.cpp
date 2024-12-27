@@ -147,37 +147,42 @@ static void GenChunkMeshWithNoiseAndSaveToFile(VertexPositions& megaVertPosition
 
     if (saveChunkToFile) {
 
-        std::string curChunkSaveFileName = CHUNK_SAVE_STRING(chunkIndex);
+        {
+            std::string curChunkFileMetadaName = CHUNK_METADATA_SAVE_STRING(chunkIndex);
 
-        //std::cout << "SAVED: " << curChunkSaveFileName << std::endl;
+            std::ofstream os(worldDataDir + curChunkFileMetadaName, std::ios::binary);
+            cereal::BinaryOutputArchive archive(os);
+
+            int chunkFlatIndexWithoutVoxels = megaVertPositions.ChunkFlatIndexWithoutVoxels(chunkIndex);
+            archive(megaVertPositions.upEndVoxelPositions[chunkFlatIndexWithoutVoxels]
+                , megaVertPositions.downEndVoxelPositions[chunkFlatIndexWithoutVoxels]
+                , megaVertPositions.frontEndVoxelPositions[chunkFlatIndexWithoutVoxels]
+                , megaVertPositions.backEndVoxelPositions[chunkFlatIndexWithoutVoxels]
+                , megaVertPositions.rightEndVoxelPositions[chunkFlatIndexWithoutVoxels]
+                , megaVertPositions.leftEndVoxelPositions[chunkFlatIndexWithoutVoxels]);
+        }
+
+        std::string curChunkSaveFileName = CHUNK_SAVE_STRING(chunkIndex);
 
         std::ofstream os(worldDataDir + curChunkSaveFileName, std::ios::binary);
         cereal::BinaryOutputArchive archive(os);
 
-        int chunkFlatIndexWithoutVoxels = megaVertPositions.ChunkFlatIndexWithoutVoxels(innerChunkIndex);
+        std::span<int> upFacePositions = megaVertPositions.GetCurChunkCurDirVoxelData(chunkIndex, FACE_UP_INDEX);
+        std::span<int> downFacePositions = megaVertPositions.GetCurChunkCurDirVoxelData(chunkIndex, FACE_DOWN_INDEX);
+        std::span<int> frontFacePositions = megaVertPositions.GetCurChunkCurDirVoxelData(chunkIndex, FACE_FRONT_INDEX);
+        std::span<int> backFacePositions = megaVertPositions.GetCurChunkCurDirVoxelData(chunkIndex, FACE_BACK_INDEX);
+        std::span<int> rightFacePositions = megaVertPositions.GetCurChunkCurDirVoxelData(chunkIndex, FACE_RIGHT_INDEX);
+        std::span<int> leftFacePositions = megaVertPositions.GetCurChunkCurDirVoxelData(chunkIndex, FACE_LEFT_INDEX);
 
-        int start = megaVertPositions.ChunkTotalFlatIndexWithVoxels(innerChunkIndex);
-        std::span<int> curChunkSlice(megaVertPositions.megaArrayOfAllPositions.begin() + start, totalNumVoxelsPerChunk * NUM_FACES);
+        archive(
+            cereal::binary_data(upFacePositions.data(), sizeof(int) * upFacePositions.size())
+            , cereal::binary_data(downFacePositions.data(), sizeof(int) * downFacePositions.size())
+            , cereal::binary_data(frontFacePositions.data(), sizeof(int) * frontFacePositions.size())
+            , cereal::binary_data(backFacePositions.data(), sizeof(int) * backFacePositions.size())
+            , cereal::binary_data(rightFacePositions.data(), sizeof(int) * rightFacePositions.size())
+            , cereal::binary_data(leftFacePositions.data(), sizeof(int) * leftFacePositions.size())
+        );
 
-        //cereal::binary_data(curChunkSlice.data(), sizeof(int) * curChunkSlice.size())
-
-        archive(cereal::binary_data(curChunkSlice.data(), sizeof(int) * curChunkSlice.size())
-            , megaVertPositions.upEndVoxelPositions[chunkFlatIndexWithoutVoxels]
-            , megaVertPositions.downEndVoxelPositions[chunkFlatIndexWithoutVoxels]
-            , megaVertPositions.frontEndVoxelPositions[chunkFlatIndexWithoutVoxels]
-            , megaVertPositions.backEndVoxelPositions[chunkFlatIndexWithoutVoxels]
-            , megaVertPositions.rightEndVoxelPositions[chunkFlatIndexWithoutVoxels]
-            , megaVertPositions.leftEndVoxelPositions[chunkFlatIndexWithoutVoxels]);
-
-        //if (chunkIndex.x == 0 && chunkIndex.y == 0 && chunkIndex.z == 0) {
-
-        //    std::cout << megaVertPositions.upEndVoxelPositions[chunkFlatIndexWithoutVoxels] << ", "
-        //        << megaVertPositions.downEndVoxelPositions[chunkFlatIndexWithoutVoxels] << ", "
-        //        << megaVertPositions.frontEndVoxelPositions[chunkFlatIndexWithoutVoxels] << ", "
-        //        << megaVertPositions.backEndVoxelPositions[chunkFlatIndexWithoutVoxels] << ", "
-        //        << megaVertPositions.rightEndVoxelPositions[chunkFlatIndexWithoutVoxels] << ", "
-        //        << megaVertPositions.leftEndVoxelPositions[chunkFlatIndexWithoutVoxels] << std::endl;
-        //}
     }
 }
 
@@ -190,20 +195,73 @@ static void ReloadChunkDataFromFile(std::string curChunkFileName
 {
     PROFILE_FUNCTION();
 
-    std::ifstream is(curChunkFileName, std::ios::binary);
-    cereal::BinaryInputArchive iarchive(is);
+    {
+        std::string curChunkFileMetadaName = CHUNK_METADATA_SAVE_STRING(curChunkIndex);
 
-    int chunkFlatIndexWithoutVoxels = megaVertPositions.ChunkFlatIndexWithoutVoxels(innerChunkIndex);
-    int start = megaVertPositions.ChunkTotalFlatIndexWithVoxels(innerChunkIndex);
-    std::span<int> curChunkSlice(megaVertPositions.megaArrayOfAllPositions.begin() + start, totalNumVoxelsPerChunk * NUM_FACES);
+        std::ifstream is(worldDataDir + curChunkFileMetadaName, std::ios::binary);
+        cereal::BinaryInputArchive iarchive(is);
 
-    iarchive(cereal::binary_data(curChunkSlice.data(), sizeof(int) * curChunkSlice.size())
-        , megaVertPositions.upEndVoxelPositions[chunkFlatIndexWithoutVoxels]
-        , megaVertPositions.downEndVoxelPositions[chunkFlatIndexWithoutVoxels]
-        , megaVertPositions.frontEndVoxelPositions[chunkFlatIndexWithoutVoxels]
-        , megaVertPositions.backEndVoxelPositions[chunkFlatIndexWithoutVoxels]
-        , megaVertPositions.rightEndVoxelPositions[chunkFlatIndexWithoutVoxels]
-        , megaVertPositions.leftEndVoxelPositions[chunkFlatIndexWithoutVoxels]);
+        int chunkFlatIndexWithoutVoxels = megaVertPositions.ChunkFlatIndexWithoutVoxels(curChunkIndex);
+        iarchive(megaVertPositions.upEndVoxelPositions[chunkFlatIndexWithoutVoxels]
+            , megaVertPositions.downEndVoxelPositions[chunkFlatIndexWithoutVoxels]
+            , megaVertPositions.frontEndVoxelPositions[chunkFlatIndexWithoutVoxels]
+            , megaVertPositions.backEndVoxelPositions[chunkFlatIndexWithoutVoxels]
+            , megaVertPositions.rightEndVoxelPositions[chunkFlatIndexWithoutVoxels]
+            , megaVertPositions.leftEndVoxelPositions[chunkFlatIndexWithoutVoxels]);
+    }
+
+    {
+        std::string curChunkSaveFileName = CHUNK_SAVE_STRING(curChunkIndex);
+
+        std::ifstream is(worldDataDir + curChunkSaveFileName, std::ios::binary);
+        cereal::BinaryInputArchive iarchive(is);
+
+        std::span<int> upFacePositions = megaVertPositions.GetCurChunkCurDirVoxelData(curChunkIndex, FACE_UP_INDEX);
+        std::span<int> downFacePositions = megaVertPositions.GetCurChunkCurDirVoxelData(curChunkIndex, FACE_DOWN_INDEX);
+        std::span<int> frontFacePositions = megaVertPositions.GetCurChunkCurDirVoxelData(curChunkIndex, FACE_FRONT_INDEX);
+        std::span<int> backFacePositions = megaVertPositions.GetCurChunkCurDirVoxelData(curChunkIndex, FACE_BACK_INDEX);
+        std::span<int> rightFacePositions = megaVertPositions.GetCurChunkCurDirVoxelData(curChunkIndex, FACE_RIGHT_INDEX);
+        std::span<int> leftFacePositions = megaVertPositions.GetCurChunkCurDirVoxelData(curChunkIndex, FACE_LEFT_INDEX);
+
+        iarchive(
+            cereal::binary_data(upFacePositions.data(), sizeof(int) * upFacePositions.size())
+            , cereal::binary_data(downFacePositions.data(), sizeof(int) * downFacePositions.size())
+            , cereal::binary_data(frontFacePositions.data(), sizeof(int) * frontFacePositions.size())
+            , cereal::binary_data(backFacePositions.data(), sizeof(int) * backFacePositions.size())
+            , cereal::binary_data(rightFacePositions.data(), sizeof(int) * rightFacePositions.size())
+            , cereal::binary_data(leftFacePositions.data(), sizeof(int) * leftFacePositions.size())
+        );
+    }
+
+
+    //for (int i = 0; i < NUM_FACES; i++)
+    //{
+    //    std::string curChunkSaveFileName = CHUNK_SAVE_STRING(curChunkIndex, i);
+
+    //    std::ifstream is(worldDataDir + curChunkSaveFileName, std::ios::binary);
+    //    cereal::BinaryInputArchive iarchive(is);
+
+    //    int start = megaVertPositions.ChunkTotalFlatIndexWithVoxels(innerChunkIndex) + (i * totalNumVoxelsPerChunk);
+    //    std::span<int> curChunkSlice(megaVertPositions.megaArrayOfAllPositions.begin() + start, megaVertPositions.GetCurFaceDirChunkDataEndPos(curChunkIndex, i));
+
+    //    iarchive(cereal::binary_data(curChunkSlice.data(), sizeof(int) * curChunkSlice.size()));
+
+    //}
+
+    //std::ifstream is(curChunkFileName, std::ios::binary);
+    //cereal::BinaryInputArchive iarchive(is);
+
+    //int chunkFlatIndexWithoutVoxels = megaVertPositions.ChunkFlatIndexWithoutVoxels(innerChunkIndex);
+    //int start = megaVertPositions.ChunkTotalFlatIndexWithVoxels(innerChunkIndex);
+    //std::span<int> curChunkSlice(megaVertPositions.megaArrayOfAllPositions.begin() + start, totalNumVoxelsPerChunk * NUM_FACES);
+
+    //iarchive(cereal::binary_data(curChunkSlice.data(), sizeof(int) * curChunkSlice.size())
+    //    , megaVertPositions.upEndVoxelPositions[chunkFlatIndexWithoutVoxels]
+    //    , megaVertPositions.downEndVoxelPositions[chunkFlatIndexWithoutVoxels]
+    //    , megaVertPositions.frontEndVoxelPositions[chunkFlatIndexWithoutVoxels]
+    //    , megaVertPositions.backEndVoxelPositions[chunkFlatIndexWithoutVoxels]
+    //    , megaVertPositions.rightEndVoxelPositions[chunkFlatIndexWithoutVoxels]
+    //    , megaVertPositions.leftEndVoxelPositions[chunkFlatIndexWithoutVoxels]);
 
     {
         {

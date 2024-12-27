@@ -76,6 +76,53 @@ public:
         //}
     }
 
+    int GetCurFaceDirChunkDataEndPos(Vector3 chunkIndex, int curDir) {
+        switch (curDir) {
+        case FACE_UP_INDEX:
+            return upEndVoxelPositions[ChunkFlatIndexWithoutVoxels(chunkIndex)];
+        case FACE_DOWN_INDEX:
+            return downEndVoxelPositions[ChunkFlatIndexWithoutVoxels(chunkIndex)];
+        case FACE_FRONT_INDEX:
+            return frontEndVoxelPositions[ChunkFlatIndexWithoutVoxels(chunkIndex)];
+        case FACE_BACK_INDEX:
+            return backEndVoxelPositions[ChunkFlatIndexWithoutVoxels(chunkIndex)];
+        case FACE_RIGHT_INDEX:
+            return rightEndVoxelPositions[ChunkFlatIndexWithoutVoxels(chunkIndex)];
+        case FACE_LEFT_INDEX:
+            return leftEndVoxelPositions[ChunkFlatIndexWithoutVoxels(chunkIndex)];
+        }
+    }
+
+    std::span<int> GetCurChunkCurDirVoxelData(Vector3 curChunkIndex, int curDir) {
+
+        int curChunkFlatIndexWithVoxels = ChunkTotalFlatIndexWithVoxels(curChunkIndex);
+        int curChunkFlatIndexWithoutVoxels = ChunkFlatIndexWithoutVoxels(curChunkIndex);
+
+        auto curIteratorHead = megaArrayOfAllPositions.begin() + curChunkFlatIndexWithVoxels + (curDir * totalNumVoxelsPerChunk);
+        std::span<int> curSpan;
+
+        switch (curDir) {
+        case FACE_UP_INDEX:
+            curSpan = std::span<int>(curIteratorHead, curIteratorHead + upEndVoxelPositions[curChunkFlatIndexWithoutVoxels]);
+            return curSpan;
+        case FACE_DOWN_INDEX:
+            curSpan = std::span<int>(curIteratorHead, curIteratorHead + downEndVoxelPositions[curChunkFlatIndexWithoutVoxels]);
+            return curSpan;
+        case FACE_FRONT_INDEX:
+            curSpan = std::span<int>(curIteratorHead, curIteratorHead + frontEndVoxelPositions[curChunkFlatIndexWithoutVoxels]);
+            return curSpan;
+        case FACE_BACK_INDEX:
+            curSpan = std::span<int>(curIteratorHead, curIteratorHead + backEndVoxelPositions[curChunkFlatIndexWithoutVoxels]);
+            return curSpan;
+        case FACE_RIGHT_INDEX:
+            curSpan = std::span<int>(curIteratorHead, curIteratorHead + rightEndVoxelPositions[curChunkFlatIndexWithoutVoxels]);
+            return curSpan;
+        case FACE_LEFT_INDEX:
+            curSpan = std::span<int>(curIteratorHead, curIteratorHead + leftEndVoxelPositions[curChunkFlatIndexWithoutVoxels]);
+            return curSpan;
+        }
+    }
+
     void AddUp(int toAdd, Vector3 innerChunkIndex) {
         megaArrayOfAllPositions[ChunkTotalFlatIndexWithVoxels(innerChunkIndex) + FACE_UP_INDEX * totalNumVoxelsPerChunk + upEndVoxelPositions[ChunkFlatIndexWithoutVoxels(innerChunkIndex)]] = toAdd;
         upEndVoxelPositions[ChunkFlatIndexWithoutVoxels(innerChunkIndex)]++;

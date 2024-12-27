@@ -5,6 +5,7 @@
 
 # Ignore World Data Files.
 *.Data
+*.MetaData
 
 # User-specific files
 *.rsuser

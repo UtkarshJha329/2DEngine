@@ -14,7 +14,9 @@
 
 #define NUM_FACES 6
 
+//#define CHUNK_SAVE_STRING(chunkIndex, faceDir) "Chunk" + CHUNK_FILE_DELIMITER + std::to_string(chunkIndex.x) + CHUNK_FILE_DELIMITER + std::to_string(chunkIndex.y) + CHUNK_FILE_DELIMITER + std::to_string(chunkIndex.z) + CHUNK_FILE_DELIMITER + "LOD.LEVEL" + CHUNK_FILE_DELIMITER + std::to_string(LODLevel) + CHUNK_FILE_DELIMITER + "FACEDIR" + CHUNK_FILE_DELIMITER + std::to_string(faceDir) + CHUNK_FILE_DELIMITER + "Data"
 #define CHUNK_SAVE_STRING(chunkIndex) "Chunk" + CHUNK_FILE_DELIMITER + std::to_string(chunkIndex.x) + CHUNK_FILE_DELIMITER + std::to_string(chunkIndex.y) + CHUNK_FILE_DELIMITER + std::to_string(chunkIndex.z) + CHUNK_FILE_DELIMITER + "LOD.LEVEL" + CHUNK_FILE_DELIMITER + std::to_string(LODLevel) + CHUNK_FILE_DELIMITER + "Data"
+#define CHUNK_METADATA_SAVE_STRING(chunkIndex) "Chunk" + CHUNK_FILE_DELIMITER + std::to_string(chunkIndex.x) + CHUNK_FILE_DELIMITER + std::to_string(chunkIndex.y) + CHUNK_FILE_DELIMITER + std::to_string(chunkIndex.z) + CHUNK_FILE_DELIMITER + "LOD.LEVEL" + CHUNK_FILE_DELIMITER + std::to_string(LODLevel) + CHUNK_FILE_DELIMITER + "MetaData"
 
 const std::string CHUNK_FILE_DELIMITER = ".";
 
@@ -35,7 +37,7 @@ constexpr int totalNumFaces = totalNumChunks * NUM_FACES * totalNumVoxelsPerChun
 const int farPlaneDistance = 10000;
 
 float LODLevel = 0.0f;
-const bool saveChunkToFile = false;
+const bool saveChunkToFile = true;
 
 Vector3 up = { 0, 1, 0 };
 Vector3 down = { 0, -1, 0 };
