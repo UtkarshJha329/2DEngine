@@ -3,6 +3,7 @@
 #include "raylib/raymath.h"
 
 #define FACE_DIRECTION_POSITION 16
+#define SCALE_POSITION_IN_PACKED_INT 19
 
 #define FACE_UP_INDEX 0
 #define FACE_DOWN_INDEX 1
@@ -13,7 +14,7 @@
 
 #define NUM_FACES 6
 
-#define CHUNK_SAVE_STRING(chunkIndex) "Chunk" + CHUNK_FILE_DELIMITER + std::to_string(chunkIndex.x) + CHUNK_FILE_DELIMITER + std::to_string(chunkIndex.y) + CHUNK_FILE_DELIMITER + std::to_string(chunkIndex.z) + CHUNK_FILE_DELIMITER + "LOD.LEVEL" + CHUNK_FILE_DELIMITER + std::to_string(lodLevel) + CHUNK_FILE_DELIMITER + "Data"
+#define CHUNK_SAVE_STRING(chunkIndex) "Chunk" + CHUNK_FILE_DELIMITER + std::to_string(chunkIndex.x) + CHUNK_FILE_DELIMITER + std::to_string(chunkIndex.y) + CHUNK_FILE_DELIMITER + std::to_string(chunkIndex.z) + CHUNK_FILE_DELIMITER + "LOD.LEVEL" + CHUNK_FILE_DELIMITER + std::to_string(LODLevel) + CHUNK_FILE_DELIMITER + "Data"
 
 const std::string CHUNK_FILE_DELIMITER = ".";
 
@@ -33,7 +34,7 @@ constexpr int totalNumFaces = totalNumChunks * NUM_FACES * totalNumVoxelsPerChun
 
 const int farPlaneDistance = 10000;
 
-float lodLevel = 0.0f;
+float LODLevel = 0.0f;
 const bool saveChunkToFile = false;
 
 Vector3 up = { 0, 1, 0 };

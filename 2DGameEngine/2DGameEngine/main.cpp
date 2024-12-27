@@ -66,7 +66,8 @@ static void GenMeshCustom3D(std::unordered_map<BlockFaceDirection, std::vector<i
 static void GenMeshCustom2D(std::vector<std::vector<std::vector<float>>>& noiseForCurrentChunk
     , VertexPositions &megaVertPositions
     , Vector3 rescopedChunkIndex
-    , Vector3 chunkIndex);
+    , Vector3 chunkIndex
+    , int curLodLevel);
 
 void PlaneFacingDir(Vector3 dir, GenerativeMesh & curMesh);
 
@@ -101,16 +102,16 @@ static void GenChunkMeshWithNoise(VertexPositions &megaVertPositions
                                 , std::unordered_map<int, int> &chunkUpdatedIndexWithVoxelMatchedToChunk
                                 , int &chunkBeingGeneratedCount
                                 , Vector3 chunkIndex, Vector3 innerChunkIndex
-                                , int lodLevel)
+                                , int curLodLevel)
 {
     PROFILE_FUNCTION();
 
     std::vector<std::vector<std::vector<float>>> _noiseForCurChunk(chunkSize + 3, std::vector<std::vector<float>>(chunkSize + 3, std::vector<float>(chunkSize + 3)));
     MakeNoiseForChunk(_noiseForCurChunk, chunkIndex.x, chunkIndex.y, chunkIndex.z, numChunksFullWidth, numChunksFullWidth_Y, chunkSize, scale);
 
-    ConvoluteNoise(_noiseForCurChunk, lodLevel);
+    ConvoluteNoise(_noiseForCurChunk, curLodLevel);
 
-    GenMeshCustom2D(_noiseForCurChunk, megaVertPositions, innerChunkIndex, chunkIndex);
+    GenMeshCustom2D(_noiseForCurChunk, megaVertPositions, innerChunkIndex, chunkIndex, curLodLevel);
 
     {
         {
@@ -354,7 +355,7 @@ int main()
     SetShaderValue(instanceShader, randValueLoc, &randValue, SHADER_UNIFORM_FLOAT);
 
     int lodLevelLoc = GetShaderLocation(instanceShader, "lodScale");
-    float lodScale = pow(2, lodLevel);
+    float lodScale = pow(2, LODLevel);
     SetShaderValue(instanceShader, lodLevelLoc, &lodScale, SHADER_UNIFORM_FLOAT);
 
     //std::cout << renderTraversalOrder.size() << std::endl;
@@ -437,9 +438,9 @@ int main()
         }
 
         if (IsKeyPressed(KEY_COMMA)) {
-            lodLevel++;
-            if (lodLevel > 5) {
-                lodLevel = 5;
+            LODLevel++;
+            if (LODLevel > 5) {
+                LODLevel = 5;
             }
 
             for (int i = 0; i < renderTraversalOrder.size(); i++)
@@ -447,14 +448,14 @@ int main()
                 innerIndexWhereNewMeshNeedsToBeCalculated[megaVertPositions.InnerIndexFlattened(renderTraversalOrder[i])] = true;
             }
 
-            lodScale = pow(2, lodLevel);
+            lodScale = pow(2, LODLevel);
             SetShaderValue(instanceShader, lodLevelLoc, &lodScale, SHADER_UNIFORM_FLOAT);
         }
 
         if (IsKeyPressed(KEY_PERIOD)) {
-            lodLevel--;
-            if (lodLevel < 0) {
-                lodLevel = 0;
+            LODLevel--;
+            if (LODLevel < 0) {
+                LODLevel = 0;
             }
 
             for (int i = 0; i < renderTraversalOrder.size(); i++)
@@ -462,7 +463,7 @@ int main()
                 innerIndexWhereNewMeshNeedsToBeCalculated[megaVertPositions.InnerIndexFlattened(renderTraversalOrder[i])] = true;
             }
 
-            lodScale = pow(2, lodLevel);
+            lodScale = pow(2, LODLevel);
             SetShaderValue(instanceShader, lodLevelLoc, &lodScale, SHADER_UNIFORM_FLOAT);
         }
 
@@ -549,6 +550,25 @@ int main()
                             //std::span<int> curChunkSlice(megaVertPositions.megaArrayOfAllPositions.begin() + start, totalNumVoxelsPerChunk * NUM_FACES);
                             //archive(cereal::binary_data(curChunkSlice.data(), sizeof(int) * curChunkSlice.size()));
 
+                            int curLodLevel = 0;
+                            int curDistFromCamera = (int)(Vector3Length(renderTraversalOrder[i]));
+                            if (curDistFromCamera < 4) {
+                                curLodLevel = LODLevel;
+                                //std::cout << "x < 4 : " << curLodLevel << std::endl;;
+                            }
+                            else if (curDistFromCamera >= 4 && curDistFromCamera <= 6) {
+                                curLodLevel = LODLevel + 1;
+                                //std::cout << "x >=4 && x <= 6 : " << curLodLevel << std::endl;;
+                            }
+                            else if (curDistFromCamera >= 7 && curDistFromCamera <= 9) {
+                                curLodLevel = LODLevel + 2;
+                                //std::cout << "x >= 7 && x <= 9 : " << curLodLevel << std::endl;;
+                            }
+                            else if (curDistFromCamera >= 10) {
+                                curLodLevel = LODLevel + 3;
+                                //std::cout << "x >= 10 : " << curLodLevel << std::endl;;
+                            }
+
                             chunkMeshGenThreads.push_back(std::async(std::launch::async, GenChunkMeshWithNoiseAndSaveToFile
                                 , std::ref(megaVertPositions)
                                 , std::ref(chunkGenerated)
@@ -556,7 +576,7 @@ int main()
                                 , std::ref(chunkBeingGeneratedCount)
                                 , curChunkTraversalIndex
                                 , offsetRenderTraversalOrder
-                                , (int)lodLevel
+                                , (int)curLodLevel
                                 , saveChunkToFile));
 
                             //GenChunkMeshWithNoise(std::ref(megaVertPositions)
@@ -1020,17 +1040,19 @@ static void GenMeshCustom3D(std::unordered_map<BlockFaceDirection, std::vector<i
 static void GenMeshCustom2D(std::vector<std::vector<std::vector<float>>> &noiseForCurrentChunk
                                                         , VertexPositions &megaVertPositions
                                                         , Vector3 innerChunkIndex
-                                                        , Vector3 chunkIndex)
+                                                        , Vector3 chunkIndex
+                                                        , int curLodLevel)
 {
     PROFILE_FUNCTION();
 
     //std::cout << innerChunkIndex.x << ", " << innerChunkIndex.y << ", " << innerChunkIndex.z << std::endl;
 
+    int scale = pow(2, curLodLevel);
     int curChunkIndexInBigArray = megaVertPositions.ChunkTotalFlatIndexWithVoxels(innerChunkIndex);
 
     megaVertPositions.ClearChunkData(innerChunkIndex);
 
-    int powerOfTwo = pow(2, lodLevel);
+    int powerOfTwo = pow(2, curLodLevel);
     int startX = powerOfTwo;
     int endX = chunkSize;
 
@@ -1072,6 +1094,7 @@ static void GenMeshCustom2D(std::vector<std::vector<std::vector<float>>> &noiseF
 
                     if (curNoiseTop == 2) {
                         int curPositionTemp = curPosition + (FACE_UP_INDEX << FACE_DIRECTION_POSITION);
+                        curPositionTemp = curPositionTemp | (scale << SCALE_POSITION_IN_PACKED_INT);
                         //transformOfVerticesOfFaceInParticularDir[BlockFaceDirection::UP].push_back(curPositionTemp);
                         megaVertPositions.AddUp(curPositionTemp, innerChunkIndex);
                         //std::cout << innerChunkIndex.y << std::endl;
@@ -1081,6 +1104,7 @@ static void GenMeshCustom2D(std::vector<std::vector<std::vector<float>>> &noiseF
 
                     if (curNoiseBottom == 2) {
                         int curPositionTemp = curPosition + (FACE_DOWN_INDEX << FACE_DIRECTION_POSITION);
+                        curPositionTemp = curPositionTemp | (scale << SCALE_POSITION_IN_PACKED_INT);
                         //transformOfVerticesOfFaceInParticularDir[BlockFaceDirection::DOWN].push_back(curPositionTemp);
                         megaVertPositions.AddDown(curPositionTemp, innerChunkIndex);
                     }
@@ -1089,6 +1113,7 @@ static void GenMeshCustom2D(std::vector<std::vector<std::vector<float>>> &noiseF
 
                     if (curNoiseFront == 2) {
                         int curPositionTemp = curPosition + (FACE_FRONT_INDEX << FACE_DIRECTION_POSITION);
+                        curPositionTemp = curPositionTemp | (scale << SCALE_POSITION_IN_PACKED_INT);
                         //transformOfVerticesOfFaceInParticularDir[BlockFaceDirection::FRONT].push_back(curPositionTemp);
                         megaVertPositions.AddFront(curPositionTemp, innerChunkIndex);
                     }
@@ -1097,6 +1122,7 @@ static void GenMeshCustom2D(std::vector<std::vector<std::vector<float>>> &noiseF
 
                     if (curNoiseBack == 2) {
                         int curPositionTemp = curPosition + (FACE_BACK_INDEX << FACE_DIRECTION_POSITION);
+                        curPositionTemp = curPositionTemp | (scale << SCALE_POSITION_IN_PACKED_INT);
                         //transformOfVerticesOfFaceInParticularDir[BlockFaceDirection::BACK].push_back(curPositionTemp);
                         megaVertPositions.AddBack(curPositionTemp, innerChunkIndex);
                     }
@@ -1105,6 +1131,7 @@ static void GenMeshCustom2D(std::vector<std::vector<std::vector<float>>> &noiseF
 
                     if (curNoiseRight == 2) {
                         int curPositionTemp = curPosition + (FACE_RIGHT_INDEX << FACE_DIRECTION_POSITION);
+                        curPositionTemp = curPositionTemp | (scale << SCALE_POSITION_IN_PACKED_INT);
                         //transformOfVerticesOfFaceInParticularDir[BlockFaceDirection::RIGHT].push_back(curPositionTemp);
                         megaVertPositions.AddRight(curPositionTemp, innerChunkIndex);
                     }
@@ -1113,6 +1140,7 @@ static void GenMeshCustom2D(std::vector<std::vector<std::vector<float>>> &noiseF
 
                     if (curNoiseLeft == 2) {
                         int curPositionTemp = curPosition + (FACE_LEFT_INDEX << FACE_DIRECTION_POSITION);
+                        curPositionTemp = curPositionTemp | (scale << SCALE_POSITION_IN_PACKED_INT);
                         //transformOfVerticesOfFaceInParticularDir[BlockFaceDirection::LEFT].push_back(curPositionTemp);
                         megaVertPositions.AddLeft(curPositionTemp, innerChunkIndex);
                     }

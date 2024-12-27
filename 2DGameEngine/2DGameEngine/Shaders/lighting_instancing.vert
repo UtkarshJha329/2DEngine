@@ -69,10 +69,21 @@ vec3 verticesLEFT[4] = vec3[4]( vec3(-0.5, -0.5, -0.5),
 
 uniform float lodScale;
 
+float curScale;
+
+int xPosInPackedInt = 10;
+int yPosInPackedInt = 5;
+int zPosInPackedInt = 0;
+
+int faceDirPosInPackedInt = 16;
+int curScalePosInPackedInt = 19;
+
 void main()
 {
-    vec3 curVoxelPos = vec3((instancePosition >> 10) & 31, (instancePosition >> 5) & 31, instancePosition & 31);
-    faceDir = (instancePosition >> 16) & 7;
+    vec3 curVoxelPos = vec3((instancePosition >> xPosInPackedInt) & 31, (instancePosition >> yPosInPackedInt) & 31, (instancePosition >> zPosInPackedInt) & 31);
+    faceDir = (instancePosition >> faceDirPosInPackedInt) & 7;
+
+    curScale = (instancePosition >> curScalePosInPackedInt) & 31;
 
     chunkPos = vec3(chunkPosition[gl_DrawIDARB].x, chunkPosition[gl_DrawIDARB].y, chunkPosition[gl_DrawIDARB].z);
 
@@ -103,7 +114,7 @@ void main()
     }
 
     curVertex += 0.5;
-    curVertex *= lodScale;
+    curVertex *= curScale;
 
     fragPosition = vec3(translationMatrix * vec4(curVertex, 1.0));
     fragTexCoord = vertexTexCoord;
