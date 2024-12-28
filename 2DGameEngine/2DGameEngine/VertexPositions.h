@@ -85,7 +85,7 @@ public:
 
     int totalFilled = 0;
 
-    VertexPositions() : megaArrayOfAllPositions(totalNumFaces, 0)
+    VertexPositions() : megaArrayOfAllPositions(/*totalNumFaces*/1250000 * 2, 0)
         , upFacesMetadata(totalNumChunks, { 0, 0 })
         , downFacesMetadata(totalNumChunks, { 0, 0 })
         , frontFacesMetadata(totalNumChunks, { 0, 0 })
