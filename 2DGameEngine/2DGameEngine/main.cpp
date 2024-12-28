@@ -123,13 +123,34 @@ static void GenChunkMeshWithNoise(VertexPositions &megaVertPositions
             std::lock_guard<std::mutex> lockChunkMappingAndAllocatingMutex(chunkMappingAllocatingMutex);
 
             int chunkIndexFlattenedWithoutVoxels = megaVertPositions.ChunkFlatIndexWithoutVoxels(innerChunkIndex);
+            int chunkIndexFlattenedWithVoxels = megaVertPositions.ChunkTotalFlatIndexWithVoxels(innerChunkIndex);
 
-            chunkFacesMetadata.upFacesStartIndex += megaVertPositions.ChunkTotalFlatIndexWithVoxels(innerChunkIndex);
-            chunkFacesMetadata.downFacesStartIndex += megaVertPositions.ChunkTotalFlatIndexWithVoxels(innerChunkIndex);
-            chunkFacesMetadata.frontFacesStartIndex += megaVertPositions.ChunkTotalFlatIndexWithVoxels(innerChunkIndex);
-            chunkFacesMetadata.backFacesStartIndex += megaVertPositions.ChunkTotalFlatIndexWithVoxels(innerChunkIndex);
-            chunkFacesMetadata.rightFacesStartIndex += megaVertPositions.ChunkTotalFlatIndexWithVoxels(innerChunkIndex);
-            chunkFacesMetadata.leftFacesStartIndex += megaVertPositions.ChunkTotalFlatIndexWithVoxels(innerChunkIndex);
+            auto copyBegin = megaVertPositions.megaArrayOfAllPositions.begin() + chunkIndexFlattenedWithVoxels;
+            //auto end = begin + totalNumVoxelsPerChunkWorstCase;
+            //std::span<int> curChunkMegaArray(begin, end);
+
+            //std::cout << "copying..." << std::endl;
+            std::copy(chunkMeshData.begin(), chunkMeshData.end(), copyBegin);
+            //for (int i = 0; i < totalNumVoxelsPerChunkWorstCase; i++)
+            //{
+            //    curChunkMegaArray[i] = chunkMeshData[i];
+            //}
+
+            chunkFacesMetadata.upFacesStartIndex += chunkIndexFlattenedWithVoxels;
+            chunkFacesMetadata.downFacesStartIndex += chunkIndexFlattenedWithVoxels;
+            chunkFacesMetadata.frontFacesStartIndex += chunkIndexFlattenedWithVoxels;
+            chunkFacesMetadata.backFacesStartIndex += chunkIndexFlattenedWithVoxels;
+            chunkFacesMetadata.rightFacesStartIndex += chunkIndexFlattenedWithVoxels;
+            chunkFacesMetadata.leftFacesStartIndex += chunkIndexFlattenedWithVoxels;
+
+            megaVertPositions.MapChunkMemoryToBigArray(innerChunkIndex, chunkFacesMetadata);
+
+            megaVertPositions.totalFilled += chunkFacesMetadata.numUpFaces
+                                            + chunkFacesMetadata.numDownFaces
+                                            + chunkFacesMetadata.numFrontFaces
+                                            + chunkFacesMetadata.numBackFaces
+                                            + chunkFacesMetadata.numRightFaces
+                                            + chunkFacesMetadata.numLeftFaces;
 
             //ChunkFacesMetadata chunkFacesMetadata;
 
@@ -147,7 +168,6 @@ static void GenChunkMeshWithNoise(VertexPositions &megaVertPositions
             //chunkFacesMetadata.rightFacesStartIndex = chunkFacesMetadata.backFacesStartIndex + chunkFacesMetadata.numBackFaces;
             //chunkFacesMetadata.leftFacesStartIndex = chunkFacesMetadata.rightFacesStartIndex + chunkFacesMetadata.numRightFaces;
 
-            megaVertPositions.MapChunkMemoryToBigArray(innerChunkIndex, chunkFacesMetadata);
         }
 
         {
@@ -1203,7 +1223,7 @@ static void GenMeshCustom2D(std::vector<std::vector<std::vector<float>>> &noiseF
                         int curPositionTemp = curPosition + (FACE_UP_INDEX << FACE_DIRECTION_POSITION);
                         curPositionTemp = curPositionTemp | (scale << SCALE_POSITION_IN_PACKED_INT);
                         //transformOfVerticesOfFaceInParticularDir[BlockFaceDirection::UP].push_back(curPositionTemp);
-                        megaVertPositions.AddUp(curPositionTemp, innerChunkIndex);
+                        //megaVertPositions.AddUp(curPositionTemp, innerChunkIndex);
 
                         chunkMeshData[chunkFacesMetadata.upFacesStartIndex + chunkFacesMetadata.numUpFaces] = curPositionTemp;
                         chunkFacesMetadata.numUpFaces++;
