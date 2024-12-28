@@ -133,26 +133,28 @@ static void GenChunkMeshWithNoise(VertexPositions &megaVertPositions
 
             for (int i = 0; i < NUM_FACES; i++)
             {
-                megaVertPositions.CopyDataToMegaArray(megaVertPositions.megaArrayOfAllPositions, chunkIndexFlattenedWithVoxels + (i * totalNumVoxelsPerChunkWorstCase)
-                                                    , chunkMeshData, i * totalNumVoxelsPerChunkWorstCase
-                                                    , chunkFacesMetadata.GetSizeOfFaceDirPositions(i));
+                megaVertPositions.CopyDataToMegaArray(megaVertPositions.megaArrayOfAllPositions, megaVertPositions.totalFilled/*chunkIndexFlattenedWithVoxels + (i * totalNumVoxelsPerChunkWorstCase)*/
+                                                    , chunkMeshData, i * totalNumVoxelsPerChunkWorstCase, chunkFacesMetadata.GetSizeOfFaceDirPositions(i)
+                                                    , chunkFacesMetadata.GetAppropriateStartIndexBasedOnFaceDir(i));
             }
 
-            chunkFacesMetadata.upFacesStartIndex += chunkIndexFlattenedWithVoxels;
-            chunkFacesMetadata.downFacesStartIndex += chunkIndexFlattenedWithVoxels;
-            chunkFacesMetadata.frontFacesStartIndex += chunkIndexFlattenedWithVoxels;
-            chunkFacesMetadata.backFacesStartIndex += chunkIndexFlattenedWithVoxels;
-            chunkFacesMetadata.rightFacesStartIndex += chunkIndexFlattenedWithVoxels;
-            chunkFacesMetadata.leftFacesStartIndex += chunkIndexFlattenedWithVoxels;
+            //std::cout << *chunkFacesMetadata.GetAppropriateStartIndexBasedOnFaceDir(0) << std::endl;
+
+            //chunkFacesMetadata.upFacesStartIndex += chunkIndexFlattenedWithVoxels;
+            //chunkFacesMetadata.downFacesStartIndex += chunkIndexFlattenedWithVoxels;
+            //chunkFacesMetadata.frontFacesStartIndex += chunkIndexFlattenedWithVoxels;
+            //chunkFacesMetadata.backFacesStartIndex += chunkIndexFlattenedWithVoxels;
+            //chunkFacesMetadata.rightFacesStartIndex += chunkIndexFlattenedWithVoxels;
+            //chunkFacesMetadata.leftFacesStartIndex += chunkIndexFlattenedWithVoxels;
 
             megaVertPositions.MapChunkMemoryToBigArray(innerChunkIndex, chunkFacesMetadata);
 
-            megaVertPositions.totalFilled += chunkFacesMetadata.numUpFaces
-                                            + chunkFacesMetadata.numDownFaces
-                                            + chunkFacesMetadata.numFrontFaces
-                                            + chunkFacesMetadata.numBackFaces
-                                            + chunkFacesMetadata.numRightFaces
-                                            + chunkFacesMetadata.numLeftFaces;
+            //megaVertPositions.totalFilled += chunkFacesMetadata.numUpFaces
+            //                                + chunkFacesMetadata.numDownFaces
+            //                                + chunkFacesMetadata.numFrontFaces
+            //                                + chunkFacesMetadata.numBackFaces
+            //                                + chunkFacesMetadata.numRightFaces
+            //                                + chunkFacesMetadata.numLeftFaces;
         }
 
         {
@@ -669,6 +671,16 @@ int main()
                             if (curLodLevel > 5) {
                                 curLodLevel = 5;
                             }
+
+                            //GenChunkMeshWithNoiseAndSaveToFile(
+                            //    std::ref(megaVertPositions)
+                            //    , std::ref(chunkGenerated)
+                            //    , std::ref(chunkUpdatedVoxelPositionInBigArrayMappedToChunkPositionInArray)
+                            //    , std::ref(chunkBeingGeneratedCount)
+                            //    , curChunkTraversalIndex
+                            //    , offsetRenderTraversalOrder
+                            //    , (int)curLodLevel
+                            //    , saveChunkToFile);
 
                             chunkMeshGenThreads.push_back(std::async(std::launch::async, GenChunkMeshWithNoiseAndSaveToFile
                                 , std::ref(megaVertPositions)
@@ -1223,7 +1235,7 @@ static void GenMeshCustom2D(std::vector<std::vector<std::vector<float>>> &noiseF
                         int curPositionTemp = curPosition + (FACE_DOWN_INDEX << FACE_DIRECTION_POSITION);
                         curPositionTemp = curPositionTemp | (scale << SCALE_POSITION_IN_PACKED_INT);
                         //transformOfVerticesOfFaceInParticularDir[BlockFaceDirection::DOWN].push_back(curPositionTemp);
-                        megaVertPositions.AddDown(curPositionTemp, innerChunkIndex);
+                        //megaVertPositions.AddDown(curPositionTemp, innerChunkIndex);
 
                         chunkMeshData[chunkFacesMetadata.downFacesStartIndex + chunkFacesMetadata.numDownFaces] = curPositionTemp;
                         chunkFacesMetadata.numDownFaces++;
@@ -1235,7 +1247,7 @@ static void GenMeshCustom2D(std::vector<std::vector<std::vector<float>>> &noiseF
                         int curPositionTemp = curPosition + (FACE_FRONT_INDEX << FACE_DIRECTION_POSITION);
                         curPositionTemp = curPositionTemp | (scale << SCALE_POSITION_IN_PACKED_INT);
                         //transformOfVerticesOfFaceInParticularDir[BlockFaceDirection::FRONT].push_back(curPositionTemp);
-                        megaVertPositions.AddFront(curPositionTemp, innerChunkIndex);
+                        //megaVertPositions.AddFront(curPositionTemp, innerChunkIndex);
 
                         chunkMeshData[chunkFacesMetadata.frontFacesStartIndex + chunkFacesMetadata.numFrontFaces] = curPositionTemp;
                         chunkFacesMetadata.numFrontFaces++;
@@ -1247,7 +1259,7 @@ static void GenMeshCustom2D(std::vector<std::vector<std::vector<float>>> &noiseF
                         int curPositionTemp = curPosition + (FACE_BACK_INDEX << FACE_DIRECTION_POSITION);
                         curPositionTemp = curPositionTemp | (scale << SCALE_POSITION_IN_PACKED_INT);
                         //transformOfVerticesOfFaceInParticularDir[BlockFaceDirection::BACK].push_back(curPositionTemp);
-                        megaVertPositions.AddBack(curPositionTemp, innerChunkIndex);
+                        //megaVertPositions.AddBack(curPositionTemp, innerChunkIndex);
 
                         chunkMeshData[chunkFacesMetadata.backFacesStartIndex + chunkFacesMetadata.numBackFaces] = curPositionTemp;
                         chunkFacesMetadata.numBackFaces++;
@@ -1259,7 +1271,7 @@ static void GenMeshCustom2D(std::vector<std::vector<std::vector<float>>> &noiseF
                         int curPositionTemp = curPosition + (FACE_RIGHT_INDEX << FACE_DIRECTION_POSITION);
                         curPositionTemp = curPositionTemp | (scale << SCALE_POSITION_IN_PACKED_INT);
                         //transformOfVerticesOfFaceInParticularDir[BlockFaceDirection::RIGHT].push_back(curPositionTemp);
-                        megaVertPositions.AddRight(curPositionTemp, innerChunkIndex);
+                        //megaVertPositions.AddRight(curPositionTemp, innerChunkIndex);
 
                         chunkMeshData[chunkFacesMetadata.rightFacesStartIndex + chunkFacesMetadata.numRightFaces] = curPositionTemp;
                         chunkFacesMetadata.numRightFaces++;
@@ -1271,7 +1283,7 @@ static void GenMeshCustom2D(std::vector<std::vector<std::vector<float>>> &noiseF
                         int curPositionTemp = curPosition + (FACE_LEFT_INDEX << FACE_DIRECTION_POSITION);
                         curPositionTemp = curPositionTemp | (scale << SCALE_POSITION_IN_PACKED_INT);
                         //transformOfVerticesOfFaceInParticularDir[BlockFaceDirection::LEFT].push_back(curPositionTemp);
-                        megaVertPositions.AddLeft(curPositionTemp, innerChunkIndex);
+                        //megaVertPositions.AddLeft(curPositionTemp, innerChunkIndex);
 
                         chunkMeshData[chunkFacesMetadata.leftFacesStartIndex + chunkFacesMetadata.numLeftFaces] = curPositionTemp;
                         chunkFacesMetadata.numLeftFaces++;

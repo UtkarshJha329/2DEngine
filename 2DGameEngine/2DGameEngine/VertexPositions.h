@@ -217,11 +217,14 @@ public:
         //startPos += chunkFacesMetadata.numLeftFaces;
     }
 
-    void CopyDataToMegaArray(std::vector<int> & copyIntoArray, int copyIntoArrayOffsetToCopyAt, std::vector<int> & copyFromArray, int offsetIntoCopyArray, int numCopyFromCopyArray) {
+    void CopyDataToMegaArray(std::vector<int> & copyIntoArray, int copyIntoArrayOffsetToCopyAt
+                            , std::vector<int> & copyFromArray, int offsetIntoCopyArray, int numCopyFromCopyArray
+                            , int* mappedPositionThatNeedsToBeRemaped) {
         auto copyBeginFrom = copyFromArray.begin() + offsetIntoCopyArray;
         auto copyEndAt = copyBeginFrom + numCopyFromCopyArray;
         std::copy(copyBeginFrom, copyEndAt, copyIntoArray.begin() + copyIntoArrayOffsetToCopyAt);
-
+        //std::cout << totalFilled << std::endl;
+        *mappedPositionThatNeedsToBeRemaped = copyIntoArrayOffsetToCopyAt;
         totalFilled += numCopyFromCopyArray;
     }
 
