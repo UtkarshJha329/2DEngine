@@ -126,15 +126,17 @@ static void GenChunkMeshWithNoise(VertexPositions &megaVertPositions
             int chunkIndexFlattenedWithVoxels = megaVertPositions.ChunkTotalFlatIndexWithVoxels(innerChunkIndex);
 
             auto copyBegin = megaVertPositions.megaArrayOfAllPositions.begin() + chunkIndexFlattenedWithVoxels;
-            //auto end = begin + totalNumVoxelsPerChunkWorstCase;
-            //std::span<int> curChunkMegaArray(begin, end);
+            auto end = copyBegin + totalNumVoxelsPerChunkWorstCase;
+            std::span<int> curChunkMegaArray(copyBegin, end);
 
-            //std::cout << "copying..." << std::endl;
-            std::copy(chunkMeshData.begin(), chunkMeshData.end(), copyBegin);
-            //for (int i = 0; i < totalNumVoxelsPerChunkWorstCase; i++)
-            //{
-            //    curChunkMegaArray[i] = chunkMeshData[i];
-            //}
+            //std::copy(chunkMeshData.begin(), chunkMeshData.end(), copyBegin);
+
+            for (int i = 0; i < NUM_FACES; i++)
+            {
+                megaVertPositions.CopyDataToMegaArray(megaVertPositions.megaArrayOfAllPositions, chunkIndexFlattenedWithVoxels + (i * totalNumVoxelsPerChunkWorstCase)
+                                                    , chunkMeshData, i * totalNumVoxelsPerChunkWorstCase
+                                                    , chunkFacesMetadata.GetSizeOfFaceDirPositions(i));
+            }
 
             chunkFacesMetadata.upFacesStartIndex += chunkIndexFlattenedWithVoxels;
             chunkFacesMetadata.downFacesStartIndex += chunkIndexFlattenedWithVoxels;
@@ -151,23 +153,6 @@ static void GenChunkMeshWithNoise(VertexPositions &megaVertPositions
                                             + chunkFacesMetadata.numBackFaces
                                             + chunkFacesMetadata.numRightFaces
                                             + chunkFacesMetadata.numLeftFaces;
-
-            //ChunkFacesMetadata chunkFacesMetadata;
-
-            //chunkFacesMetadata.numUpFaces = megaVertPositions.upFacesMetadata[chunkIndexFlattenedWithoutVoxels].size;
-            //chunkFacesMetadata.numDownFaces = megaVertPositions.downFacesMetadata[chunkIndexFlattenedWithoutVoxels].size;
-            //chunkFacesMetadata.numFrontFaces = megaVertPositions.frontFacesMetadata[chunkIndexFlattenedWithoutVoxels].size;
-            //chunkFacesMetadata.numBackFaces = megaVertPositions.backFacesMetadata[chunkIndexFlattenedWithoutVoxels].size;
-            //chunkFacesMetadata.numRightFaces = megaVertPositions.rightFacesMetadata[chunkIndexFlattenedWithoutVoxels].size;
-            //chunkFacesMetadata.numLeftFaces = megaVertPositions.leftFacesMetadata[chunkIndexFlattenedWithoutVoxels].size;
-
-            //chunkFacesMetadata.upFacesStartIndex = megaVertPositions.ChunkTotalFlatIndexWithVoxels(innerChunkIndex);
-            //chunkFacesMetadata.downFacesStartIndex = chunkFacesMetadata.upFacesStartIndex + chunkFacesMetadata.numUpFaces;
-            //chunkFacesMetadata.frontFacesStartIndex = chunkFacesMetadata.downFacesStartIndex + chunkFacesMetadata.numDownFaces;
-            //chunkFacesMetadata.backFacesStartIndex = chunkFacesMetadata.frontFacesStartIndex + chunkFacesMetadata.numFrontFaces;
-            //chunkFacesMetadata.rightFacesStartIndex = chunkFacesMetadata.backFacesStartIndex + chunkFacesMetadata.numBackFaces;
-            //chunkFacesMetadata.leftFacesStartIndex = chunkFacesMetadata.rightFacesStartIndex + chunkFacesMetadata.numRightFaces;
-
         }
 
         {

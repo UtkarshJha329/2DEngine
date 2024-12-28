@@ -23,6 +23,40 @@ struct ChunkFacesMetadata {
     int numBackFaces = 0;
     int numRightFaces = 0;
     int numLeftFaces = 0;
+
+    int GetSizeOfFaceDirPositions(int faceDir) {
+        switch (faceDir) {
+        case FACE_UP_INDEX:
+            return numUpFaces;
+        case FACE_DOWN_INDEX:
+            return numDownFaces;
+        case FACE_FRONT_INDEX:
+            return numFrontFaces;
+        case FACE_BACK_INDEX:
+            return numBackFaces;
+        case FACE_RIGHT_INDEX:
+            return numRightFaces;
+        case FACE_LEFT_INDEX:
+            return numLeftFaces;
+        }
+    }
+
+    int* GetAppropriateStartIndexBasedOnFaceDir(int faceDir) {
+        switch (faceDir) {
+        case FACE_UP_INDEX:
+            return &upFacesStartIndex;
+        case FACE_DOWN_INDEX:
+            return &downFacesStartIndex;
+        case FACE_FRONT_INDEX:
+            return &frontFacesStartIndex;
+        case FACE_BACK_INDEX:
+            return &backFacesStartIndex;
+        case FACE_RIGHT_INDEX:
+            return &rightFacesStartIndex;
+        case FACE_LEFT_INDEX:
+            return &leftFacesStartIndex;
+        }
+    }
 };
 
 struct ChunkFacePositionMetaData {
@@ -181,6 +215,14 @@ public:
         leftFacesMetadata[chunkFlatIndexWithoutVoxels].startPositionInBigArray = chunkFacesMetadata.leftFacesStartIndex;
         leftFacesMetadata[chunkFlatIndexWithoutVoxels].size = chunkFacesMetadata.numLeftFaces;
         //startPos += chunkFacesMetadata.numLeftFaces;
+    }
+
+    void CopyDataToMegaArray(std::vector<int> & copyIntoArray, int copyIntoArrayOffsetToCopyAt, std::vector<int> & copyFromArray, int offsetIntoCopyArray, int numCopyFromCopyArray) {
+        auto copyBeginFrom = copyFromArray.begin() + offsetIntoCopyArray;
+        auto copyEndAt = copyBeginFrom + numCopyFromCopyArray;
+        std::copy(copyBeginFrom, copyEndAt, copyIntoArray.begin() + copyIntoArrayOffsetToCopyAt);
+
+        totalFilled += numCopyFromCopyArray;
     }
 
     void AddUp(int toAdd, Vector3 innerChunkIndex) {
