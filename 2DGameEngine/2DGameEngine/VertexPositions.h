@@ -2,10 +2,22 @@
 
 #include <vector>
 #include <fstream>
+#include <span>
 
 #include "cereal/types/vector.hpp"
 #include "cereal/types/memory.hpp"
 #include "cereal/archives/binary.hpp"
+
+struct ChunkFacePositionMetaData {
+
+public:
+    int startPositionInBigArray;
+    int size;
+
+    int EndPos() {
+        return startPositionInBigArray + size;
+    }
+};
 
 
 struct VertexPositions {
@@ -14,22 +26,22 @@ public:
 
     std::vector<int> megaArrayOfAllPositions;
 
-    std::vector<int> upEndVoxelPositions;
-    std::vector<int> downEndVoxelPositions;
-    std::vector<int> frontEndVoxelPositions;
-    std::vector<int> backEndVoxelPositions;
-    std::vector<int> rightEndVoxelPositions;
-    std::vector<int> leftEndVoxelPositions;
+    std::vector<ChunkFacePositionMetaData> upEndVoxelPositions;
+    std::vector<ChunkFacePositionMetaData> downEndVoxelPositions;
+    std::vector<ChunkFacePositionMetaData> frontEndVoxelPositions;
+    std::vector<ChunkFacePositionMetaData> backEndVoxelPositions;
+    std::vector<ChunkFacePositionMetaData> rightEndVoxelPositions;
+    std::vector<ChunkFacePositionMetaData> leftEndVoxelPositions;
 
     int totalFilled = 0;
 
     VertexPositions() : megaArrayOfAllPositions(totalNumFaces, 0)
-        , upEndVoxelPositions(totalNumChunks, 0)
-        , downEndVoxelPositions(totalNumChunks, 0)
-        , frontEndVoxelPositions(totalNumChunks, 0)
-        , backEndVoxelPositions(totalNumChunks, 0)
-        , rightEndVoxelPositions(totalNumChunks, 0)
-        , leftEndVoxelPositions(totalNumChunks, 0)
+        , upEndVoxelPositions(totalNumChunks, { 0, 0 })
+        , downEndVoxelPositions(totalNumChunks, { 0, 0 })
+        , frontEndVoxelPositions(totalNumChunks, { 0, 0 })
+        , backEndVoxelPositions(totalNumChunks, { 0, 0 })
+        , rightEndVoxelPositions(totalNumChunks, { 0, 0 })
+        , leftEndVoxelPositions(totalNumChunks, { 0, 0 })
         , totalFilled(0)
     {
 
@@ -54,19 +66,20 @@ public:
 
         int chunkFlatIndexWithoutVoxels = ChunkFlatIndexWithoutVoxels(innerChunkIndex);
 
-        totalFilled -= upEndVoxelPositions[chunkFlatIndexWithoutVoxels];
-        totalFilled -= downEndVoxelPositions[chunkFlatIndexWithoutVoxels];
-        totalFilled -= frontEndVoxelPositions[chunkFlatIndexWithoutVoxels];
-        totalFilled -= backEndVoxelPositions[chunkFlatIndexWithoutVoxels];
-        totalFilled -= rightEndVoxelPositions[chunkFlatIndexWithoutVoxels];
-        totalFilled -= leftEndVoxelPositions[chunkFlatIndexWithoutVoxels];
+        //VVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVV This should not be here, it will mess up the free list.
+        totalFilled -= upEndVoxelPositions[chunkFlatIndexWithoutVoxels].size;
+        totalFilled -= downEndVoxelPositions[chunkFlatIndexWithoutVoxels].size;
+        totalFilled -= frontEndVoxelPositions[chunkFlatIndexWithoutVoxels].size;
+        totalFilled -= backEndVoxelPositions[chunkFlatIndexWithoutVoxels].size;
+        totalFilled -= rightEndVoxelPositions[chunkFlatIndexWithoutVoxels].size;
+        totalFilled -= leftEndVoxelPositions[chunkFlatIndexWithoutVoxels].size;
 
-        upEndVoxelPositions[chunkFlatIndexWithoutVoxels] = 0;
-        downEndVoxelPositions[chunkFlatIndexWithoutVoxels] = 0;
-        frontEndVoxelPositions[chunkFlatIndexWithoutVoxels] = 0;
-        backEndVoxelPositions[chunkFlatIndexWithoutVoxels] = 0;
-        rightEndVoxelPositions[chunkFlatIndexWithoutVoxels] = 0;
-        leftEndVoxelPositions[chunkFlatIndexWithoutVoxels] = 0;
+        upEndVoxelPositions[chunkFlatIndexWithoutVoxels].size = 0;
+        downEndVoxelPositions[chunkFlatIndexWithoutVoxels].size = 0;
+        frontEndVoxelPositions[chunkFlatIndexWithoutVoxels].size = 0;
+        backEndVoxelPositions[chunkFlatIndexWithoutVoxels].size = 0;
+        rightEndVoxelPositions[chunkFlatIndexWithoutVoxels].size = 0;
+        leftEndVoxelPositions[chunkFlatIndexWithoutVoxels].size = 0;
 
         //int start = ChunkTotalFlatIndexWithVoxels(innerChunkIndex);
         //int end = start + totalNumVoxelsPerChunk * NUM_FACES;
@@ -79,17 +92,17 @@ public:
     int GetCurFaceDirChunkDataEndPos(Vector3 chunkIndex, int curDir) {
         switch (curDir) {
         case FACE_UP_INDEX:
-            return upEndVoxelPositions[ChunkFlatIndexWithoutVoxels(chunkIndex)];
+            return upEndVoxelPositions[ChunkFlatIndexWithoutVoxels(chunkIndex)].EndPos();
         case FACE_DOWN_INDEX:
-            return downEndVoxelPositions[ChunkFlatIndexWithoutVoxels(chunkIndex)];
+            return downEndVoxelPositions[ChunkFlatIndexWithoutVoxels(chunkIndex)].EndPos();
         case FACE_FRONT_INDEX:
-            return frontEndVoxelPositions[ChunkFlatIndexWithoutVoxels(chunkIndex)];
+            return frontEndVoxelPositions[ChunkFlatIndexWithoutVoxels(chunkIndex)].EndPos();
         case FACE_BACK_INDEX:
-            return backEndVoxelPositions[ChunkFlatIndexWithoutVoxels(chunkIndex)];
+            return backEndVoxelPositions[ChunkFlatIndexWithoutVoxels(chunkIndex)].EndPos();
         case FACE_RIGHT_INDEX:
-            return rightEndVoxelPositions[ChunkFlatIndexWithoutVoxels(chunkIndex)];
+            return rightEndVoxelPositions[ChunkFlatIndexWithoutVoxels(chunkIndex)].EndPos();
         case FACE_LEFT_INDEX:
-            return leftEndVoxelPositions[ChunkFlatIndexWithoutVoxels(chunkIndex)];
+            return leftEndVoxelPositions[ChunkFlatIndexWithoutVoxels(chunkIndex)].EndPos();
         }
     }
 
@@ -98,66 +111,66 @@ public:
         int curChunkFlatIndexWithVoxels = ChunkTotalFlatIndexWithVoxels(curChunkIndex);
         int curChunkFlatIndexWithoutVoxels = ChunkFlatIndexWithoutVoxels(curChunkIndex);
 
-        auto curIteratorHead = megaArrayOfAllPositions.begin() + curChunkFlatIndexWithVoxels + (curDir * totalNumVoxelsPerChunk);
+        auto curIteratorHead = megaArrayOfAllPositions.begin() + curChunkFlatIndexWithVoxels + (curDir * totalNumVoxelsPerChunkWorstCase);
         std::span<int> curSpan;
 
         switch (curDir) {
         case FACE_UP_INDEX:
-            curSpan = std::span<int>(curIteratorHead, curIteratorHead + upEndVoxelPositions[curChunkFlatIndexWithoutVoxels]);
+            curSpan = std::span<int>(curIteratorHead, curIteratorHead + upEndVoxelPositions[curChunkFlatIndexWithoutVoxels].size);
             return curSpan;
         case FACE_DOWN_INDEX:
-            curSpan = std::span<int>(curIteratorHead, curIteratorHead + downEndVoxelPositions[curChunkFlatIndexWithoutVoxels]);
+            curSpan = std::span<int>(curIteratorHead, curIteratorHead + downEndVoxelPositions[curChunkFlatIndexWithoutVoxels].size);
             return curSpan;
         case FACE_FRONT_INDEX:
-            curSpan = std::span<int>(curIteratorHead, curIteratorHead + frontEndVoxelPositions[curChunkFlatIndexWithoutVoxels]);
+            curSpan = std::span<int>(curIteratorHead, curIteratorHead + frontEndVoxelPositions[curChunkFlatIndexWithoutVoxels].size);
             return curSpan;
         case FACE_BACK_INDEX:
-            curSpan = std::span<int>(curIteratorHead, curIteratorHead + backEndVoxelPositions[curChunkFlatIndexWithoutVoxels]);
+            curSpan = std::span<int>(curIteratorHead, curIteratorHead + backEndVoxelPositions[curChunkFlatIndexWithoutVoxels].size);
             return curSpan;
         case FACE_RIGHT_INDEX:
-            curSpan = std::span<int>(curIteratorHead, curIteratorHead + rightEndVoxelPositions[curChunkFlatIndexWithoutVoxels]);
+            curSpan = std::span<int>(curIteratorHead, curIteratorHead + rightEndVoxelPositions[curChunkFlatIndexWithoutVoxels].size);
             return curSpan;
         case FACE_LEFT_INDEX:
-            curSpan = std::span<int>(curIteratorHead, curIteratorHead + leftEndVoxelPositions[curChunkFlatIndexWithoutVoxels]);
+            curSpan = std::span<int>(curIteratorHead, curIteratorHead + leftEndVoxelPositions[curChunkFlatIndexWithoutVoxels].size);
             return curSpan;
         }
     }
 
     void AddUp(int toAdd, Vector3 innerChunkIndex) {
-        megaArrayOfAllPositions[ChunkTotalFlatIndexWithVoxels(innerChunkIndex) + FACE_UP_INDEX * totalNumVoxelsPerChunk + upEndVoxelPositions[ChunkFlatIndexWithoutVoxels(innerChunkIndex)]] = toAdd;
-        upEndVoxelPositions[ChunkFlatIndexWithoutVoxels(innerChunkIndex)]++;
+        megaArrayOfAllPositions[ChunkTotalFlatIndexWithVoxels(innerChunkIndex) + FACE_UP_INDEX * totalNumVoxelsPerChunkWorstCase + upEndVoxelPositions[ChunkFlatIndexWithoutVoxels(innerChunkIndex)].size] = toAdd;
+        upEndVoxelPositions[ChunkFlatIndexWithoutVoxels(innerChunkIndex)].size++;
 
         //std::cout << upEndVoxelPositions[ChunkFlatIndexWithoutVoxels(innerChunkIndex)] << std::endl;
         totalFilled++;
     }
 
     void AddDown(int toAdd, Vector3 innerChunkIndex) {
-        megaArrayOfAllPositions[ChunkTotalFlatIndexWithVoxels(innerChunkIndex) + FACE_DOWN_INDEX * totalNumVoxelsPerChunk + downEndVoxelPositions[ChunkFlatIndexWithoutVoxels(innerChunkIndex)]] = toAdd;
-        downEndVoxelPositions[ChunkFlatIndexWithoutVoxels(innerChunkIndex)]++;
+        megaArrayOfAllPositions[ChunkTotalFlatIndexWithVoxels(innerChunkIndex) + FACE_DOWN_INDEX * totalNumVoxelsPerChunkWorstCase + downEndVoxelPositions[ChunkFlatIndexWithoutVoxels(innerChunkIndex)].size] = toAdd;
+        downEndVoxelPositions[ChunkFlatIndexWithoutVoxels(innerChunkIndex)].size++;
         totalFilled++;
     }
 
     void AddFront(int toAdd, Vector3 innerChunkIndex) {
-        megaArrayOfAllPositions[ChunkTotalFlatIndexWithVoxels(innerChunkIndex) + FACE_FRONT_INDEX * totalNumVoxelsPerChunk + frontEndVoxelPositions[ChunkFlatIndexWithoutVoxels(innerChunkIndex)]] = toAdd;
-        frontEndVoxelPositions[ChunkFlatIndexWithoutVoxels(innerChunkIndex)]++;
+        megaArrayOfAllPositions[ChunkTotalFlatIndexWithVoxels(innerChunkIndex) + FACE_FRONT_INDEX * totalNumVoxelsPerChunkWorstCase + frontEndVoxelPositions[ChunkFlatIndexWithoutVoxels(innerChunkIndex)].size] = toAdd;
+        frontEndVoxelPositions[ChunkFlatIndexWithoutVoxels(innerChunkIndex)].size++;
         totalFilled++;
     }
 
     void AddBack(int toAdd, Vector3 innerChunkIndex) {
-        megaArrayOfAllPositions[ChunkTotalFlatIndexWithVoxels(innerChunkIndex) + FACE_BACK_INDEX * totalNumVoxelsPerChunk + backEndVoxelPositions[ChunkFlatIndexWithoutVoxels(innerChunkIndex)]] = toAdd;
-        backEndVoxelPositions[ChunkFlatIndexWithoutVoxels(innerChunkIndex)]++;
+        megaArrayOfAllPositions[ChunkTotalFlatIndexWithVoxels(innerChunkIndex) + FACE_BACK_INDEX * totalNumVoxelsPerChunkWorstCase + backEndVoxelPositions[ChunkFlatIndexWithoutVoxels(innerChunkIndex)].size] = toAdd;
+        backEndVoxelPositions[ChunkFlatIndexWithoutVoxels(innerChunkIndex)].size++;
         totalFilled++;
     }
 
     void AddRight(int toAdd, Vector3 innerChunkIndex) {
-        megaArrayOfAllPositions[ChunkTotalFlatIndexWithVoxels(innerChunkIndex) + FACE_RIGHT_INDEX * totalNumVoxelsPerChunk + rightEndVoxelPositions[ChunkFlatIndexWithoutVoxels(innerChunkIndex)]] = toAdd;
-        rightEndVoxelPositions[ChunkFlatIndexWithoutVoxels(innerChunkIndex)]++;
+        megaArrayOfAllPositions[ChunkTotalFlatIndexWithVoxels(innerChunkIndex) + FACE_RIGHT_INDEX * totalNumVoxelsPerChunkWorstCase + rightEndVoxelPositions[ChunkFlatIndexWithoutVoxels(innerChunkIndex)].size] = toAdd;
+        rightEndVoxelPositions[ChunkFlatIndexWithoutVoxels(innerChunkIndex)].size++;
         totalFilled++;
     }
 
     void AddLeft(int toAdd, Vector3 innerChunkIndex) {
-        megaArrayOfAllPositions[ChunkTotalFlatIndexWithVoxels(innerChunkIndex) + FACE_LEFT_INDEX * totalNumVoxelsPerChunk + leftEndVoxelPositions[ChunkFlatIndexWithoutVoxels(innerChunkIndex)]] = toAdd;
-        leftEndVoxelPositions[ChunkFlatIndexWithoutVoxels(innerChunkIndex)]++;
+        megaArrayOfAllPositions[ChunkTotalFlatIndexWithVoxels(innerChunkIndex) + FACE_LEFT_INDEX * totalNumVoxelsPerChunkWorstCase + leftEndVoxelPositions[ChunkFlatIndexWithoutVoxels(innerChunkIndex)].size] = toAdd;
+        leftEndVoxelPositions[ChunkFlatIndexWithoutVoxels(innerChunkIndex)].size++;
         totalFilled++;
     }
 
@@ -165,9 +178,9 @@ public:
 
         innerChunkIndex = innerChunkIndex + Vector3{ (float)numChunksHalfWidth, (float)0, (float)numChunksHalfWidth };
 
-        return innerChunkIndex.y * numChunksFullWidth * numChunksFullWidth * NUM_FACES * chunkSize * chunkSize * chunkSize
-            + innerChunkIndex.z * numChunksFullWidth * NUM_FACES * chunkSize * chunkSize * chunkSize
-            + innerChunkIndex.x * NUM_FACES * chunkSize * chunkSize * chunkSize;
+        return innerChunkIndex.y * numChunksFullWidth * numChunksFullWidth * NUM_FACES * totalNumVoxelsPerChunkWorstCase
+            + innerChunkIndex.z * numChunksFullWidth * NUM_FACES * totalNumVoxelsPerChunkWorstCase
+            + innerChunkIndex.x * NUM_FACES * totalNumVoxelsPerChunkWorstCase;
     }
 
     int ChunkFlatIndexWithoutVoxels(Vector3 innerChunkIndex) {

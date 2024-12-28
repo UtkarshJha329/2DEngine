@@ -22,22 +22,23 @@ const std::string CHUNK_FILE_DELIMITER = ".";
 
 const std::string worldDataDir = "WorldData/";
 
-const int numChunksHalfWidth = 10;
-const int numChunksHalfWidth_Y = 3;
-const int chunkSize = 32;
+const int numChunksHalfWidth = 3;
+const int numChunksHalfWidth_Y = 1;
+const int chunkSize = 8;
 const float scale = 0.1f;
 
 constexpr int numChunksFullWidth = (2 * numChunksHalfWidth) + 1;
 constexpr int numChunksFullWidth_Y = numChunksHalfWidth_Y;
 constexpr int totalNumVoxelsPerChunk = chunkSize * chunkSize * chunkSize;
+constexpr int totalNumVoxelsPerChunkWorstCase = totalNumVoxelsPerChunk / (2 * 2 * 2);
 
 constexpr int totalNumChunks =  numChunksFullWidth * numChunksFullWidth * numChunksFullWidth_Y;
-constexpr int totalNumFaces = totalNumChunks * NUM_FACES * totalNumVoxelsPerChunk;
+constexpr int totalNumFaces = totalNumChunks * NUM_FACES * totalNumVoxelsPerChunkWorstCase;
 
-const int farPlaneDistance = 10000;
+const int farPlaneDistance = 100000000;
 
 float LODLevel = 0.0f;
-const bool saveChunkToFile = true;
+const bool saveChunkToFile = false;
 
 Vector3 up = { 0, 1, 0 };
 Vector3 down = { 0, -1, 0 };

@@ -154,12 +154,12 @@ static void GenChunkMeshWithNoiseAndSaveToFile(VertexPositions& megaVertPosition
             cereal::BinaryOutputArchive archive(os);
 
             int chunkFlatIndexWithoutVoxels = megaVertPositions.ChunkFlatIndexWithoutVoxels(chunkIndex);
-            archive(megaVertPositions.upEndVoxelPositions[chunkFlatIndexWithoutVoxels]
-                , megaVertPositions.downEndVoxelPositions[chunkFlatIndexWithoutVoxels]
-                , megaVertPositions.frontEndVoxelPositions[chunkFlatIndexWithoutVoxels]
-                , megaVertPositions.backEndVoxelPositions[chunkFlatIndexWithoutVoxels]
-                , megaVertPositions.rightEndVoxelPositions[chunkFlatIndexWithoutVoxels]
-                , megaVertPositions.leftEndVoxelPositions[chunkFlatIndexWithoutVoxels]);
+            archive(megaVertPositions.upEndVoxelPositions[chunkFlatIndexWithoutVoxels].size
+                , megaVertPositions.downEndVoxelPositions[chunkFlatIndexWithoutVoxels].size
+                , megaVertPositions.frontEndVoxelPositions[chunkFlatIndexWithoutVoxels].size
+                , megaVertPositions.backEndVoxelPositions[chunkFlatIndexWithoutVoxels].size
+                , megaVertPositions.rightEndVoxelPositions[chunkFlatIndexWithoutVoxels].size
+                , megaVertPositions.leftEndVoxelPositions[chunkFlatIndexWithoutVoxels].size);
         }
 
         std::string curChunkSaveFileName = CHUNK_SAVE_STRING(chunkIndex);
@@ -202,12 +202,12 @@ static void ReloadChunkDataFromFile(std::string curChunkFileName
         cereal::BinaryInputArchive iarchive(is);
 
         int chunkFlatIndexWithoutVoxels = megaVertPositions.ChunkFlatIndexWithoutVoxels(curChunkIndex);
-        iarchive(megaVertPositions.upEndVoxelPositions[chunkFlatIndexWithoutVoxels]
-            , megaVertPositions.downEndVoxelPositions[chunkFlatIndexWithoutVoxels]
-            , megaVertPositions.frontEndVoxelPositions[chunkFlatIndexWithoutVoxels]
-            , megaVertPositions.backEndVoxelPositions[chunkFlatIndexWithoutVoxels]
-            , megaVertPositions.rightEndVoxelPositions[chunkFlatIndexWithoutVoxels]
-            , megaVertPositions.leftEndVoxelPositions[chunkFlatIndexWithoutVoxels]);
+        iarchive(megaVertPositions.upEndVoxelPositions[chunkFlatIndexWithoutVoxels].size
+            , megaVertPositions.downEndVoxelPositions[chunkFlatIndexWithoutVoxels].size
+            , megaVertPositions.frontEndVoxelPositions[chunkFlatIndexWithoutVoxels].size
+            , megaVertPositions.backEndVoxelPositions[chunkFlatIndexWithoutVoxels].size
+            , megaVertPositions.rightEndVoxelPositions[chunkFlatIndexWithoutVoxels].size
+            , megaVertPositions.leftEndVoxelPositions[chunkFlatIndexWithoutVoxels].size);
     }
 
     {
@@ -305,8 +305,6 @@ int main()
     Camera camera = { { 5.0f, 5.0f, 5.0f }, { 0.0f, 0.0f, 0.0f }, { 0.0f, 1.0f, 0.0f }, 45.0f, 0 };
 
     Texture2D textureLoad = LoadTexture("texture_test_small.png");
-
-    AllChunkVoxelStorage(noise3D, float, numChunksFullWidth, chunkSize + 3);
 
     std::unordered_map<int, bool> chunkGenerated;
 
@@ -610,11 +608,11 @@ int main()
 
                             int curLodLevel = 0;
                             int curDistFromCamera = (int)(Vector3Length(renderTraversalOrder[i]));
-                            if (curDistFromCamera < 4) {
+                            if (curDistFromCamera < 5) {
                                 curLodLevel = LODLevel;
                                 //std::cout << "x < 4 : " << curLodLevel << std::endl;;
                             }
-                            else if (curDistFromCamera >= 4 && curDistFromCamera <= 6) {
+                            else if (curDistFromCamera >= 5 && curDistFromCamera <= 6) {
                                 curLodLevel = LODLevel + 1;
                                 //std::cout << "x >=4 && x <= 6 : " << curLodLevel << std::endl;;
                             }
@@ -625,6 +623,10 @@ int main()
                             else if (curDistFromCamera >= 10) {
                                 curLodLevel = LODLevel + 3;
                                 //std::cout << "x >= 10 : " << curLodLevel << std::endl;;
+                            }
+
+                            if (curLodLevel > 5) {
+                                curLodLevel = 5;
                             }
 
                             chunkMeshGenThreads.push_back(std::async(std::launch::async, GenChunkMeshWithNoiseAndSaveToFile
@@ -692,27 +694,27 @@ int main()
                     for (const auto& it : chunkUpdatedVoxelPositionInBigArrayMappedToChunkPositionInArray) {
                         int start = it.first;
 
-                        int sizeUp = megaVertPositions.upEndVoxelPositions[it.second];
+                        int sizeUp = megaVertPositions.upEndVoxelPositions[it.second].size;
                         rlUpdateVertexBuffer(renderQuad.instanceVBOID, megaVertPositions.megaArrayOfAllPositions.data() + start, sizeUp * sizeof(int), start * sizeof(int));
-                        start += totalNumVoxelsPerChunk;
+                        start += totalNumVoxelsPerChunkWorstCase;
 
-                        int sizeDown = megaVertPositions.downEndVoxelPositions[it.second];
+                        int sizeDown = megaVertPositions.downEndVoxelPositions[it.second].size;
                         rlUpdateVertexBuffer(renderQuad.instanceVBOID, megaVertPositions.megaArrayOfAllPositions.data() + start, sizeDown * sizeof(int), start * sizeof(int));
-                        start += totalNumVoxelsPerChunk;
+                        start += totalNumVoxelsPerChunkWorstCase;
 
-                        int sizeFront = megaVertPositions.frontEndVoxelPositions[it.second];
+                        int sizeFront = megaVertPositions.frontEndVoxelPositions[it.second].size;
                         rlUpdateVertexBuffer(renderQuad.instanceVBOID, megaVertPositions.megaArrayOfAllPositions.data() + start, sizeFront * sizeof(int), start * sizeof(int));
-                        start += totalNumVoxelsPerChunk;
+                        start += totalNumVoxelsPerChunkWorstCase;
 
-                        int sizeBack = megaVertPositions.backEndVoxelPositions[it.second];
+                        int sizeBack = megaVertPositions.backEndVoxelPositions[it.second].size;
                         rlUpdateVertexBuffer(renderQuad.instanceVBOID, megaVertPositions.megaArrayOfAllPositions.data() + start, sizeBack * sizeof(int), start * sizeof(int));
-                        start += totalNumVoxelsPerChunk;
+                        start += totalNumVoxelsPerChunkWorstCase;
 
-                        int sizeRight = megaVertPositions.rightEndVoxelPositions[it.second];
+                        int sizeRight = megaVertPositions.rightEndVoxelPositions[it.second].size;
                         rlUpdateVertexBuffer(renderQuad.instanceVBOID, megaVertPositions.megaArrayOfAllPositions.data() + start, sizeRight * sizeof(int), start * sizeof(int));
-                        start += totalNumVoxelsPerChunk;
+                        start += totalNumVoxelsPerChunkWorstCase;
 
-                        int sizeLeft = megaVertPositions.leftEndVoxelPositions[it.second];
+                        int sizeLeft = megaVertPositions.leftEndVoxelPositions[it.second].size;
                         rlUpdateVertexBuffer(renderQuad.instanceVBOID, megaVertPositions.megaArrayOfAllPositions.data() + start, sizeLeft * sizeof(int), start * sizeof(int));
                     }
 
@@ -815,8 +817,8 @@ static void ReadyIndirectDrawListOfDrawableChunksAndFaces(Vector3 innerChunkInde
         float dotLeft = Vector3DotProduct(dirToChunkFromCamera, left);
 
         if (dotUp < 0 || cameraInThisChunkWidthAndBreadth || drawAll) {
-            int start = curChunkIndexInBigArray + totalNumVoxelsPerChunk * FACE_UP_INDEX;
-            int numInstances = megaVertPositions.upEndVoxelPositions[megaVertPositions.ChunkFlatIndexWithoutVoxels(innerChunkIndex)];
+            int start = curChunkIndexInBigArray + totalNumVoxelsPerChunkWorstCase * FACE_UP_INDEX;
+            int numInstances = megaVertPositions.upEndVoxelPositions[megaVertPositions.ChunkFlatIndexWithoutVoxels(innerChunkIndex)].size;
             if (numInstances > 0 || drawAll) {
                 DrawArraysIndirectCommand curCommand = { 4, numInstances, 0, start };
                 drawArraysIndirectCommands.push_back(curCommand);
@@ -827,8 +829,8 @@ static void ReadyIndirectDrawListOfDrawableChunksAndFaces(Vector3 innerChunkInde
         }
 
         if (dotDown < 0 || cameraInThisChunkWidthAndBreadth || drawAll) {
-            int start = curChunkIndexInBigArray + totalNumVoxelsPerChunk * FACE_DOWN_INDEX;
-            int numInstances = megaVertPositions.downEndVoxelPositions[megaVertPositions.ChunkFlatIndexWithoutVoxels(innerChunkIndex)];
+            int start = curChunkIndexInBigArray + totalNumVoxelsPerChunkWorstCase * FACE_DOWN_INDEX;
+            int numInstances = megaVertPositions.downEndVoxelPositions[megaVertPositions.ChunkFlatIndexWithoutVoxels(innerChunkIndex)].size;
             if (numInstances > 0 || drawAll) {
                 DrawArraysIndirectCommand curCommand = { 4, numInstances, 0, start };
                 drawArraysIndirectCommands.push_back(curCommand);
@@ -838,8 +840,8 @@ static void ReadyIndirectDrawListOfDrawableChunksAndFaces(Vector3 innerChunkInde
         }
 
         if (dotFront < 0 || cameraInThisChunkWidthAndBreadth || drawAll) {
-            int start = curChunkIndexInBigArray + totalNumVoxelsPerChunk * FACE_FRONT_INDEX;
-            int numInstances = megaVertPositions.frontEndVoxelPositions[megaVertPositions.ChunkFlatIndexWithoutVoxels(innerChunkIndex)];
+            int start = curChunkIndexInBigArray + totalNumVoxelsPerChunkWorstCase * FACE_FRONT_INDEX;
+            int numInstances = megaVertPositions.frontEndVoxelPositions[megaVertPositions.ChunkFlatIndexWithoutVoxels(innerChunkIndex)].size;
             if (numInstances > 0 || drawAll) {
                 DrawArraysIndirectCommand curCommand = { 4, numInstances, 0, start };
                 drawArraysIndirectCommands.push_back(curCommand);
@@ -849,8 +851,8 @@ static void ReadyIndirectDrawListOfDrawableChunksAndFaces(Vector3 innerChunkInde
         }
 
         if (dotBack < 0 || cameraInThisChunkWidthAndBreadth || drawAll) {
-            int start = curChunkIndexInBigArray + totalNumVoxelsPerChunk * FACE_BACK_INDEX;
-            int numInstances = megaVertPositions.backEndVoxelPositions[megaVertPositions.ChunkFlatIndexWithoutVoxels(innerChunkIndex)];
+            int start = curChunkIndexInBigArray + totalNumVoxelsPerChunkWorstCase * FACE_BACK_INDEX;
+            int numInstances = megaVertPositions.backEndVoxelPositions[megaVertPositions.ChunkFlatIndexWithoutVoxels(innerChunkIndex)].size;
             if (numInstances > 0 || drawAll) {
                 DrawArraysIndirectCommand curCommand = { 4, numInstances, 0, start };
                 drawArraysIndirectCommands.push_back(curCommand);
@@ -860,8 +862,8 @@ static void ReadyIndirectDrawListOfDrawableChunksAndFaces(Vector3 innerChunkInde
         }
 
         if (dotRight < 0 || cameraInThisChunkWidthAndBreadth || drawAll) {
-            int start = curChunkIndexInBigArray + totalNumVoxelsPerChunk * FACE_RIGHT_INDEX;
-            int numInstances = megaVertPositions.rightEndVoxelPositions[megaVertPositions.ChunkFlatIndexWithoutVoxels(innerChunkIndex)];
+            int start = curChunkIndexInBigArray + totalNumVoxelsPerChunkWorstCase * FACE_RIGHT_INDEX;
+            int numInstances = megaVertPositions.rightEndVoxelPositions[megaVertPositions.ChunkFlatIndexWithoutVoxels(innerChunkIndex)].size;
             if (numInstances > 0 || drawAll) {
                 DrawArraysIndirectCommand curCommand = { 4, numInstances, 0, start };
                 drawArraysIndirectCommands.push_back(curCommand);
@@ -871,8 +873,8 @@ static void ReadyIndirectDrawListOfDrawableChunksAndFaces(Vector3 innerChunkInde
         }
 
         if (dotLeft < 0 || cameraInThisChunkWidthAndBreadth || drawAll) {
-            int start = curChunkIndexInBigArray + totalNumVoxelsPerChunk * FACE_LEFT_INDEX;
-            int numInstances = megaVertPositions.leftEndVoxelPositions[megaVertPositions.ChunkFlatIndexWithoutVoxels(innerChunkIndex)];
+            int start = curChunkIndexInBigArray + totalNumVoxelsPerChunkWorstCase * FACE_LEFT_INDEX;
+            int numInstances = megaVertPositions.leftEndVoxelPositions[megaVertPositions.ChunkFlatIndexWithoutVoxels(innerChunkIndex)].size;
             if (numInstances > 0 || drawAll) {
                 DrawArraysIndirectCommand curCommand = { 4, numInstances, 0, start };
                 drawArraysIndirectCommands.push_back(curCommand);
