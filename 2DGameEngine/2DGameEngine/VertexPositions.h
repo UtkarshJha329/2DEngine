@@ -186,39 +186,31 @@ public:
     void AddUp(int toAdd, Vector3 innerChunkIndex) {
         megaArrayOfAllPositions[ChunkTotalFlatIndexWithVoxels(innerChunkIndex) + FACE_UP_INDEX * totalNumVoxelsPerChunkWorstCase + upFacesMetadata[ChunkFlatIndexWithoutVoxels(innerChunkIndex)].size] = toAdd;
         upFacesMetadata[ChunkFlatIndexWithoutVoxels(innerChunkIndex)].size++;
-
-        //std::cout << upEndVoxelPositions[ChunkFlatIndexWithoutVoxels(innerChunkIndex)] << std::endl;
-        totalFilled++;
     }
 
     void AddDown(int toAdd, Vector3 innerChunkIndex) {
         megaArrayOfAllPositions[ChunkTotalFlatIndexWithVoxels(innerChunkIndex) + FACE_DOWN_INDEX * totalNumVoxelsPerChunkWorstCase + downFacesMetadata[ChunkFlatIndexWithoutVoxels(innerChunkIndex)].size] = toAdd;
         downFacesMetadata[ChunkFlatIndexWithoutVoxels(innerChunkIndex)].size++;
-        totalFilled++;
     }
 
     void AddFront(int toAdd, Vector3 innerChunkIndex) {
         megaArrayOfAllPositions[ChunkTotalFlatIndexWithVoxels(innerChunkIndex) + FACE_FRONT_INDEX * totalNumVoxelsPerChunkWorstCase + frontFacesMetadata[ChunkFlatIndexWithoutVoxels(innerChunkIndex)].size] = toAdd;
         frontFacesMetadata[ChunkFlatIndexWithoutVoxels(innerChunkIndex)].size++;
-        totalFilled++;
     }
 
     void AddBack(int toAdd, Vector3 innerChunkIndex) {
         megaArrayOfAllPositions[ChunkTotalFlatIndexWithVoxels(innerChunkIndex) + FACE_BACK_INDEX * totalNumVoxelsPerChunkWorstCase + backFacesMetadata[ChunkFlatIndexWithoutVoxels(innerChunkIndex)].size] = toAdd;
         backFacesMetadata[ChunkFlatIndexWithoutVoxels(innerChunkIndex)].size++;
-        totalFilled++;
     }
 
     void AddRight(int toAdd, Vector3 innerChunkIndex) {
         megaArrayOfAllPositions[ChunkTotalFlatIndexWithVoxels(innerChunkIndex) + FACE_RIGHT_INDEX * totalNumVoxelsPerChunkWorstCase + rightFacesMetadata[ChunkFlatIndexWithoutVoxels(innerChunkIndex)].size] = toAdd;
         rightFacesMetadata[ChunkFlatIndexWithoutVoxels(innerChunkIndex)].size++;
-        totalFilled++;
     }
 
     void AddLeft(int toAdd, Vector3 innerChunkIndex) {
         megaArrayOfAllPositions[ChunkTotalFlatIndexWithVoxels(innerChunkIndex) + FACE_LEFT_INDEX * totalNumVoxelsPerChunkWorstCase + leftFacesMetadata[ChunkFlatIndexWithoutVoxels(innerChunkIndex)].size] = toAdd;
         leftFacesMetadata[ChunkFlatIndexWithoutVoxels(innerChunkIndex)].size++;
-        totalFilled++;
     }
 
     int ChunkTotalFlatIndexWithVoxels(Vector3 innerChunkIndex) {
