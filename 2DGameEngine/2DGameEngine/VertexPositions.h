@@ -8,6 +8,23 @@
 #include "cereal/types/memory.hpp"
 #include "cereal/archives/binary.hpp"
 
+struct ChunkFacesMetadata {
+
+    int upFacesStartIndex = 0;
+    int downFacesStartIndex = 0;
+    int frontFacesStartIndex = 0;
+    int backFacesStartIndex = 0;
+    int rightFacesStartIndex = 0;
+    int leftFacesStartIndex = 0;
+
+    int numUpFaces = 0;
+    int numDownFaces = 0;
+    int numFrontFaces = 0;
+    int numBackFaces = 0;
+    int numRightFaces = 0;
+    int numLeftFaces = 0;
+};
+
 struct ChunkFacePositionMetaData {
 
 public:
@@ -19,29 +36,28 @@ public:
     }
 };
 
-
 struct VertexPositions {
 
 public:
 
     std::vector<int> megaArrayOfAllPositions;
 
-    std::vector<ChunkFacePositionMetaData> upEndVoxelPositions;
-    std::vector<ChunkFacePositionMetaData> downEndVoxelPositions;
-    std::vector<ChunkFacePositionMetaData> frontEndVoxelPositions;
-    std::vector<ChunkFacePositionMetaData> backEndVoxelPositions;
-    std::vector<ChunkFacePositionMetaData> rightEndVoxelPositions;
-    std::vector<ChunkFacePositionMetaData> leftEndVoxelPositions;
+    std::vector<ChunkFacePositionMetaData> upFacesMetadata;
+    std::vector<ChunkFacePositionMetaData> downFacesMetadata;
+    std::vector<ChunkFacePositionMetaData> frontFacesMetadata;
+    std::vector<ChunkFacePositionMetaData> backFacesMetadata;
+    std::vector<ChunkFacePositionMetaData> rightFacesMetadata;
+    std::vector<ChunkFacePositionMetaData> leftFacesMetadata;
 
     int totalFilled = 0;
 
     VertexPositions() : megaArrayOfAllPositions(totalNumFaces, 0)
-        , upEndVoxelPositions(totalNumChunks, { 0, 0 })
-        , downEndVoxelPositions(totalNumChunks, { 0, 0 })
-        , frontEndVoxelPositions(totalNumChunks, { 0, 0 })
-        , backEndVoxelPositions(totalNumChunks, { 0, 0 })
-        , rightEndVoxelPositions(totalNumChunks, { 0, 0 })
-        , leftEndVoxelPositions(totalNumChunks, { 0, 0 })
+        , upFacesMetadata(totalNumChunks, { 0, 0 })
+        , downFacesMetadata(totalNumChunks, { 0, 0 })
+        , frontFacesMetadata(totalNumChunks, { 0, 0 })
+        , backFacesMetadata(totalNumChunks, { 0, 0 })
+        , rightFacesMetadata(totalNumChunks, { 0, 0 })
+        , leftFacesMetadata(totalNumChunks, { 0, 0 })
         , totalFilled(0)
     {
 
@@ -51,12 +67,12 @@ public:
     void serialize(Archive& archive)
     {
         archive(megaArrayOfAllPositions
-            , upEndVoxelPositions
-            , downEndVoxelPositions
-            , frontEndVoxelPositions
-            , backEndVoxelPositions
-            , rightEndVoxelPositions
-            , leftEndVoxelPositions
+            , upFacesMetadata
+            , downFacesMetadata
+            , frontFacesMetadata
+            , backFacesMetadata
+            , rightFacesMetadata
+            , leftFacesMetadata
             , totalFilled);
     }
 
@@ -67,19 +83,19 @@ public:
         int chunkFlatIndexWithoutVoxels = ChunkFlatIndexWithoutVoxels(innerChunkIndex);
 
         //VVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVV This should not be here, it will mess up the free list.
-        totalFilled -= upEndVoxelPositions[chunkFlatIndexWithoutVoxels].size;
-        totalFilled -= downEndVoxelPositions[chunkFlatIndexWithoutVoxels].size;
-        totalFilled -= frontEndVoxelPositions[chunkFlatIndexWithoutVoxels].size;
-        totalFilled -= backEndVoxelPositions[chunkFlatIndexWithoutVoxels].size;
-        totalFilled -= rightEndVoxelPositions[chunkFlatIndexWithoutVoxels].size;
-        totalFilled -= leftEndVoxelPositions[chunkFlatIndexWithoutVoxels].size;
+        totalFilled -= upFacesMetadata[chunkFlatIndexWithoutVoxels].size;
+        totalFilled -= downFacesMetadata[chunkFlatIndexWithoutVoxels].size;
+        totalFilled -= frontFacesMetadata[chunkFlatIndexWithoutVoxels].size;
+        totalFilled -= backFacesMetadata[chunkFlatIndexWithoutVoxels].size;
+        totalFilled -= rightFacesMetadata[chunkFlatIndexWithoutVoxels].size;
+        totalFilled -= leftFacesMetadata[chunkFlatIndexWithoutVoxels].size;
 
-        upEndVoxelPositions[chunkFlatIndexWithoutVoxels].size = 0;
-        downEndVoxelPositions[chunkFlatIndexWithoutVoxels].size = 0;
-        frontEndVoxelPositions[chunkFlatIndexWithoutVoxels].size = 0;
-        backEndVoxelPositions[chunkFlatIndexWithoutVoxels].size = 0;
-        rightEndVoxelPositions[chunkFlatIndexWithoutVoxels].size = 0;
-        leftEndVoxelPositions[chunkFlatIndexWithoutVoxels].size = 0;
+        upFacesMetadata[chunkFlatIndexWithoutVoxels].size = 0;
+        downFacesMetadata[chunkFlatIndexWithoutVoxels].size = 0;
+        frontFacesMetadata[chunkFlatIndexWithoutVoxels].size = 0;
+        backFacesMetadata[chunkFlatIndexWithoutVoxels].size = 0;
+        rightFacesMetadata[chunkFlatIndexWithoutVoxels].size = 0;
+        leftFacesMetadata[chunkFlatIndexWithoutVoxels].size = 0;
 
         //int start = ChunkTotalFlatIndexWithVoxels(innerChunkIndex);
         //int end = start + totalNumVoxelsPerChunk * NUM_FACES;
@@ -92,85 +108,116 @@ public:
     int GetCurFaceDirChunkDataEndPos(Vector3 chunkIndex, int curDir) {
         switch (curDir) {
         case FACE_UP_INDEX:
-            return upEndVoxelPositions[ChunkFlatIndexWithoutVoxels(chunkIndex)].EndPos();
+            return upFacesMetadata[ChunkFlatIndexWithoutVoxels(chunkIndex)].EndPos();
         case FACE_DOWN_INDEX:
-            return downEndVoxelPositions[ChunkFlatIndexWithoutVoxels(chunkIndex)].EndPos();
+            return downFacesMetadata[ChunkFlatIndexWithoutVoxels(chunkIndex)].EndPos();
         case FACE_FRONT_INDEX:
-            return frontEndVoxelPositions[ChunkFlatIndexWithoutVoxels(chunkIndex)].EndPos();
+            return frontFacesMetadata[ChunkFlatIndexWithoutVoxels(chunkIndex)].EndPos();
         case FACE_BACK_INDEX:
-            return backEndVoxelPositions[ChunkFlatIndexWithoutVoxels(chunkIndex)].EndPos();
+            return backFacesMetadata[ChunkFlatIndexWithoutVoxels(chunkIndex)].EndPos();
         case FACE_RIGHT_INDEX:
-            return rightEndVoxelPositions[ChunkFlatIndexWithoutVoxels(chunkIndex)].EndPos();
+            return rightFacesMetadata[ChunkFlatIndexWithoutVoxels(chunkIndex)].EndPos();
         case FACE_LEFT_INDEX:
-            return leftEndVoxelPositions[ChunkFlatIndexWithoutVoxels(chunkIndex)].EndPos();
+            return leftFacesMetadata[ChunkFlatIndexWithoutVoxels(chunkIndex)].EndPos();
         }
     }
 
-    std::span<int> GetCurChunkCurDirVoxelData(Vector3 curChunkIndex, int curDir) {
+    std::span<int> GetCurChunkCurDirVoxelData(Vector3 innerChunkIndex, int curDir) {
 
-        int curChunkFlatIndexWithVoxels = ChunkTotalFlatIndexWithVoxels(curChunkIndex);
-        int curChunkFlatIndexWithoutVoxels = ChunkFlatIndexWithoutVoxels(curChunkIndex);
+        int curChunkFlatIndexWithVoxels = ChunkTotalFlatIndexWithVoxels(innerChunkIndex);
+        int curChunkFlatIndexWithoutVoxels = ChunkFlatIndexWithoutVoxels(innerChunkIndex);
 
         auto curIteratorHead = megaArrayOfAllPositions.begin() + curChunkFlatIndexWithVoxels + (curDir * totalNumVoxelsPerChunkWorstCase);
         std::span<int> curSpan;
 
         switch (curDir) {
         case FACE_UP_INDEX:
-            curSpan = std::span<int>(curIteratorHead, curIteratorHead + upEndVoxelPositions[curChunkFlatIndexWithoutVoxels].size);
+            curSpan = std::span<int>(curIteratorHead, curIteratorHead + upFacesMetadata[curChunkFlatIndexWithoutVoxels].size);
             return curSpan;
         case FACE_DOWN_INDEX:
-            curSpan = std::span<int>(curIteratorHead, curIteratorHead + downEndVoxelPositions[curChunkFlatIndexWithoutVoxels].size);
+            curSpan = std::span<int>(curIteratorHead, curIteratorHead + downFacesMetadata[curChunkFlatIndexWithoutVoxels].size);
             return curSpan;
         case FACE_FRONT_INDEX:
-            curSpan = std::span<int>(curIteratorHead, curIteratorHead + frontEndVoxelPositions[curChunkFlatIndexWithoutVoxels].size);
+            curSpan = std::span<int>(curIteratorHead, curIteratorHead + frontFacesMetadata[curChunkFlatIndexWithoutVoxels].size);
             return curSpan;
         case FACE_BACK_INDEX:
-            curSpan = std::span<int>(curIteratorHead, curIteratorHead + backEndVoxelPositions[curChunkFlatIndexWithoutVoxels].size);
+            curSpan = std::span<int>(curIteratorHead, curIteratorHead + backFacesMetadata[curChunkFlatIndexWithoutVoxels].size);
             return curSpan;
         case FACE_RIGHT_INDEX:
-            curSpan = std::span<int>(curIteratorHead, curIteratorHead + rightEndVoxelPositions[curChunkFlatIndexWithoutVoxels].size);
+            curSpan = std::span<int>(curIteratorHead, curIteratorHead + rightFacesMetadata[curChunkFlatIndexWithoutVoxels].size);
             return curSpan;
         case FACE_LEFT_INDEX:
-            curSpan = std::span<int>(curIteratorHead, curIteratorHead + leftEndVoxelPositions[curChunkFlatIndexWithoutVoxels].size);
+            curSpan = std::span<int>(curIteratorHead, curIteratorHead + leftFacesMetadata[curChunkFlatIndexWithoutVoxels].size);
             return curSpan;
         }
     }
 
+    void MapChunkMemoryToBigArray(Vector3 innerChunkIndex, ChunkFacesMetadata chunkFacesMetadata) {
+
+        int chunkFlatIndexWithoutVoxels = ChunkFlatIndexWithoutVoxels(innerChunkIndex);
+
+        //int startPos = ChunkTotalFlatIndexWithVoxels(innerChunkIndex);
+
+        upFacesMetadata[chunkFlatIndexWithoutVoxels].startPositionInBigArray = chunkFacesMetadata.upFacesStartIndex;
+        upFacesMetadata[chunkFlatIndexWithoutVoxels].size = chunkFacesMetadata.numUpFaces;
+        //startPos += chunkFacesMetadata.numUpFaces;
+
+        downFacesMetadata[chunkFlatIndexWithoutVoxels].startPositionInBigArray = chunkFacesMetadata.downFacesStartIndex;
+        downFacesMetadata[chunkFlatIndexWithoutVoxels].size = chunkFacesMetadata.numDownFaces;
+        //startPos += chunkFacesMetadata.numDownFaces;
+
+        frontFacesMetadata[chunkFlatIndexWithoutVoxels].startPositionInBigArray = chunkFacesMetadata.frontFacesStartIndex;
+        frontFacesMetadata[chunkFlatIndexWithoutVoxels].size = chunkFacesMetadata.numFrontFaces;
+        //startPos += chunkFacesMetadata.numFrontFaces;
+        
+        backFacesMetadata[chunkFlatIndexWithoutVoxels].startPositionInBigArray = chunkFacesMetadata.backFacesStartIndex;
+        backFacesMetadata[chunkFlatIndexWithoutVoxels].size = chunkFacesMetadata.numBackFaces;
+        //startPos += chunkFacesMetadata.numBackFaces;
+        
+        rightFacesMetadata[chunkFlatIndexWithoutVoxels].startPositionInBigArray = chunkFacesMetadata.rightFacesStartIndex;
+        rightFacesMetadata[chunkFlatIndexWithoutVoxels].size = chunkFacesMetadata.numRightFaces;
+        //startPos += chunkFacesMetadata.numRightFaces;
+        
+        leftFacesMetadata[chunkFlatIndexWithoutVoxels].startPositionInBigArray = chunkFacesMetadata.leftFacesStartIndex;
+        leftFacesMetadata[chunkFlatIndexWithoutVoxels].size = chunkFacesMetadata.numLeftFaces;
+        //startPos += chunkFacesMetadata.numLeftFaces;
+    }
+
     void AddUp(int toAdd, Vector3 innerChunkIndex) {
-        megaArrayOfAllPositions[ChunkTotalFlatIndexWithVoxels(innerChunkIndex) + FACE_UP_INDEX * totalNumVoxelsPerChunkWorstCase + upEndVoxelPositions[ChunkFlatIndexWithoutVoxels(innerChunkIndex)].size] = toAdd;
-        upEndVoxelPositions[ChunkFlatIndexWithoutVoxels(innerChunkIndex)].size++;
+        megaArrayOfAllPositions[ChunkTotalFlatIndexWithVoxels(innerChunkIndex) + FACE_UP_INDEX * totalNumVoxelsPerChunkWorstCase + upFacesMetadata[ChunkFlatIndexWithoutVoxels(innerChunkIndex)].size] = toAdd;
+        upFacesMetadata[ChunkFlatIndexWithoutVoxels(innerChunkIndex)].size++;
 
         //std::cout << upEndVoxelPositions[ChunkFlatIndexWithoutVoxels(innerChunkIndex)] << std::endl;
         totalFilled++;
     }
 
     void AddDown(int toAdd, Vector3 innerChunkIndex) {
-        megaArrayOfAllPositions[ChunkTotalFlatIndexWithVoxels(innerChunkIndex) + FACE_DOWN_INDEX * totalNumVoxelsPerChunkWorstCase + downEndVoxelPositions[ChunkFlatIndexWithoutVoxels(innerChunkIndex)].size] = toAdd;
-        downEndVoxelPositions[ChunkFlatIndexWithoutVoxels(innerChunkIndex)].size++;
+        megaArrayOfAllPositions[ChunkTotalFlatIndexWithVoxels(innerChunkIndex) + FACE_DOWN_INDEX * totalNumVoxelsPerChunkWorstCase + downFacesMetadata[ChunkFlatIndexWithoutVoxels(innerChunkIndex)].size] = toAdd;
+        downFacesMetadata[ChunkFlatIndexWithoutVoxels(innerChunkIndex)].size++;
         totalFilled++;
     }
 
     void AddFront(int toAdd, Vector3 innerChunkIndex) {
-        megaArrayOfAllPositions[ChunkTotalFlatIndexWithVoxels(innerChunkIndex) + FACE_FRONT_INDEX * totalNumVoxelsPerChunkWorstCase + frontEndVoxelPositions[ChunkFlatIndexWithoutVoxels(innerChunkIndex)].size] = toAdd;
-        frontEndVoxelPositions[ChunkFlatIndexWithoutVoxels(innerChunkIndex)].size++;
+        megaArrayOfAllPositions[ChunkTotalFlatIndexWithVoxels(innerChunkIndex) + FACE_FRONT_INDEX * totalNumVoxelsPerChunkWorstCase + frontFacesMetadata[ChunkFlatIndexWithoutVoxels(innerChunkIndex)].size] = toAdd;
+        frontFacesMetadata[ChunkFlatIndexWithoutVoxels(innerChunkIndex)].size++;
         totalFilled++;
     }
 
     void AddBack(int toAdd, Vector3 innerChunkIndex) {
-        megaArrayOfAllPositions[ChunkTotalFlatIndexWithVoxels(innerChunkIndex) + FACE_BACK_INDEX * totalNumVoxelsPerChunkWorstCase + backEndVoxelPositions[ChunkFlatIndexWithoutVoxels(innerChunkIndex)].size] = toAdd;
-        backEndVoxelPositions[ChunkFlatIndexWithoutVoxels(innerChunkIndex)].size++;
+        megaArrayOfAllPositions[ChunkTotalFlatIndexWithVoxels(innerChunkIndex) + FACE_BACK_INDEX * totalNumVoxelsPerChunkWorstCase + backFacesMetadata[ChunkFlatIndexWithoutVoxels(innerChunkIndex)].size] = toAdd;
+        backFacesMetadata[ChunkFlatIndexWithoutVoxels(innerChunkIndex)].size++;
         totalFilled++;
     }
 
     void AddRight(int toAdd, Vector3 innerChunkIndex) {
-        megaArrayOfAllPositions[ChunkTotalFlatIndexWithVoxels(innerChunkIndex) + FACE_RIGHT_INDEX * totalNumVoxelsPerChunkWorstCase + rightEndVoxelPositions[ChunkFlatIndexWithoutVoxels(innerChunkIndex)].size] = toAdd;
-        rightEndVoxelPositions[ChunkFlatIndexWithoutVoxels(innerChunkIndex)].size++;
+        megaArrayOfAllPositions[ChunkTotalFlatIndexWithVoxels(innerChunkIndex) + FACE_RIGHT_INDEX * totalNumVoxelsPerChunkWorstCase + rightFacesMetadata[ChunkFlatIndexWithoutVoxels(innerChunkIndex)].size] = toAdd;
+        rightFacesMetadata[ChunkFlatIndexWithoutVoxels(innerChunkIndex)].size++;
         totalFilled++;
     }
 
     void AddLeft(int toAdd, Vector3 innerChunkIndex) {
-        megaArrayOfAllPositions[ChunkTotalFlatIndexWithVoxels(innerChunkIndex) + FACE_LEFT_INDEX * totalNumVoxelsPerChunkWorstCase + leftEndVoxelPositions[ChunkFlatIndexWithoutVoxels(innerChunkIndex)].size] = toAdd;
-        leftEndVoxelPositions[ChunkFlatIndexWithoutVoxels(innerChunkIndex)].size++;
+        megaArrayOfAllPositions[ChunkTotalFlatIndexWithVoxels(innerChunkIndex) + FACE_LEFT_INDEX * totalNumVoxelsPerChunkWorstCase + leftFacesMetadata[ChunkFlatIndexWithoutVoxels(innerChunkIndex)].size] = toAdd;
+        leftFacesMetadata[ChunkFlatIndexWithoutVoxels(innerChunkIndex)].size++;
         totalFilled++;
     }
 
