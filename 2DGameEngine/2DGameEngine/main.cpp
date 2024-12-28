@@ -829,17 +829,17 @@ int main()
 }
 
 static void ReadyIndirectDrawListOfDrawableChunksAndFaces(Vector3 innerChunkIndex, Vector3 drawChunkIndex
-                                                        , Camera camera, Vector3 cameraChunkIndex
-                                                        , Shader instanceShader, Material instancedMaterial
-                                                        , VertexPositions &megaVertPositions
-                                                        , std::vector<float3> &chunkPositions
-                                                        , GenerativeMesh &renderQuad
-                                                        , Plane& nearPlane
-                                                        , Plane& farPlane
-                                                        , Plane& rightPlane
-                                                        , Plane& leftPlane
-                                                        , Plane& topPlane
-                                                        , Plane& bottomPlane)
+    , Camera camera, Vector3 cameraChunkIndex
+    , Shader instanceShader, Material instancedMaterial
+    , VertexPositions& megaVertPositions
+    , std::vector<float3>& chunkPositions
+    , GenerativeMesh& renderQuad
+    , Plane& nearPlane
+    , Plane& farPlane
+    , Plane& rightPlane
+    , Plane& leftPlane
+    , Plane& topPlane
+    , Plane& bottomPlane)
 {
     PROFILE_FUNCTION();
 
@@ -872,9 +872,11 @@ static void ReadyIndirectDrawListOfDrawableChunksAndFaces(Vector3 innerChunkInde
         float dotRight = Vector3DotProduct(dirToChunkFromCamera, right);
         float dotLeft = Vector3DotProduct(dirToChunkFromCamera, left);
 
+        int curChunkIndexWithoutVoxels = megaVertPositions.ChunkFlatIndexWithoutVoxels(innerChunkIndex);
+
         if (dotUp < 0 || cameraInThisChunkWidthAndBreadth || drawAll) {
-            int start = curChunkIndexInBigArray + totalNumVoxelsPerChunkWorstCase * FACE_UP_INDEX;
-            int numInstances = megaVertPositions.upFacesMetadata[megaVertPositions.ChunkFlatIndexWithoutVoxels(innerChunkIndex)].size;
+            int start = megaVertPositions.upFacesMetadata[curChunkIndexWithoutVoxels].startPositionInBigArray;
+            int numInstances = megaVertPositions.upFacesMetadata[curChunkIndexWithoutVoxels].size;
             if (numInstances > 0 || drawAll) {
                 DrawArraysIndirectCommand curCommand = { 4, numInstances, 0, start };
                 drawArraysIndirectCommands.push_back(curCommand);
@@ -885,8 +887,8 @@ static void ReadyIndirectDrawListOfDrawableChunksAndFaces(Vector3 innerChunkInde
         }
 
         if (dotDown < 0 || cameraInThisChunkWidthAndBreadth || drawAll) {
-            int start = curChunkIndexInBigArray + totalNumVoxelsPerChunkWorstCase * FACE_DOWN_INDEX;
-            int numInstances = megaVertPositions.downFacesMetadata[megaVertPositions.ChunkFlatIndexWithoutVoxels(innerChunkIndex)].size;
+            int start = megaVertPositions.downFacesMetadata[curChunkIndexWithoutVoxels].startPositionInBigArray;
+            int numInstances = megaVertPositions.downFacesMetadata[curChunkIndexWithoutVoxels].size;
             if (numInstances > 0 || drawAll) {
                 DrawArraysIndirectCommand curCommand = { 4, numInstances, 0, start };
                 drawArraysIndirectCommands.push_back(curCommand);
@@ -896,8 +898,8 @@ static void ReadyIndirectDrawListOfDrawableChunksAndFaces(Vector3 innerChunkInde
         }
 
         if (dotFront < 0 || cameraInThisChunkWidthAndBreadth || drawAll) {
-            int start = curChunkIndexInBigArray + totalNumVoxelsPerChunkWorstCase * FACE_FRONT_INDEX;
-            int numInstances = megaVertPositions.frontFacesMetadata[megaVertPositions.ChunkFlatIndexWithoutVoxels(innerChunkIndex)].size;
+            int start = megaVertPositions.frontFacesMetadata[curChunkIndexWithoutVoxels].startPositionInBigArray;
+            int numInstances = megaVertPositions.frontFacesMetadata[curChunkIndexWithoutVoxels].size;
             if (numInstances > 0 || drawAll) {
                 DrawArraysIndirectCommand curCommand = { 4, numInstances, 0, start };
                 drawArraysIndirectCommands.push_back(curCommand);
@@ -907,8 +909,8 @@ static void ReadyIndirectDrawListOfDrawableChunksAndFaces(Vector3 innerChunkInde
         }
 
         if (dotBack < 0 || cameraInThisChunkWidthAndBreadth || drawAll) {
-            int start = curChunkIndexInBigArray + totalNumVoxelsPerChunkWorstCase * FACE_BACK_INDEX;
-            int numInstances = megaVertPositions.backFacesMetadata[megaVertPositions.ChunkFlatIndexWithoutVoxels(innerChunkIndex)].size;
+            int start = megaVertPositions.backFacesMetadata[curChunkIndexWithoutVoxels].startPositionInBigArray;
+            int numInstances = megaVertPositions.backFacesMetadata[curChunkIndexWithoutVoxels].size;
             if (numInstances > 0 || drawAll) {
                 DrawArraysIndirectCommand curCommand = { 4, numInstances, 0, start };
                 drawArraysIndirectCommands.push_back(curCommand);
@@ -918,8 +920,8 @@ static void ReadyIndirectDrawListOfDrawableChunksAndFaces(Vector3 innerChunkInde
         }
 
         if (dotRight < 0 || cameraInThisChunkWidthAndBreadth || drawAll) {
-            int start = curChunkIndexInBigArray + totalNumVoxelsPerChunkWorstCase * FACE_RIGHT_INDEX;
-            int numInstances = megaVertPositions.rightFacesMetadata[megaVertPositions.ChunkFlatIndexWithoutVoxels(innerChunkIndex)].size;
+            int start = megaVertPositions.rightFacesMetadata[curChunkIndexWithoutVoxels].startPositionInBigArray;
+            int numInstances = megaVertPositions.rightFacesMetadata[curChunkIndexWithoutVoxels].size;
             if (numInstances > 0 || drawAll) {
                 DrawArraysIndirectCommand curCommand = { 4, numInstances, 0, start };
                 drawArraysIndirectCommands.push_back(curCommand);
@@ -929,8 +931,8 @@ static void ReadyIndirectDrawListOfDrawableChunksAndFaces(Vector3 innerChunkInde
         }
 
         if (dotLeft < 0 || cameraInThisChunkWidthAndBreadth || drawAll) {
-            int start = curChunkIndexInBigArray + totalNumVoxelsPerChunkWorstCase * FACE_LEFT_INDEX;
-            int numInstances = megaVertPositions.leftFacesMetadata[megaVertPositions.ChunkFlatIndexWithoutVoxels(innerChunkIndex)].size;
+            int start = megaVertPositions.leftFacesMetadata[curChunkIndexWithoutVoxels].startPositionInBigArray;
+            int numInstances = megaVertPositions.leftFacesMetadata[curChunkIndexWithoutVoxels].size;
             if (numInstances > 0 || drawAll) {
                 DrawArraysIndirectCommand curCommand = { 4, numInstances, 0, start };
                 drawArraysIndirectCommands.push_back(curCommand);
