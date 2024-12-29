@@ -124,7 +124,7 @@ static void GenChunkMeshWithNoise(VertexPositions &megaVertPositions
 
             for (int i = 0; i < NUM_FACES; i++)
             {
-                megaVertPositions.CopyDataToMegaArray(megaVertPositions.megaArrayOfAllPositions, megaVertPositions.totalFilled/*megaVertPositions.ChunkTotalFlatIndexWithVoxels(innerChunkIndex) + (i * totalNumVoxelsPerChunkWorstCase)*/
+                megaVertPositions.CopyDataToMegaArray(megaVertPositions.megaArrayOfAllPositions/*, megaVertPositions.nextToFill*//*megaVertPositions.ChunkTotalFlatIndexWithVoxels(innerChunkIndex) + (i * totalNumVoxelsPerChunkWorstCase)*/
                                                     , chunkMeshData, i * totalNumVoxelsPerChunkWorstCase, chunkFacesMetadata.GetSizeOfFaceDirPositions(i)
                                                     , chunkFacesMetadata.GetAppropriateStartIndexBasedOnFaceDir(i));
             }

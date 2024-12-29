@@ -70,6 +70,13 @@ public:
     }
 };
 
+struct FreeListMetaData {
+
+public:
+    int freeBlockStartPosition;
+    int freeBlockSize;
+};
+
 struct VertexPositions {
 
 public:
@@ -83,7 +90,9 @@ public:
     std::vector<ChunkFacePositionMetaData> rightFacesMetadata;
     std::vector<ChunkFacePositionMetaData> leftFacesMetadata;
 
-    int totalFilled = 0;
+    std::vector<FreeListMetaData> freeListMetadataList;
+
+    int nextToFill = 0;
 
     VertexPositions() : megaArrayOfAllPositions(totalNumFacesToStore, 0)
         , upFacesMetadata(totalNumChunks, { 0, 0 })
@@ -92,7 +101,8 @@ public:
         , backFacesMetadata(totalNumChunks, { 0, 0 })
         , rightFacesMetadata(totalNumChunks, { 0, 0 })
         , leftFacesMetadata(totalNumChunks, { 0, 0 })
-        , totalFilled(0)
+        , nextToFill(0)
+        , freeListMetadataList(1, { 0, totalNumFacesToStore })
     {
 
     }
@@ -107,7 +117,7 @@ public:
             , backFacesMetadata
             , rightFacesMetadata
             , leftFacesMetadata
-            , totalFilled);
+            , nextToFill);
     }
 
     const int numToCheck = 16;
@@ -131,12 +141,6 @@ public:
         rightFacesMetadata[chunkFlatIndexWithoutVoxels].size = 0;
         leftFacesMetadata[chunkFlatIndexWithoutVoxels].size = 0;
 
-        //int start = ChunkTotalFlatIndexWithVoxels(innerChunkIndex);
-        //int end = start + totalNumVoxelsPerChunk * NUM_FACES;
-        //for (int i = start; i < end; i++)
-        //{
-        //    megaArrayOfAllPositions[i] = 0;
-        //}
     }
 
     int GetCurFaceDirChunkDataEndPos(Vector3 chunkIndex, int curDir) {
@@ -217,45 +221,36 @@ public:
         //startPos += chunkFacesMetadata.numLeftFaces;
     }
 
-    void CopyDataToMegaArray(std::vector<int> & copyIntoArray, int copyIntoArrayOffsetToCopyAt
+    void CopyDataToMegaArray(std::vector<int> & copyIntoArray
                             , std::vector<int> & copyFromArray, int offsetIntoCopyArray, int numCopyFromCopyArray
                             , int* mappedPositionThatNeedsToBeRemaped) {
         auto copyBeginFrom = copyFromArray.begin() + offsetIntoCopyArray;
         auto copyEndAt = copyBeginFrom + numCopyFromCopyArray;
-        std::copy(copyBeginFrom, copyEndAt, copyIntoArray.begin() + copyIntoArrayOffsetToCopyAt);
+
+        int copyIntoArrayCopyAtPosition = AllocateMemoryOfSize(numCopyFromCopyArray);
+
+        std::copy(copyBeginFrom, copyEndAt, copyIntoArray.begin() + copyIntoArrayCopyAtPosition);
         //std::cout << totalFilled << std::endl;
-        *mappedPositionThatNeedsToBeRemaped = copyIntoArrayOffsetToCopyAt;
-        totalFilled += numCopyFromCopyArray;
+        *mappedPositionThatNeedsToBeRemaped = copyIntoArrayCopyAtPosition;
+        //nextToFill += numCopyFromCopyArray;
     }
 
-    void AddUp(int toAdd, Vector3 innerChunkIndex) {
-        megaArrayOfAllPositions[ChunkTotalFlatIndexWithVoxels(innerChunkIndex) + FACE_UP_INDEX * totalNumVoxelsPerChunkWorstCase + upFacesMetadata[ChunkFlatIndexWithoutVoxels(innerChunkIndex)].size] = toAdd;
-        upFacesMetadata[ChunkFlatIndexWithoutVoxels(innerChunkIndex)].size++;
-    }
+    int AllocateMemoryOfSize(int sizeOfMemoryToAllocate) {
+        for (int i = 0; i < freeListMetadataList.size(); i++)
+        {
+            if (freeListMetadataList[i].freeBlockSize >= sizeOfMemoryToAllocate) {
 
-    void AddDown(int toAdd, Vector3 innerChunkIndex) {
-        megaArrayOfAllPositions[ChunkTotalFlatIndexWithVoxels(innerChunkIndex) + FACE_DOWN_INDEX * totalNumVoxelsPerChunkWorstCase + downFacesMetadata[ChunkFlatIndexWithoutVoxels(innerChunkIndex)].size] = toAdd;
-        downFacesMetadata[ChunkFlatIndexWithoutVoxels(innerChunkIndex)].size++;
-    }
+                int startPositionOfBlock = freeListMetadataList[i].freeBlockStartPosition;
 
-    void AddFront(int toAdd, Vector3 innerChunkIndex) {
-        megaArrayOfAllPositions[ChunkTotalFlatIndexWithVoxels(innerChunkIndex) + FACE_FRONT_INDEX * totalNumVoxelsPerChunkWorstCase + frontFacesMetadata[ChunkFlatIndexWithoutVoxels(innerChunkIndex)].size] = toAdd;
-        frontFacesMetadata[ChunkFlatIndexWithoutVoxels(innerChunkIndex)].size++;
-    }
+                if (freeListMetadataList[i].freeBlockSize > sizeOfMemoryToAllocate) {
+                    freeListMetadataList[i].freeBlockStartPosition += sizeOfMemoryToAllocate;
+                    freeListMetadataList[i].freeBlockSize -= sizeOfMemoryToAllocate;
+                }
 
-    void AddBack(int toAdd, Vector3 innerChunkIndex) {
-        megaArrayOfAllPositions[ChunkTotalFlatIndexWithVoxels(innerChunkIndex) + FACE_BACK_INDEX * totalNumVoxelsPerChunkWorstCase + backFacesMetadata[ChunkFlatIndexWithoutVoxels(innerChunkIndex)].size] = toAdd;
-        backFacesMetadata[ChunkFlatIndexWithoutVoxels(innerChunkIndex)].size++;
-    }
-
-    void AddRight(int toAdd, Vector3 innerChunkIndex) {
-        megaArrayOfAllPositions[ChunkTotalFlatIndexWithVoxels(innerChunkIndex) + FACE_RIGHT_INDEX * totalNumVoxelsPerChunkWorstCase + rightFacesMetadata[ChunkFlatIndexWithoutVoxels(innerChunkIndex)].size] = toAdd;
-        rightFacesMetadata[ChunkFlatIndexWithoutVoxels(innerChunkIndex)].size++;
-    }
-
-    void AddLeft(int toAdd, Vector3 innerChunkIndex) {
-        megaArrayOfAllPositions[ChunkTotalFlatIndexWithVoxels(innerChunkIndex) + FACE_LEFT_INDEX * totalNumVoxelsPerChunkWorstCase + leftFacesMetadata[ChunkFlatIndexWithoutVoxels(innerChunkIndex)].size] = toAdd;
-        leftFacesMetadata[ChunkFlatIndexWithoutVoxels(innerChunkIndex)].size++;
+                return startPositionOfBlock;
+            }
+        }
+        return -1;
     }
 
     int ChunkTotalFlatIndexWithVoxels(Vector3 innerChunkIndex) {
