@@ -85,7 +85,7 @@ public:
 
     int totalFilled = 0;
 
-    VertexPositions() : megaArrayOfAllPositions(/*totalNumFaces*/1250000 * 2, 0)
+    VertexPositions() : megaArrayOfAllPositions(totalNumFacesToStore, 0)
         , upFacesMetadata(totalNumChunks, { 0, 0 })
         , downFacesMetadata(totalNumChunks, { 0, 0 })
         , frontFacesMetadata(totalNumChunks, { 0, 0 })
@@ -117,12 +117,12 @@ public:
         int chunkFlatIndexWithoutVoxels = ChunkFlatIndexWithoutVoxels(innerChunkIndex);
 
         //VVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVV This should not be here, it will mess up the free list.
-        totalFilled -= upFacesMetadata[chunkFlatIndexWithoutVoxels].size;
-        totalFilled -= downFacesMetadata[chunkFlatIndexWithoutVoxels].size;
-        totalFilled -= frontFacesMetadata[chunkFlatIndexWithoutVoxels].size;
-        totalFilled -= backFacesMetadata[chunkFlatIndexWithoutVoxels].size;
-        totalFilled -= rightFacesMetadata[chunkFlatIndexWithoutVoxels].size;
-        totalFilled -= leftFacesMetadata[chunkFlatIndexWithoutVoxels].size;
+        //totalFilled -= upFacesMetadata[chunkFlatIndexWithoutVoxels].size;
+        //totalFilled -= downFacesMetadata[chunkFlatIndexWithoutVoxels].size;
+        //totalFilled -= frontFacesMetadata[chunkFlatIndexWithoutVoxels].size;
+        //totalFilled -= backFacesMetadata[chunkFlatIndexWithoutVoxels].size;
+        //totalFilled -= rightFacesMetadata[chunkFlatIndexWithoutVoxels].size;
+        //totalFilled -= leftFacesMetadata[chunkFlatIndexWithoutVoxels].size;
 
         upFacesMetadata[chunkFlatIndexWithoutVoxels].size = 0;
         downFacesMetadata[chunkFlatIndexWithoutVoxels].size = 0;

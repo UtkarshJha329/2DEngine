@@ -94,7 +94,7 @@ static void ReadyIndirectDrawListOfDrawableChunksAndFaces(Vector3 innerChunkInde
                                                         , Plane& topPlane
                                                         , Plane& bottomPlane);
 
-static std::unordered_map<int, int> chunkUpdatedVoxelPositionInBigArrayMappedToChunkPositionInArray;
+static std::vector<int> chunkUpdatedVoxelPositionInBigArrayMappedToChunkPositionInArray;
 
 static std::mutex chunkGeneratedMutex;
 static std::mutex chunkBeingGeneratedCountMutex;
@@ -102,7 +102,7 @@ static std::mutex chunkUpdatedIndexWithVoxelMutex;
 static std::mutex chunkMappingAllocatingMutex;
 static void GenChunkMeshWithNoise(VertexPositions &megaVertPositions
                                 , std::unordered_map<int, bool> &chunkGenerated
-                                , std::unordered_map<int, int> &chunkUpdatedIndexWithVoxelMatchedToChunk
+                                , std::vector<int> &chunkUpdatedIndexWithVoxelMatchedToChunk
                                 , int &chunkBeingGeneratedCount
                                 , Vector3 chunkIndex, Vector3 innerChunkIndex
                                 , int curLodLevel)
@@ -122,18 +122,9 @@ static void GenChunkMeshWithNoise(VertexPositions &megaVertPositions
         {
             std::lock_guard<std::mutex> lockChunkMappingAndAllocatingMutex(chunkMappingAllocatingMutex);
 
-            int chunkIndexFlattenedWithoutVoxels = megaVertPositions.ChunkFlatIndexWithoutVoxels(innerChunkIndex);
-            int chunkIndexFlattenedWithVoxels = megaVertPositions.ChunkTotalFlatIndexWithVoxels(innerChunkIndex);
-
-            auto copyBegin = megaVertPositions.megaArrayOfAllPositions.begin() + chunkIndexFlattenedWithVoxels;
-            auto end = copyBegin + totalNumVoxelsPerChunkWorstCase;
-            std::span<int> curChunkMegaArray(copyBegin, end);
-
-            //std::copy(chunkMeshData.begin(), chunkMeshData.end(), copyBegin);
-
             for (int i = 0; i < NUM_FACES; i++)
             {
-                megaVertPositions.CopyDataToMegaArray(megaVertPositions.megaArrayOfAllPositions, megaVertPositions.totalFilled/*chunkIndexFlattenedWithVoxels + (i * totalNumVoxelsPerChunkWorstCase)*/
+                megaVertPositions.CopyDataToMegaArray(megaVertPositions.megaArrayOfAllPositions, megaVertPositions.totalFilled/*megaVertPositions.ChunkTotalFlatIndexWithVoxels(innerChunkIndex) + (i * totalNumVoxelsPerChunkWorstCase)*/
                                                     , chunkMeshData, i * totalNumVoxelsPerChunkWorstCase, chunkFacesMetadata.GetSizeOfFaceDirPositions(i)
                                                     , chunkFacesMetadata.GetAppropriateStartIndexBasedOnFaceDir(i));
             }
@@ -159,7 +150,7 @@ static void GenChunkMeshWithNoise(VertexPositions &megaVertPositions
 
         {
             std::lock_guard<std::mutex> lockChunkUpdatedIndex(chunkUpdatedIndexWithVoxelMutex);
-            chunkUpdatedIndexWithVoxelMatchedToChunk[megaVertPositions.ChunkTotalFlatIndexWithVoxels(innerChunkIndex)] = megaVertPositions.ChunkFlatIndexWithoutVoxels(innerChunkIndex);
+            chunkUpdatedIndexWithVoxelMatchedToChunk.push_back(megaVertPositions.ChunkFlatIndexWithoutVoxels(innerChunkIndex));
         }
 
         //std::cout << chunkIndex.x << ", " << chunkIndex.y << ", " << chunkIndex.z << std::endl;
@@ -178,7 +169,7 @@ static void GenChunkMeshWithNoise(VertexPositions &megaVertPositions
 
 static void GenChunkMeshWithNoiseAndSaveToFile(VertexPositions& megaVertPositions
     , std::unordered_map<int, bool>& chunkGenerated
-    , std::unordered_map<int, int>& chunkUpdatedIndexWithVoxel
+    , std::vector<int>& chunkUpdatedIndexWithVoxel
     , int& chunkBeingGeneratedCount
     , Vector3 chunkIndex, Vector3 innerChunkIndex
     , int lodLevel
@@ -186,7 +177,7 @@ static void GenChunkMeshWithNoiseAndSaveToFile(VertexPositions& megaVertPosition
 
     PROFILE_FUNCTION();
 
-    GenChunkMeshWithNoise(megaVertPositions, chunkGenerated, chunkUpdatedVoxelPositionInBigArrayMappedToChunkPositionInArray, chunkBeingGeneratedCount, chunkIndex, innerChunkIndex, lodLevel);
+    GenChunkMeshWithNoise(megaVertPositions, chunkGenerated, chunkUpdatedIndexWithVoxel, chunkBeingGeneratedCount, chunkIndex, innerChunkIndex, lodLevel);
 
     if (saveChunkToFile) {
 
@@ -232,7 +223,7 @@ static void GenChunkMeshWithNoiseAndSaveToFile(VertexPositions& megaVertPosition
 static void ReloadChunkDataFromFile(std::string curChunkFileName
                                     , VertexPositions &megaVertPositions
                                     , std::unordered_map<int, bool>& chunkGenerated
-                                    , std::unordered_map<int, int>& chunkUpdatedIndexWithVoxel
+                                    , std::vector<int>& chunkUpdatedIndexWithVoxel
                                     , int& chunkBeingGeneratedCount
                                     , Vector3 curChunkIndex, Vector3 innerChunkIndex)
 {
@@ -309,7 +300,7 @@ static void ReloadChunkDataFromFile(std::string curChunkFileName
     {
         {
             std::lock_guard<std::mutex> lockChunkUpdatedIndex(chunkUpdatedIndexWithVoxelMutex);
-            chunkUpdatedVoxelPositionInBigArrayMappedToChunkPositionInArray[megaVertPositions.ChunkTotalFlatIndexWithVoxels(innerChunkIndex)] = megaVertPositions.ChunkFlatIndexWithoutVoxels(innerChunkIndex);
+            chunkUpdatedVoxelPositionInBigArrayMappedToChunkPositionInArray.push_back(megaVertPositions.ChunkFlatIndexWithoutVoxels(innerChunkIndex));
         }
 
         //std::cout << chunkIndex.x << ", " << chunkIndex.y << ", " << chunkIndex.z << std::endl;
@@ -345,7 +336,8 @@ int main()
 
     InitWindow(1280, 720, "raylib [core] example - basic window");
 
-    Camera camera = { { 5.0f, 5.0f, 5.0f }, { 0.0f, 0.0f, 0.0f }, { 0.0f, 1.0f, 0.0f }, 45.0f, 0 };
+    Camera camera = { { 5.0f, 5.0f * 32.0f, 5.0f }, { 0.0f, 0.0f, 0.0f }, { 0.0f, 1.0f, 0.0f }, 45.0f, 0 };
+    rlSetClipPlanes(0.1f, farPlaneDistance);
 
     Texture2D textureLoad = LoadTexture("texture_test_small.png");
 
@@ -650,21 +642,25 @@ int main()
                             //archive(cereal::binary_data(curChunkSlice.data(), sizeof(int) * curChunkSlice.size()));
 
                             int curLodLevel = 0;
-                            int curDistFromCamera = (int)(Vector3Length(renderTraversalOrder[i]));
-                            if (curDistFromCamera < 5) {
-                                curLodLevel = LODLevel;
+                            int curDistFromCamera = (int)(Vector3Length((cameraChunkIndex - offsetRenderTraversalOrder)));
+                            if (curDistFromCamera >= lodDistance1.x && curDistFromCamera <= lodDistance1.y) {
+                                curLodLevel = LODLevel + 0;
                                 //std::cout << "x < 4 : " << curLodLevel << std::endl;;
                             }
-                            else if (curDistFromCamera >= 5 && curDistFromCamera <= 6) {
+                            else if (curDistFromCamera >= lodDistance2.x && curDistFromCamera <= lodDistance2.y) {
                                 curLodLevel = LODLevel + 1;
                                 //std::cout << "x >=4 && x <= 6 : " << curLodLevel << std::endl;;
                             }
-                            else if (curDistFromCamera >= 7 && curDistFromCamera <= 9) {
+                            else if (curDistFromCamera >= lodDistance3.x && curDistFromCamera <= lodDistance3.y) {
                                 curLodLevel = LODLevel + 2;
                                 //std::cout << "x >= 7 && x <= 9 : " << curLodLevel << std::endl;;
                             }
-                            else if (curDistFromCamera >= 10) {
+                            else if (curDistFromCamera >= lodDistance4.x && curDistFromCamera <= lodDistance4.y) {
                                 curLodLevel = LODLevel + 3;
+                                //std::cout << "x >= 10 : " << curLodLevel << std::endl;;
+                            }
+                            else if (curDistFromCamera >= lodDistance5.x) {
+                                curLodLevel = LODLevel + 4;
                                 //std::cout << "x >= 10 : " << curLodLevel << std::endl;;
                             }
 
@@ -746,28 +742,28 @@ int main()
 
                     for (const auto& it : chunkUpdatedVoxelPositionInBigArrayMappedToChunkPositionInArray) {
 
-                        int startUp = megaVertPositions.upFacesMetadata[it.second].startPositionInBigArray;
-                        int sizeUp = megaVertPositions.upFacesMetadata[it.second].size;
+                        int startUp = megaVertPositions.upFacesMetadata[it].startPositionInBigArray;
+                        int sizeUp = megaVertPositions.upFacesMetadata[it].size;
                         rlUpdateVertexBuffer(renderQuad.instanceVBOID, megaVertPositions.megaArrayOfAllPositions.data() + startUp, sizeUp * sizeof(int), startUp * sizeof(int));
 
-                        int startDown = megaVertPositions.downFacesMetadata[it.second].startPositionInBigArray;
-                        int sizeDown = megaVertPositions.downFacesMetadata[it.second].size;
+                        int startDown = megaVertPositions.downFacesMetadata[it].startPositionInBigArray;
+                        int sizeDown = megaVertPositions.downFacesMetadata[it].size;
                         rlUpdateVertexBuffer(renderQuad.instanceVBOID, megaVertPositions.megaArrayOfAllPositions.data() + startDown, sizeDown * sizeof(int), startDown * sizeof(int));
 
-                        int startFront = megaVertPositions.frontFacesMetadata[it.second].startPositionInBigArray;
-                        int sizeFront = megaVertPositions.frontFacesMetadata[it.second].size;
+                        int startFront = megaVertPositions.frontFacesMetadata[it].startPositionInBigArray;
+                        int sizeFront = megaVertPositions.frontFacesMetadata[it].size;
                         rlUpdateVertexBuffer(renderQuad.instanceVBOID, megaVertPositions.megaArrayOfAllPositions.data() + startFront, sizeFront * sizeof(int), startFront * sizeof(int));
 
-                        int startBack = megaVertPositions.backFacesMetadata[it.second].startPositionInBigArray;
-                        int sizeBack = megaVertPositions.backFacesMetadata[it.second].size;
+                        int startBack = megaVertPositions.backFacesMetadata[it].startPositionInBigArray;
+                        int sizeBack = megaVertPositions.backFacesMetadata[it].size;
                         rlUpdateVertexBuffer(renderQuad.instanceVBOID, megaVertPositions.megaArrayOfAllPositions.data() + startBack, sizeBack * sizeof(int), startBack * sizeof(int));
 
-                        int startRight = megaVertPositions.rightFacesMetadata[it.second].startPositionInBigArray;
-                        int sizeRight = megaVertPositions.rightFacesMetadata[it.second].size;
+                        int startRight = megaVertPositions.rightFacesMetadata[it].startPositionInBigArray;
+                        int sizeRight = megaVertPositions.rightFacesMetadata[it].size;
                         rlUpdateVertexBuffer(renderQuad.instanceVBOID, megaVertPositions.megaArrayOfAllPositions.data() + startRight, sizeRight * sizeof(int), startRight * sizeof(int));
 
-                        int startLeft = megaVertPositions.leftFacesMetadata[it.second].startPositionInBigArray;
-                        int sizeLeft = megaVertPositions.leftFacesMetadata[it.second].size;
+                        int startLeft = megaVertPositions.leftFacesMetadata[it].startPositionInBigArray;
+                        int sizeLeft = megaVertPositions.leftFacesMetadata[it].size;
                         rlUpdateVertexBuffer(renderQuad.instanceVBOID, megaVertPositions.megaArrayOfAllPositions.data() + startLeft, sizeLeft * sizeof(int), startLeft * sizeof(int));
                     }
 
@@ -1174,7 +1170,7 @@ static void GenMeshCustom2D(std::vector<std::vector<std::vector<float>>> &noiseF
     chunkFacesMetadata.leftFacesStartIndex = FACE_LEFT_INDEX * totalNumVoxelsPerChunkWorstCase;
 
     int scale = pow(2, curLodLevel);
-    int curChunkIndexInBigArray = megaVertPositions.ChunkTotalFlatIndexWithVoxels(innerChunkIndex);
+    //int curChunkIndexInBigArray = megaVertPositions.ChunkTotalFlatIndexWithVoxels(innerChunkIndex);
 
     megaVertPositions.ClearChunkData(innerChunkIndex);
 

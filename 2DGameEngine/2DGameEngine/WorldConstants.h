@@ -1,6 +1,7 @@
 #pragma once
 
 #include "raylib/raymath.h"
+#include "raylib/rlgl.h"
 
 #define FACE_DIRECTION_POSITION 16
 #define SCALE_POSITION_IN_PACKED_INT 19
@@ -22,8 +23,8 @@ const std::string CHUNK_FILE_DELIMITER = ".";
 
 const std::string worldDataDir = "WorldData/";
 
-const int numChunksHalfWidth = 32;
-const int numChunksHalfWidth_Y = 3;
+const int numChunksHalfWidth = 2;
+const int numChunksHalfWidth_Y = 1;
 const int chunkSize = 32;
 const float scale = 0.1f;
 
@@ -35,7 +36,15 @@ constexpr int totalNumVoxelsPerChunkWorstCase = totalNumVoxelsPerChunk / (2 * 2 
 constexpr int totalNumChunks =  numChunksFullWidth * numChunksFullWidth * numChunksFullWidth_Y;
 constexpr int totalNumFaces = totalNumChunks * NUM_FACES * totalNumVoxelsPerChunkWorstCase;
 
-const int farPlaneDistance = 100000000;
+const int farPlaneDistance = RL_CULL_DISTANCE_FAR;
+
+constexpr Vector2 lodDistance1 = { 0, 9 };
+constexpr Vector2 lodDistance2 = { lodDistance1.y + 1, lodDistance1.y + 10 };
+constexpr Vector2 lodDistance3 = { lodDistance2.y + 1, lodDistance2.y + 10 };
+constexpr Vector2 lodDistance4 = { lodDistance3.y + 1, lodDistance3.y + 10 };
+constexpr Vector2 lodDistance5 = { lodDistance4.y + 1, lodDistance4.y + 10 };
+
+constexpr int totalNumFacesToStore = 50000000;
 
 float LODLevel = 0.0f;
 const bool saveChunkToFile = false;
