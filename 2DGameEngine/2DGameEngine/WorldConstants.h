@@ -23,7 +23,7 @@ const std::string CHUNK_FILE_DELIMITER = ".";
 
 const std::string worldDataDir = "WorldData/";
 
-const int numChunksHalfWidth = 64;
+const int numChunksHalfWidth = 3;
 const int numChunksHalfWidth_Y = 3;
 const int chunkSize = 32;
 const float scale = 0.1f;
@@ -44,7 +44,7 @@ constexpr Vector2 lodDistance3 = { lodDistance2.y + 1, lodDistance2.y + 10 };
 constexpr Vector2 lodDistance4 = { lodDistance3.y + 1, lodDistance3.y + 10 };
 constexpr Vector2 lodDistance5 = { lodDistance4.y + 1, lodDistance4.y + 10 };
 
-constexpr int totalNumFacesToStore = 50000000;
+constexpr int totalNumFacesToStore = 10000000;
 const int maxLODLevel = 5;
 
 float LODLevel = 0.0f;

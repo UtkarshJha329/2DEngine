@@ -105,7 +105,8 @@ static void GenChunkMeshWithNoise(VertexPositions &megaVertPositions
                                 , std::vector<int> &chunkUpdatedIndexWithVoxelMatchedToChunk
                                 , int &chunkBeingGeneratedCount
                                 , Vector3 chunkIndex, Vector3 innerChunkIndex
-                                , int curLodLevel)
+                                , int curLodLevel
+                                , bool reclaimPreviousMemory)
 {
     PROFILE_FUNCTION();
 
@@ -122,11 +123,30 @@ static void GenChunkMeshWithNoise(VertexPositions &megaVertPositions
         {
             std::lock_guard<std::mutex> lockChunkMappingAndAllocatingMutex(chunkMappingAllocatingMutex);
 
+            if (reclaimPreviousMemory) {
+                //int chunkFlatPos = megaVertPositions.ChunkFlatIndexWithoutVoxels(innerChunkIndex);
+
+                //std::cout << "Reclaim Memory." << std::endl;
+                megaVertPositions.ClearChunkData(innerChunkIndex);
+
+                //megaVertPositions.ReclaimMemory(megaVertPositions.upFacesMetadata[chunkFlatPos].startPositionInBigArray, megaVertPositions.upFacesMetadata[chunkFlatPos].size);
+                //megaVertPositions.ReclaimMemory(megaVertPositions.downFacesMetadata[chunkFlatPos].startPositionInBigArray, megaVertPositions.downFacesMetadata[chunkFlatPos].size);
+                //megaVertPositions.ReclaimMemory(megaVertPositions.frontFacesMetadata[chunkFlatPos].startPositionInBigArray, megaVertPositions.frontFacesMetadata[chunkFlatPos].size);
+                //megaVertPositions.ReclaimMemory(megaVertPositions.backFacesMetadata[chunkFlatPos].startPositionInBigArray, megaVertPositions.backFacesMetadata[chunkFlatPos].size);
+                //megaVertPositions.ReclaimMemory(megaVertPositions.rightFacesMetadata[chunkFlatPos].startPositionInBigArray, megaVertPositions.rightFacesMetadata[chunkFlatPos].size);
+                //megaVertPositions.ReclaimMemory(megaVertPositions.leftFacesMetadata[chunkFlatPos].startPositionInBigArray, megaVertPositions.leftFacesMetadata[chunkFlatPos].size);
+            }
+
             for (int i = 0; i < NUM_FACES; i++)
             {
                 megaVertPositions.CopyDataToMegaArray(megaVertPositions.megaArrayOfAllPositions/*, megaVertPositions.nextToFill*//*megaVertPositions.ChunkTotalFlatIndexWithVoxels(innerChunkIndex) + (i * totalNumVoxelsPerChunkWorstCase)*/
                                                     , chunkMeshData, i * totalNumVoxelsPerChunkWorstCase, chunkFacesMetadata.GetSizeOfFaceDirPositions(i)
                                                     , chunkFacesMetadata.GetAppropriateStartIndexBasedOnFaceDir(i));
+
+                //if (reclaimPreviousMemory) {
+                //    std::cout << chunkFacesMetadata.GetAppropriateStartIndexBasedOnFaceDir(i) << " : " << chunkFacesMetadata.GetSizeOfFaceDirPositions(i) << std::endl;
+                //}
+                //std::cout << *chunkFacesMetadata.GetAppropriateStartIndexBasedOnFaceDir(i) << " : " << chunkFacesMetadata.GetSizeOfFaceDirPositions(i) << std::endl;
             }
 
             //std::cout << *chunkFacesMetadata.GetAppropriateStartIndexBasedOnFaceDir(0) << std::endl;
@@ -173,11 +193,12 @@ static void GenChunkMeshWithNoiseAndSaveToFile(VertexPositions& megaVertPosition
     , int& chunkBeingGeneratedCount
     , Vector3 chunkIndex, Vector3 innerChunkIndex
     , int lodLevel
+    , bool reclaimPreviousMemory
     , bool saveChunkToFile) {
 
     PROFILE_FUNCTION();
 
-    GenChunkMeshWithNoise(megaVertPositions, chunkGenerated, chunkUpdatedIndexWithVoxel, chunkBeingGeneratedCount, chunkIndex, innerChunkIndex, lodLevel);
+    GenChunkMeshWithNoise(megaVertPositions, chunkGenerated, chunkUpdatedIndexWithVoxel, chunkBeingGeneratedCount, chunkIndex, innerChunkIndex, lodLevel, reclaimPreviousMemory);
 
     if (saveChunkToFile) {
 
@@ -668,6 +689,8 @@ int main()
                                 curLodLevel = 5;
                             }
 
+                            bool reclaimMemory = !megaVertPositions.IsFirstTimeAllocatingMemory(offsetRenderTraversalOrder);
+
                             //GenChunkMeshWithNoiseAndSaveToFile(
                             //    std::ref(megaVertPositions)
                             //    , std::ref(chunkGenerated)
@@ -676,6 +699,7 @@ int main()
                             //    , curChunkTraversalIndex
                             //    , offsetRenderTraversalOrder
                             //    , (int)curLodLevel
+                            //    , reclaimMemory
                             //    , saveChunkToFile);
 
                             chunkMeshGenThreads.push_back(std::async(std::launch::async, GenChunkMeshWithNoiseAndSaveToFile
@@ -686,6 +710,7 @@ int main()
                                 , curChunkTraversalIndex
                                 , offsetRenderTraversalOrder
                                 , (int)curLodLevel
+                                , reclaimMemory
                                 , saveChunkToFile));
 
                             //GenChunkMeshWithNoise(std::ref(megaVertPositions)
@@ -1171,8 +1196,6 @@ static void GenMeshCustom2D(std::vector<std::vector<std::vector<float>>> &noiseF
 
     int scale = pow(2, curLodLevel);
     //int curChunkIndexInBigArray = megaVertPositions.ChunkTotalFlatIndexWithVoxels(innerChunkIndex);
-
-    megaVertPositions.ClearChunkData(innerChunkIndex);
 
     int powerOfTwo = pow(2, curLodLevel);
     int startX = powerOfTwo;

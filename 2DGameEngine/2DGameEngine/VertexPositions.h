@@ -99,12 +99,12 @@ public:
     int nextToFill = 0;
 
     VertexPositions() : megaArrayOfAllPositions(totalNumFacesToStore, 0)
-        , upFacesMetadata(totalNumChunks, { 0, 0 })
-        , downFacesMetadata(totalNumChunks, { 0, 0 })
-        , frontFacesMetadata(totalNumChunks, { 0, 0 })
-        , backFacesMetadata(totalNumChunks, { 0, 0 })
-        , rightFacesMetadata(totalNumChunks, { 0, 0 })
-        , leftFacesMetadata(totalNumChunks, { 0, 0 })
+        , upFacesMetadata(totalNumChunks, { -1, -1 })
+        , downFacesMetadata(totalNumChunks, { -1, -1 })
+        , frontFacesMetadata(totalNumChunks, { -1, -1 })
+        , backFacesMetadata(totalNumChunks, { -1, -1 })
+        , rightFacesMetadata(totalNumChunks, { -1, -1 })
+        , leftFacesMetadata(totalNumChunks, { -1, -1 })
         , nextToFill(0)
         , freeListMetadataList(1, { 0, totalNumFacesToStore })
     {
@@ -138,6 +138,13 @@ public:
         //totalFilled -= backFacesMetadata[chunkFlatIndexWithoutVoxels].size;
         //totalFilled -= rightFacesMetadata[chunkFlatIndexWithoutVoxels].size;
         //totalFilled -= leftFacesMetadata[chunkFlatIndexWithoutVoxels].size;
+
+        ReclaimMemory(upFacesMetadata[chunkFlatIndexWithoutVoxels].startPositionInBigArray, upFacesMetadata[chunkFlatIndexWithoutVoxels].size);
+        ReclaimMemory(downFacesMetadata[chunkFlatIndexWithoutVoxels].startPositionInBigArray, downFacesMetadata[chunkFlatIndexWithoutVoxels].size);
+        ReclaimMemory(frontFacesMetadata[chunkFlatIndexWithoutVoxels].startPositionInBigArray, frontFacesMetadata[chunkFlatIndexWithoutVoxels].size);
+        ReclaimMemory(backFacesMetadata[chunkFlatIndexWithoutVoxels].startPositionInBigArray, backFacesMetadata[chunkFlatIndexWithoutVoxels].size);
+        ReclaimMemory(rightFacesMetadata[chunkFlatIndexWithoutVoxels].startPositionInBigArray, rightFacesMetadata[chunkFlatIndexWithoutVoxels].size);
+        ReclaimMemory(leftFacesMetadata[chunkFlatIndexWithoutVoxels].startPositionInBigArray, leftFacesMetadata[chunkFlatIndexWithoutVoxels].size);
 
         upFacesMetadata[chunkFlatIndexWithoutVoxels].size = 0;
         downFacesMetadata[chunkFlatIndexWithoutVoxels].size = 0;
@@ -226,6 +233,17 @@ public:
         //startPos += chunkFacesMetadata.numLeftFaces;
     }
 
+    bool IsFirstTimeAllocatingMemory(Vector3 innerChunkIndex) {
+        int chunkFlatIndexWithoutVoxels = ChunkFlatIndexWithoutVoxels(innerChunkIndex);
+
+        return upFacesMetadata[chunkFlatIndexWithoutVoxels].startPositionInBigArray == -1
+            || downFacesMetadata[chunkFlatIndexWithoutVoxels].startPositionInBigArray == -1
+            || frontFacesMetadata[chunkFlatIndexWithoutVoxels].startPositionInBigArray == -1
+            || backFacesMetadata[chunkFlatIndexWithoutVoxels].startPositionInBigArray == -1
+            || rightFacesMetadata[chunkFlatIndexWithoutVoxels].startPositionInBigArray == -1
+            || leftFacesMetadata[chunkFlatIndexWithoutVoxels].startPositionInBigArray == -1;
+    }
+
     void CopyDataToMegaArray(std::vector<int> & copyIntoArray
                             , std::vector<int> & copyFromArray, int offsetIntoCopyArray, int numCopyFromCopyArray
                             , int* mappedPositionThatNeedsToBeRemaped) {
@@ -256,6 +274,8 @@ public:
         //    }
         //}
 
+        //std::cout << "Allocating:-" << sizeOfMemoryToAllocate << "..." << std::endl;
+
         if (sizeOfMemoryToAllocate == 0) {
             return freeListHead;
         }
@@ -266,9 +286,12 @@ public:
 
         while (curFreeIndex != -1) {
 
+            //std::cout << "Started searching..." << std::endl;
+            //std::cout << "Checking:- " << curFreeIndex << std::endl;
             int sizeAtCurIndex = freeListSizeOfBlockAtIndex[curFreeIndex];
             if (sizeAtCurIndex >= sizeOfMemoryToAllocate) {
 
+                //std::cout << "Found block." << std::endl;
                 int startPositionOfBlock = curFreeIndex;
 
                 if (sizeAtCurIndex > sizeOfMemoryToAllocate) {
@@ -282,7 +305,6 @@ public:
                     }
                     megaArrayOfAllPositions[rearrangedPosition] = nextFreeIndex;
                     freeListSizeOfBlockAtIndex[rearrangedPosition] = sizeAtCurIndex - sizeOfMemoryToAllocate;
-                    //std::cout << rearrangedPosition << std::endl;
                 }
                 else {
                     //skip this block in free list.
@@ -306,7 +328,23 @@ public:
             nextFreeIndex = curFreeIndex == -1 ? -1 : megaArrayOfAllPositions[curFreeIndex];
         }
 
+        std::cout << "Failed to find space for memory block." << std::endl;
         return -1;
+    }
+
+    void ReclaimMemory(int positionToReclaimFrom, int sizeOfMemoryToReclaim) {
+
+        //std::cout << "Reclaimed Memory from:-" << positionToReclaimFrom << " Of size:- " << sizeOfMemoryToReclaim << " Old head:- " << freeListHead << std::endl;
+
+        if (sizeOfMemoryToReclaim == 0) {
+            return;
+        }
+
+        int oldFreeListHead = freeListHead;
+        freeListHead = positionToReclaimFrom;
+
+        megaArrayOfAllPositions[positionToReclaimFrom] = oldFreeListHead;
+        freeListSizeOfBlockAtIndex[freeListHead] = sizeOfMemoryToReclaim;
     }
 
     int ChunkTotalFlatIndexWithVoxels(Vector3 innerChunkIndex) {
