@@ -45,6 +45,7 @@ constexpr Vector2 lodDistance4 = { lodDistance3.y + 1, lodDistance3.y + 10 };
 constexpr Vector2 lodDistance5 = { lodDistance4.y + 1, lodDistance4.y + 10 };
 
 constexpr int totalNumFacesToStore = 50000000;
+const int maxLODLevel = 5;
 
 float LODLevel = 0.0f;
 const bool saveChunkToFile = false;

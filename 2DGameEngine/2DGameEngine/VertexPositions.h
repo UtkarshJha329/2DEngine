@@ -1,6 +1,7 @@
 #pragma once
 
 #include <vector>
+#include <unordered_map>
 #include <fstream>
 #include <span>
 
@@ -92,6 +93,9 @@ public:
 
     std::vector<FreeListMetaData> freeListMetadataList;
 
+    int freeListHead = 0;
+    std::unordered_map<int, int> freeListSizeOfBlockAtIndex;
+
     int nextToFill = 0;
 
     VertexPositions() : megaArrayOfAllPositions(totalNumFacesToStore, 0)
@@ -104,7 +108,8 @@ public:
         , nextToFill(0)
         , freeListMetadataList(1, { 0, totalNumFacesToStore })
     {
-
+        megaArrayOfAllPositions[freeListHead] = -1;
+        freeListSizeOfBlockAtIndex[freeListHead] = totalNumFacesToStore;
     }
 
     template<class Archive>
@@ -236,20 +241,71 @@ public:
     }
 
     int AllocateMemoryOfSize(int sizeOfMemoryToAllocate) {
-        for (int i = 0; i < freeListMetadataList.size(); i++)
-        {
-            if (freeListMetadataList[i].freeBlockSize >= sizeOfMemoryToAllocate) {
+        //for (int i = 0; i < freeListMetadataList.size(); i++)
+        //{
+        //    if (freeListMetadataList[i].freeBlockSize >= sizeOfMemoryToAllocate) {
 
-                int startPositionOfBlock = freeListMetadataList[i].freeBlockStartPosition;
+        //        int startPositionOfBlock = freeListMetadataList[i].freeBlockStartPosition;
 
-                if (freeListMetadataList[i].freeBlockSize > sizeOfMemoryToAllocate) {
-                    freeListMetadataList[i].freeBlockStartPosition += sizeOfMemoryToAllocate;
-                    freeListMetadataList[i].freeBlockSize -= sizeOfMemoryToAllocate;
+        //        if (freeListMetadataList[i].freeBlockSize > sizeOfMemoryToAllocate) {
+        //            freeListMetadataList[i].freeBlockStartPosition += sizeOfMemoryToAllocate;
+        //            freeListMetadataList[i].freeBlockSize -= sizeOfMemoryToAllocate;
+        //        }
+
+        //        return startPositionOfBlock;
+        //    }
+        //}
+
+        if (sizeOfMemoryToAllocate == 0) {
+            return freeListHead;
+        }
+
+        int curFreeIndex = freeListHead;
+        int lastFreeIndex = -1;
+        int nextFreeIndex = megaArrayOfAllPositions[curFreeIndex];
+
+        while (curFreeIndex != -1) {
+
+            int sizeAtCurIndex = freeListSizeOfBlockAtIndex[curFreeIndex];
+            if (sizeAtCurIndex >= sizeOfMemoryToAllocate) {
+
+                int startPositionOfBlock = curFreeIndex;
+
+                if (sizeAtCurIndex > sizeOfMemoryToAllocate) {
+                    //rearrange block's index in free list.
+                    int rearrangedPosition = startPositionOfBlock + sizeOfMemoryToAllocate;
+                    if (lastFreeIndex != -1) {
+                        megaArrayOfAllPositions[lastFreeIndex] = rearrangedPosition;
+                    }
+                    else {
+                        freeListHead = rearrangedPosition;
+                    }
+                    megaArrayOfAllPositions[rearrangedPosition] = nextFreeIndex;
+                    freeListSizeOfBlockAtIndex[rearrangedPosition] = sizeAtCurIndex - sizeOfMemoryToAllocate;
+                    //std::cout << rearrangedPosition << std::endl;
                 }
+                else {
+                    //skip this block in free list.
+                    //std::cout << "Came here for whatever reason." << std::endl;
+                    if (lastFreeIndex != -1) {
+                        megaArrayOfAllPositions[lastFreeIndex] = nextFreeIndex;
+                    }
+                    else {
+                        freeListHead = nextFreeIndex;
+                    }
+                }
+
+                freeListSizeOfBlockAtIndex.erase(curFreeIndex);
 
                 return startPositionOfBlock;
             }
+
+            lastFreeIndex = curFreeIndex;
+            curFreeIndex = megaArrayOfAllPositions[curFreeIndex];
+            //std::cout << "Performed." << curFreeIndex << std::endl;
+            nextFreeIndex = curFreeIndex == -1 ? -1 : megaArrayOfAllPositions[curFreeIndex];
         }
+
         return -1;
     }
 
