@@ -32,10 +32,12 @@ out vec4 fragColor;
 out vec3 fragNormal;
 out int faceDir;
 out vec3 chunkPos;
+out vec3 relChunkPos;
 
 // NOTE: Add here your custom variables
 
 uniform vec3 curChunkPos;
+uniform vec3 cameraPos;
 
 vec3 verticesUP[4] = vec3[4]( vec3(-0.5, 0.5, -0.5), 
                               vec3(-0.5, 0.5, 0.5),
@@ -86,6 +88,7 @@ void main()
     curScale = (instancePosition >> curScalePosInPackedInt) & 31;
 
     chunkPos = vec3(chunkPosition[gl_DrawIDARB].x, chunkPosition[gl_DrawIDARB].y, chunkPosition[gl_DrawIDARB].z);
+    relChunkPos = cameraPos - chunkPos;
 
     vec3 curPos = vec3(chunkPosition[gl_DrawIDARB].x, chunkPosition[gl_DrawIDARB].y, chunkPosition[gl_DrawIDARB].z) + curVoxelPos;
     //vec3 curPos = chunkPosition + curVoxelPos;
