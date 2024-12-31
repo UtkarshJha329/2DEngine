@@ -23,8 +23,8 @@ const std::string CHUNK_FILE_DELIMITER = ".";
 
 const std::string worldDataDir = "WorldData/";
 
-const int numChunksHalfWidth = 9;
-const int numChunksHalfWidth_Y = 1;
+const int numChunksHalfWidth = 64;
+const int numChunksHalfWidth_Y = 3;
 const int chunkSize = 32;
 const float scale = 0.1f;
 
@@ -38,9 +38,9 @@ constexpr int totalNumFaces = totalNumChunks * NUM_FACES * totalNumVoxelsPerChun
 
 const int farPlaneDistance = RL_CULL_DISTANCE_FAR;
 
-const int lodLevelOffset = 3;
+const int lodLevelOffset = 10;
 
-constexpr Vector2 lodDistance1 = { 0, 2 };
+constexpr Vector2 lodDistance1 = { 0, lodLevelOffset - 1 };
 constexpr Vector2 lodDistance2 = { lodDistance1.y + 1, lodDistance1.y + lodLevelOffset };
 constexpr Vector2 lodDistance3 = { lodDistance2.y + 1, lodDistance2.y + lodLevelOffset };
 constexpr Vector2 lodDistance4 = { lodDistance3.y + 1, lodDistance3.y + lodLevelOffset };

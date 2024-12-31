@@ -21,7 +21,7 @@ uniform vec4 ambient;
 //uniform vec3 viewPos;
 uniform float switchColours;
 
-int numChunks = 10;
+int numChunks = 64;
 int numChunksY = 3;
 
 void main()
@@ -55,7 +55,33 @@ void main()
     }
 
     if(switchColours != 0){
-        vec3 mappedChunkPos = vec3(mod(chunkPos.x, numChunks), mod(chunkPos.y, numChunksY), mod(chunkPos.z, numChunks)); 
-        finalColor = vec4(mappedChunkPos * 1 / numChunks, 1.0);
+        //vec3 mappedChunkPos = vec3(mod(chunkPos.x, numChunks), mod(chunkPos.y, numChunksY), mod(chunkPos.z, numChunks));
+        vec3 colour = vec3(0.0, 0.0, 0.0);
+
+        int maxLODLevel = 5;
+        int chunkSize = 32;
+        int numChunksPerLOD = 10;
+
+        vec3 moddedChunkPos = vec3(abs(chunkPos.x) / chunkSize, 0.0, abs(chunkPos.z) / chunkSize);
+
+        if(moddedChunkPos.x < ((maxLODLevel - 4) * numChunksPerLOD) && moddedChunkPos.z < ((maxLODLevel - 4) * numChunksPerLOD)){
+            colour = vec3(0.0, 0.0, 0.0);
+        }
+        else if(moddedChunkPos.x < ((maxLODLevel - 3) * numChunksPerLOD) && moddedChunkPos.z < ((maxLODLevel - 3) * numChunksPerLOD)){
+            colour = vec3(0.0, 1.0, 0.0);
+        }
+        else if(moddedChunkPos.x < ((maxLODLevel - 2) * numChunksPerLOD) && moddedChunkPos.z < ((maxLODLevel - 2) * numChunksPerLOD)){
+            colour = vec3(1.0, 0.0, 1.0);
+        }
+        else if(moddedChunkPos.x < ((maxLODLevel - 1) * numChunksPerLOD) && moddedChunkPos.z < ((maxLODLevel - 1) * numChunksPerLOD)){
+            colour = vec3(0.0, 1.0, 1.0);
+        }
+        else if(moddedChunkPos.x < (maxLODLevel * numChunksPerLOD) && moddedChunkPos.z < (maxLODLevel * numChunksPerLOD)){
+            colour = vec3(1.0);
+        }
+
+        //finalColor = vec4(mappedChunkPos * 1 / numChunks, 1.0);
+        finalColor = vec4(colour, 1.0);
+        //finalColor = vec4(moddedChunkPos * 1 / numChunks, 1.0);
     }
 }
