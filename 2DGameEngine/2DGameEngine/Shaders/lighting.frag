@@ -58,15 +58,15 @@ void main()
             //finalColor = pow(vec4(0.0, 1.0, 1.0, 1.0), vec4(1.0/2.2));
     }
 
+    int chunkSize = 32;
+    vec3 relChunkCoords = vec3(abs(relChunkPos.x) / chunkSize, 0.0, abs(relChunkPos.z) / chunkSize);
     if(switchColours != 0){
         //vec3 mappedChunkPos = vec3(mod(chunkPos.x, numChunks), mod(chunkPos.y, numChunksY), mod(chunkPos.z, numChunks));
         vec3 colour = vec3(0.0, 0.0, 0.0);
 
         int maxLODLevel = 5;
-        int chunkSize = 32;
 
         //vec3 moddedChunkPos = vec3(abs(chunkPos.x) / chunkSize, 0.0, abs(chunkPos.z) / chunkSize);
-        vec3 relChunkCoords = vec3(abs(relChunkPos.x) / chunkSize, 0.0, abs(relChunkPos.z) / chunkSize);
         float dist = length(relChunkCoords);
 
         if(dist < ((maxLODLevel - 4) * numChunksPerLOD)){
@@ -90,5 +90,9 @@ void main()
         finalColor = vec4(relChunkCoords * (1 / numChunks), 1.0);
         renderTarget2 = vec4(1 - (relChunkCoords * (1 / numChunks)), 1.0);
         //finalColor = vec4(moddedChunkPos * 1 / numChunks, 1.0);
+    }
+    else
+    {
+            renderTarget2 = vec4(1 - (relChunkCoords * (1 / numChunks)), 1.0);
     }
 }

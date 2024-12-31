@@ -567,9 +567,6 @@ int main()
     float cameraPos[3] = {camera.position.x, camera.position.y, camera.position.z};
     SetShaderValue(instanceShader, cameraPosLoc, cameraPos, SHADER_UNIFORM_VEC3);
 
-    
-    //std::cout << renderTraversalOrder.size() << std::endl;
-
     while (!WindowShouldClose())
     {
 
@@ -699,20 +696,14 @@ int main()
         Plane topPlane = { position, Vector3CrossProduct(cameraRight, Vector3RotateByAxisAngle(cameraDir, cameraRight, DEG2RAD * camera.fovy * 0.5f)) };
         Plane bottomPlane = { position, Vector3CrossProduct(cameraRight, Vector3RotateByAxisAngle(cameraDir, cameraRight, DEG2RAD * camera.fovy * -0.5f)) };
 
-        rlActiveDrawBuffers(2);
-        //SetShaderValueTexture(instanceShader, 1, target.secondColourTexture);
-
         BeginTextureMode(target);
         {
-            rlEnableFramebuffer(target.id);
             //BeginDrawing();
             ClearBackground(RAYWHITE);
 
             BeginMode3D(camera);
             {
                 PROFILE_SCOPE("Drawing Chunks");
-
-                rlEnableShader(instanceShader.id);
 
                 {
                     for (int i = 0; i < renderTraversalOrder.size(); i++)
@@ -922,8 +913,6 @@ int main()
                         , drawArraysIndirectCommands, drawArraysIndirectCommands.size());
                     rlUnloadShaderBuffer(chunkPosSSBO);
                 }
-
-                rlDisableShader();
             }
 
             DrawGrid(10, 1.0);
@@ -954,8 +943,12 @@ int main()
 
         BeginDrawing();
             ClearBackground(RAYWHITE);
-
-            DrawTextureRec(target.secondColourTexture, Rectangle { 0, 0, (float)screenWidth, (float)-screenHeight }, Vector2 { 0, 0 }, WHITE);
+            if (randValue == 0) {
+                DrawTextureRec(target.secondColourTexture, Rectangle { 0, 0, (float)screenWidth, (float)-screenHeight }, Vector2 { 0, 0 }, WHITE);
+            }
+            else {
+                DrawTextureRec(target.texture, Rectangle { 0, 0, (float)screenWidth, (float)-screenHeight }, Vector2 { 0, 0 }, WHITE);
+            }
             DrawFPS(40, 40);
         EndDrawing();
     }
