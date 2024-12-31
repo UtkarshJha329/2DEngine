@@ -339,6 +339,20 @@ static void ReloadChunkDataFromFile(std::string curChunkFileName
 
 }
 
+bool LODBorderMesh(Vector3 relativePosition, Vector3 offset) {
+
+    return relativePosition.x == offset.x * lodDistance1.y
+        || relativePosition.z == offset.z * lodDistance1.y
+        || relativePosition.x == offset.x * lodDistance2.y
+        || relativePosition.z == offset.z * lodDistance2.y
+        || relativePosition.x == offset.x * lodDistance3.y
+        || relativePosition.z == offset.z * lodDistance3.y
+        || relativePosition.x == offset.x * lodDistance4.y
+        || relativePosition.z == offset.z * lodDistance4.y
+        || relativePosition.x == offset.x * lodDistance5.y
+        || relativePosition.z == offset.z * lodDistance5.y;
+}
+
 const siv::PerlinNoise::seed_type seed = 76554893u;
 
 const siv::PerlinNoise perlin{ seed };
@@ -357,7 +371,7 @@ int main()
 
     InitWindow(1280, 720, "raylib [core] example - basic window");
 
-    Camera camera = { { 5.0f, 5.0f * 32.0f, 5.0f }, { 0.0f, 0.0f, 0.0f }, { 0.0f, 1.0f, 0.0f }, 45.0f, 0 };
+    Camera camera = { { 5.0f, 2.0f * 32.0f, 5.0f }, { 0.0f, 0.0f, 0.0f }, { 0.0f, 1.0f, 0.0f }, 45.0f, 0 };
     rlSetClipPlanes(0.1f, farPlaneDistance);
 
     Texture2D textureLoad = LoadTexture("texture_test_small.png");
@@ -528,7 +542,7 @@ int main()
             //Mark All Chunks That Are New To Be Reaclculated
             for (int i = 0; i < renderTraversalOrder.size(); i++)
             {
-                if ((offset.x != 0 && renderTraversalOrder[i].x == offset.x * numChunksHalfWidth) || (offset.z != 0 && renderTraversalOrder[i].z == offset.z * numChunksHalfWidth)) {
+                if (LODBorderMesh(renderTraversalOrder[i], offset)/*(offset.x != 0 && renderTraversalOrder[i].x == offset.x * numChunksHalfWidth) || (offset.z != 0 && renderTraversalOrder[i].z == offset.z * numChunksHalfWidth)*/) {
                     innerIndexWhereNewMeshNeedsToBeCalculated[megaVertPositions.InnerIndexFlattened(renderTraversalOrder[i])] = true;
                 }
 
@@ -663,7 +677,7 @@ int main()
                             //archive(cereal::binary_data(curChunkSlice.data(), sizeof(int) * curChunkSlice.size()));
 
                             int curLodLevel = 0;
-                            int curDistFromCamera = (int)(Vector3Length((cameraChunkIndex - offsetRenderTraversalOrder)));
+                            int curDistFromCamera = (int)(Vector3Length((renderTraversalOrder[i])));
                             if (curDistFromCamera >= lodDistance1.x && curDistFromCamera <= lodDistance1.y) {
                                 curLodLevel = LODLevel + 0;
                                 //std::cout << "x < 4 : " << curLodLevel << std::endl;;
