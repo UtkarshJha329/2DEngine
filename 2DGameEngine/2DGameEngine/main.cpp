@@ -1479,8 +1479,9 @@ void PlaneFacingDir(Vector3 dir, GenerativeMesh &curMesh) {
 
     PROFILE_FUNCTION();
 
-    curMesh.mesh.vertices = (float*)MemAlloc(4 * 3 * sizeof(float));
-    curMesh.mesh.texcoords = (float*)MemAlloc(4 * 2 * sizeof(float));
+    int numVertices = 3;
+    curMesh.mesh.vertices = (float*)MemAlloc(numVertices * 3 * sizeof(float));
+    curMesh.mesh.texcoords = (float*)MemAlloc(numVertices * 2 * sizeof(float));
     //curMesh.indices = (unsigned short*)MemAlloc(6 * sizeof(unsigned short*));
 
     if (dir.x == 0 && dir.y == 1 && dir.z == 0) {
@@ -1509,8 +1510,8 @@ void PlaneFacingDir(Vector3 dir, GenerativeMesh &curMesh) {
     }
     TexCoords(curMesh.mesh.texcoords);
 
-    curMesh.mesh.triangleCount = 2;
-    curMesh.mesh.vertexCount = 4;
+    curMesh.mesh.triangleCount = 1;
+    curMesh.mesh.vertexCount = numVertices;
 
     UploadMesh(&curMesh.mesh, false);
 }
