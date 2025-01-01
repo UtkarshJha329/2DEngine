@@ -615,7 +615,8 @@ int main()
         SetShaderValue(instanceShader, cameraPosLoc, cameraPos, SHADER_UNIFORM_VEC3);
 
         if (IsKeyPressed(KEY_ZERO)) {
-            randValue = randValue == 0 ? 1 : 0;
+            randValue++;
+            randValue = randValue > 3 ? 0 : randValue;
             SetShaderValue(instanceShader, randValueLoc, &randValue, SHADER_UNIFORM_FLOAT);
         }
 
@@ -979,10 +980,16 @@ int main()
         BeginDrawing();
             ClearBackground(RAYWHITE);
             if (randValue == 0) {
+                DrawTextureRec(target.texture, Rectangle { 0, 0, (float)screenWidth, (float)-screenHeight }, Vector2 { 0, 0 }, WHITE);
+            }
+            else if(randValue == 1) {
+                DrawTextureRec(target.texture, Rectangle { 0, 0, (float)screenWidth, (float)-screenHeight }, Vector2 { 0, 0 }, WHITE);
+            }
+            else if(randValue == 2) {
                 DrawTextureRec(target.secondColourTexture, Rectangle { 0, 0, (float)screenWidth, (float)-screenHeight }, Vector2 { 0, 0 }, WHITE);
             }
-            else {
-                DrawTextureRec(target.texture, Rectangle { 0, 0, (float)screenWidth, (float)-screenHeight }, Vector2 { 0, 0 }, WHITE);
+            else if(randValue == 3) {
+                DrawTextureRec(target.depthColourTexture, Rectangle { 0, 0, (float)screenWidth, (float)-screenHeight }, Vector2 { 0, 0 }, WHITE);
             }
             DrawCircle(screenWidth / 2, screenHeight / 2, 1.0f, RED);
             DrawFPS(40, 40);

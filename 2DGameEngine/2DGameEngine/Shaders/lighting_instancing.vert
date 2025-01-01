@@ -33,7 +33,7 @@ out vec3 fragNormal;
 out int faceDir;
 out vec3 chunkPos;
 out vec3 relChunkPos;
-out vec3 curVoxelPos;
+out vec3 innerVoxelPos;
 
 // NOTE: Add here your custom variables
 
@@ -92,7 +92,7 @@ void main()
     relChunkPos = vec3(chunkPos.x - cameraPos.x, chunkPos.y, chunkPos.z - cameraPos.z);
 
     vec3 curPos = vec3(chunkPosition[gl_DrawIDARB].x, chunkPosition[gl_DrawIDARB].y, chunkPosition[gl_DrawIDARB].z) + curVoxelPosUncompressed;
-    curVoxelPos = curPos;
+    innerVoxelPos = curVoxelPosUncompressed;
 
     //vec3 curPos = chunkPosition + curVoxelPos;
     mat4 translationMatrix = mat4(1.0);  // Identity matrix

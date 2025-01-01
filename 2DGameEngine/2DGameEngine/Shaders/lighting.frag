@@ -8,7 +8,7 @@ in vec3 fragNormal;
 flat in int faceDir;
 in vec3 chunkPos;
 in vec3 relChunkPos;
-in vec3 curVoxelPos;
+in vec3 innerVoxelPos;
 
 // Input uniform values
 uniform sampler2D texture0;
@@ -76,7 +76,7 @@ void main()
     vec3 relChunkCoords = vec3((relChunkPos.x / chunkSize) + halfNumChunksWidth, relChunkPos.y / chunkSize, (relChunkPos.z / chunkSize) + halfNumChunksWidth);
     //float totalNumChunksPerLOD = numChunksPerLOD * 2;
 
-    if(switchColours != 0){
+    if(switchColours == 1){
         //vec3 mappedChunkPos = vec3(mod(chunkPos.x, numChunks), mod(chunkPos.y, numChunksY), mod(chunkPos.z, numChunks));
         vec3 colour = vec3(0.0, 0.0, 0.0);
 
@@ -102,22 +102,27 @@ void main()
 
         //finalColor = vec4(mappedChunkPos * 1 / numChunks, 1.0);
         
-        //finalColor = vec4(colour, 1.0);
+        finalColor = vec4(colour, 1.0);
         
         //finalColor = vec4(relChunkCoords * (1 / halfNumChunksWidth), 1.0);
         //renderTarget2 = vec4(vec3(1 - (length(relChunkCoords) * (1 / numChunks))), 1.0);
         //renderTarget2 = vec4(1 - (vec3(relChunkCoords.x / totalNumChunksWidth, relChunkCoords.y / totalNumChunksWidth_Y, relChunkCoords.z / totalNumChunksWidth)), 1.0);
         //finalColor = vec4(moddedChunkPos * 1 / numChunks, 1.0);
     }
-    else
+    else if(switchColours == 2)
     {
         renderTarget2 = vec4(1 - (vec3(relChunkCoords.x / totalNumChunksWidth, relChunkCoords.y / totalNumChunksWidth_Y, relChunkCoords.z / totalNumChunksWidth)), 1.0);
         //renderTarget2 = vec4(vec3(abs(curVoxelPos.x / (halfNumChunksWidth * chunkSize)), curVoxelPos.y, abs(curVoxelPos.z / (halfNumChunksWidth * chunkSize))), 1.0);
         //renderTarget2 = vec4(1 - (vec3(length(relChunkCoords) * (1 / numChunks))), 1.0);
     }
-
-    //float depth = LinearizeDepth(gl_FragCoord.z) / far; // divide by far for demonstration
-    //depthTarget = vec4(vec3(depth), 1.0);
-    depthTarget = vec4(vec3(abs(curVoxelPos.x / (halfNumChunksWidth * chunkSize)), curVoxelPos.y, abs(curVoxelPos.z / (halfNumChunksWidth * chunkSize))), 1.0);
-
+    else if(switchColours == 3)
+    {
+        float depth = LinearizeDepth(gl_FragCoord.z) / far; // divide by far for demonstration
+        //depthTarget = vec4(vec3(depth), 1.0);
+        relChunkCoords = relChunkCoords * chunkSize;
+        vec3 mappedCoords = vec3((relChunkCoords.x + innerVoxelPos.x) / (totalNumChunksWidth * chunkSize)
+                                , (relChunkCoords.y + innerVoxelPos.y) / (totalNumChunksWidth_Y * chunkSize)
+                                , (relChunkCoords.z + innerVoxelPos.z) / (totalNumChunksWidth * chunkSize));
+        depthTarget = vec4(mappedCoords, 1.0);
+    }
 }
