@@ -353,6 +353,7 @@ bool LODBorderMesh(Vector3 relativePosition) {
 
 struct SecondRenderTexture : public RenderTexture {
     Texture secondColourTexture;
+    Texture depthColourTexture;
 };
 
 SecondRenderTexture LoadRenderTextureDepthTex(int width, int height)
@@ -386,11 +387,18 @@ SecondRenderTexture LoadRenderTextureDepthTex(int width, int height)
         target.secondColourTexture.format = PIXELFORMAT_UNCOMPRESSED_R8G8B8A8;
         target.secondColourTexture.mipmaps = 1;
 
-        rlActiveDrawBuffers(2);
+        target.depthColourTexture.id = rlLoadTexture(0, width, height, PIXELFORMAT_UNCOMPRESSED_R8G8B8A8, 1);
+        target.depthColourTexture.width = width;
+        target.depthColourTexture.height = height;
+        target.depthColourTexture.format = PIXELFORMAT_UNCOMPRESSED_R8G8B8A8;
+        target.depthColourTexture.mipmaps = 1;
+
+        rlActiveDrawBuffers(3);
 
         // Attach color texture and depth texture to FBO
         rlFramebufferAttach(target.id, target.texture.id, RL_ATTACHMENT_COLOR_CHANNEL0, RL_ATTACHMENT_TEXTURE2D, 0);
         rlFramebufferAttach(target.id, target.secondColourTexture.id, RL_ATTACHMENT_COLOR_CHANNEL1, RL_ATTACHMENT_TEXTURE2D, 0);
+        rlFramebufferAttach(target.id, target.depthColourTexture.id, RL_ATTACHMENT_COLOR_CHANNEL2, RL_ATTACHMENT_TEXTURE2D, 0);
 
         rlFramebufferAttach(target.id, target.depth.id, RL_ATTACHMENT_DEPTH, RL_ATTACHMENT_TEXTURE2D, 0);
 
@@ -559,7 +567,7 @@ int main()
     float numChunksPerLod = lodLevelOffset;
     SetShaderValue(instanceShader, numChunksPerLodLoc, &numChunksPerLod, SHADER_UNIFORM_FLOAT);
 
-    int numChunksLoc = GetShaderLocation(instanceShader, "numChunks");
+    int numChunksLoc = GetShaderLocation(instanceShader, "halfNumChunksWidth");
     float numChunks = numChunksHalfWidth;
     SetShaderValue(instanceShader, numChunksLoc, &numChunks, SHADER_UNIFORM_FLOAT);
 
@@ -567,10 +575,39 @@ int main()
     float cameraPos[3] = {camera.position.x, camera.position.y, camera.position.z};
     SetShaderValue(instanceShader, cameraPosLoc, cameraPos, SHADER_UNIFORM_VEC3);
 
+    Image chunksIDImage = LoadImageFromTexture(target.secondColourTexture);
+    Image chunksDepthImage = LoadImageFromTexture(target.depthColourTexture);
+
     while (!WindowShouldClose())
     {
 
         PROFILE_SCOPE("Game Loop");
+
+        //std::cout << GetMousePosition().x << ", " << GetMousePosition().y << std::endl;
+
+        if (IsKeyPressed(KEY_FIVE)) {
+
+            chunksIDImage = LoadImageFromTexture(target.secondColourTexture);
+            chunksDepthImage = LoadImageFromTexture(target.depthColourTexture);
+
+            Color valueAtCoord = GetImageColor(chunksIDImage, screenWidth / 2, screenHeight / 2);
+            float depth = GetImageColor(chunksDepthImage, screenWidth / 2, screenHeight / 2).r;
+            //int x = floor(((1 - (valueAtCoord.r / 255.0f))) * numChunksHalfWidth);
+            //int y = floor(((1 - (valueAtCoord.g / 255.0f))) * numChunksHalfWidth);
+            //int z = floor(((1 - (valueAtCoord.b / 255.0f))) * numChunksHalfWidth);
+
+            int x = round(((1 - (valueAtCoord.r / 255.0f))) * numChunksFullWidth);
+            int y = round(((1 - (valueAtCoord.g / 255.0f))) * numChunksFullWidth_Y);
+            int z = round(((1 - (valueAtCoord.b / 255.0f))) * numChunksFullWidth);
+
+            x -= numChunksHalfWidth;
+            z -= numChunksHalfWidth;
+
+            std::cout << std::to_string(depth) << " : "
+                << std::to_string(x) << ", "
+                << std::to_string(y) << ", "
+                << std::to_string(z) << std::endl;
+        }
 
         cameraPos[0] = camera.position.x;
         cameraPos[1] = camera.position.y;
@@ -936,8 +973,6 @@ int main()
             //EndDrawing();
             oldCameraChunkPosition = cameraChunkIndex;
             oldCameraPos = camera.position;
-
-            rlDisableFramebuffer();
         }
         EndTextureMode();
 
@@ -949,6 +984,7 @@ int main()
             else {
                 DrawTextureRec(target.texture, Rectangle { 0, 0, (float)screenWidth, (float)-screenHeight }, Vector2 { 0, 0 }, WHITE);
             }
+            DrawCircle(screenWidth / 2, screenHeight / 2, 1.0f, RED);
             DrawFPS(40, 40);
         EndDrawing();
     }
