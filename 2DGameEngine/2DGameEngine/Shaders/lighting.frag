@@ -9,6 +9,7 @@ flat in int faceDir;
 in vec3 chunkPos;
 in vec3 relChunkPos;
 in vec3 innerVoxelPos;
+in vec3 meshVertexPos;
 
 // Input uniform values
 uniform sampler2D texture0;
@@ -41,6 +42,13 @@ float LinearizeDepth(float depth)
 
 void main()
 {
+    float clipValue = 0.5;
+    if(meshVertexPos.x > clipValue || meshVertexPos.x < -clipValue
+    || meshVertexPos.y > clipValue || meshVertexPos.y < -clipValue
+    || meshVertexPos.z > clipValue || meshVertexPos.z < -clipValue)
+    {
+        discard;
+    }
     // Texel color fetching from texture sampler
     vec4 texelColor = texture(texture0, fragTexCoord);
 

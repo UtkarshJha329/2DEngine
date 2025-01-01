@@ -34,41 +34,73 @@ out int faceDir;
 out vec3 chunkPos;
 out vec3 relChunkPos;
 out vec3 innerVoxelPos;
+out vec3 meshVertexPos;
 
 // NOTE: Add here your custom variables
 
 uniform vec3 curChunkPos;
 uniform vec3 cameraPos;
 
-vec3 verticesUP[4] = vec3[4]( vec3(-0.5, 0.5, -0.5), 
-                              vec3(-0.5, 0.5, 0.5),
-                              vec3(0.5, 0.5, -0.5),
-                              vec3(0.5, 0.5, 0.5));
-
-vec3 verticesDOWN[4] = vec3[4]( vec3(0.5, -0.5, -0.5), 
-                                vec3(0.5, -0.5, 0.5),
+//vec3 verticesUP[4] = vec3[4]( vec3(-0.5, 0.5, -0.5),  
+//                              vec3(-0.5, 0.5, 0.5),   
+//                              vec3(0.5, 0.5, -0.5),   
+//                              vec3(0.5, 0.5, 0.5));   
+//
+vec3 verticesDOWN[4] = vec3[4]( vec3(0.5, -0.5, -0.5),
+                                vec3(0.5, -0.5, 0.5), 
                                 vec3(-0.5, -0.5, -0.5),
                                 vec3(-0.5, -0.5, 0.5));
 
-vec3 verticesFRONT[4] = vec3[4]( vec3(0.5, -0.5, 0.5), 
-                                vec3(0.5, 0.5, 0.5),
-                                vec3(-0.5, -0.5, 0.5),
-                                vec3(-0.5, 0.5, 0.5));
+//vec3 verticesFRONT[4] = vec3[4]( vec3(0.5, -0.5, 0.5),
+//                                vec3(0.5, 0.5, 0.5),  
+//                                vec3(-0.5, -0.5, 0.5),
+//                                vec3(-0.5, 0.5, 0.5));
 
-vec3 verticesBACK[4] = vec3[4]( vec3(-0.5, -0.5, -0.5), 
-                                vec3(-0.5, 0.5, -0.5),
-                                vec3(0.5, -0.5, -0.5),
-                                vec3(0.5, 0.5, -0.5));
+//vec3 verticesBACK[4] = vec3[4]( vec3(-0.5, -0.5, -0.5),
+//                                vec3(-0.5, 0.5, -0.5),
+//                                vec3(0.5, -0.5, -0.5),
+//                                vec3(0.5, 0.5, -0.5));
 
-vec3 verticesRIGHT[4] = vec3[4]( vec3(0.5, 0.5, -0.5), 
-                                vec3(0.5, 0.5, 0.5),
-                                vec3(0.5, -0.5, -0.5),
+//vec3 verticesRIGHT[4] = vec3[4]( vec3(0.5, 0.5, -0.5),
+//                                vec3(0.5, 0.5, 0.5),  
+//                                vec3(0.5, -0.5, -0.5),
+//                                vec3(0.5, -0.5, 0.5));
+
+//vec3 verticesLEFT[4] = vec3[4]( vec3(-0.5, -0.5, -0.5),
+//                                vec3(-0.5, -0.5, 0.5),
+//                                vec3(-0.5, 0.5, -0.5),
+//                                vec3(-0.5, 0.5, 0.5));
+
+vec3 verticesUP[4] = vec3[4]( vec3(-0.5, 0.5, -0.5), 
+                              vec3(-0.5, 0.5, 2.0),
+                              vec3(2.0, 0.5, -0.5),
+                              vec3(-0.5, 0.5, -0.5));
+
+//vec3 verticesDOWN[4] = vec3[4]( vec3(0.5, -0.5, -0.5),
+//                                vec3(0.5, -0.5, 0.5), 
+//                                vec3(-0.5, -0.5, -0.5),
+//                                vec3(-0.5, -0.5, 0.5));
+//
+
+vec3 verticesFRONT[4] = vec3[4]( vec3(0.5, -0.5, 0.5),
+                                vec3(0.5, 2.0, 0.5),  
+                                vec3(-2.0, -0.5, 0.5),
                                 vec3(0.5, -0.5, 0.5));
 
-vec3 verticesLEFT[4] = vec3[4]( vec3(-0.5, -0.5, -0.5), 
-                                vec3(-0.5, -0.5, 0.5),
-                                vec3(-0.5, 0.5, -0.5),
-                                vec3(-0.5, 0.5, 0.5));
+vec3 verticesBACK[4] = vec3[4]( vec3(-0.5, -0.5, -0.5),
+                                vec3(-0.5, 2.0, -0.5),
+                                vec3(2.0, -0.5, -0.5),
+                                vec3(-0.5, -0.5, -0.5));
+
+vec3 verticesRIGHT[4] = vec3[4]( vec3(0.5, 0.5, -0.5),
+                                vec3(0.5, 0.5, 2.0),  
+                                vec3(0.5, -2.0, -0.5),
+                                vec3(0.5, 0.5, -0.5));
+
+vec3 verticesLEFT[4] = vec3[4]( vec3(-0.5, -0.5, -0.5),
+                                vec3(-0.5, -0.5, 2.0),
+                                vec3(-0.5, 2.0, -0.5),
+                                vec3(-0.5, -0.5, -0.5));
 
 uniform float lodScale;
 
@@ -100,23 +132,35 @@ void main()
     
     vec3 curVertex = vec3(0.0);
     
+    float multiplyFac = 1.0;
     if(faceDir == 0){
         curVertex = verticesUP[gl_VertexID];
+        meshVertexPos = curVertex;
     }
     else if(faceDir == 1){
         curVertex = verticesDOWN[gl_VertexID];
+        //meshVertexPos = curVertex * vec3(multiplyFac, 1.0, multiplyFac);
+        meshVertexPos = curVertex;
     }
     else if(faceDir == 2){
         curVertex = verticesFRONT[gl_VertexID];
+        //meshVertexPos = curVertex * vec3(multiplyFac, multiplyFac, 1.0);
+        meshVertexPos = curVertex;
     }
     else if(faceDir == 3){
         curVertex = verticesBACK[gl_VertexID];
+        //meshVertexPos = curVertex * vec3(multiplyFac, multiplyFac, 1.0);
+        meshVertexPos = curVertex;
     }
     else if(faceDir == 4){
         curVertex = verticesRIGHT[gl_VertexID];
+        //meshVertexPos = curVertex * vec3(1.0, multiplyFac, multiplyFac);
+        meshVertexPos = curVertex;
     }
     else if(faceDir == 5){
         curVertex = verticesLEFT[gl_VertexID];
+        //meshVertexPos = curVertex * vec3(1.0, multiplyFac, multiplyFac);
+        meshVertexPos = curVertex;
     }
 
     curVertex += 0.5;
