@@ -30,13 +30,13 @@ void main() {
 
     mat4 tempMVP = mat4(1.0);
 
-    float scale = 5.0;
+    float scale = 1.0;
     tempMVP[0][0] = scale;
     tempMVP[1][1] = scale;
     tempMVP[2][2] = scale;
 
     //gl_Position = mvp * translationMatrix  * vec4(vertexPosition, 1.0);
-    gl_Position = mvp * tempMVP * vec4(vertexPosition, 1.0);
+    gl_Position = tempMVP * vec4(vertexPosition, 1.0);
     //gl_Position = vec4(vertexPosition, 1.0);
     texCoord = vertexTexCoord;
 }

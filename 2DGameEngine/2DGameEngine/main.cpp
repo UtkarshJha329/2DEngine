@@ -1017,7 +1017,8 @@ int main()
 
         BeginTextureMode(rd2D);
             ClearBackground(RAYWHITE);
-            rlEnableShader(cullingShader.id);
+            
+                rlEnableShader(cullingShader.id);
 
                 rlActiveTextureSlot(bindDepthTextureAtPosition);
                 rlEnableTexture(target.depthColourTexture.id);
@@ -1028,7 +1029,12 @@ int main()
                 //    , megaVertPositions.megaArrayOfAllPositions.data(), megaVertPositions.megaArrayOfAllPositions.size()
                 //    , drawArraysIndirectCommands, drawArraysIndirectCommands.size());
 
-                rlLoadDrawQuad();
+                //rlLoadDrawQuad();
+                BeginMode3D(camera);
+
+                DrawCube(Vector3{ 0,0,0 }, 10, 10, 10, RED);
+
+                EndMode3D();
 
             rlDisableShader();
         EndTextureMode();
