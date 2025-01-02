@@ -600,6 +600,10 @@ int main()
         rlSetUniform(textureLocation, &bindDepthTextureAtPosition, RL_SHADER_UNIFORM_SAMPLER2D, 1);
     rlDisableShader();
 
+    int cutOffDepthLoc = GetShaderLocation(cullingShader, "cutOffDepth");
+    float cutOffDepthValue = 0.25f;
+    SetShaderValue(cullingShader, cutOffDepthLoc, &cutOffDepthValue, SHADER_UNIFORM_FLOAT);
+
     unsigned int chunksGridPosSSBO = rlLoadShaderBuffer(chunksGridCoordinates.size() * sizeof(float3), chunksGridCoordinates.data(), RL_DYNAMIC_DRAW);
 
     while (!WindowShouldClose())
@@ -742,6 +746,16 @@ int main()
             SetShaderValue(instanceShader, lodLevelLoc, &lodScale, SHADER_UNIFORM_FLOAT);
         }
 
+        if (IsKeyPressed(KEY_FOUR)) {
+            cutOffDepthValue += 0.05;
+            SetShaderValue(cullingShader, cutOffDepthLoc, &cutOffDepthValue, SHADER_UNIFORM_FLOAT);
+            std::cout << cutOffDepthValue << std::endl;
+        }
+        if (IsKeyPressed(KEY_THREE)) {
+            cutOffDepthValue -= 0.05;
+            std::cout << cutOffDepthValue << std::endl;
+            SetShaderValue(cullingShader, cutOffDepthLoc, &cutOffDepthValue, SHADER_UNIFORM_FLOAT);
+        }
 
         float diagonalDist = 3 * chunkSize * 1.732f;
 
@@ -1007,6 +1021,8 @@ int main()
 
                 rlActiveTextureSlot(bindDepthTextureAtPosition);
                 rlEnableTexture(target.depthColourTexture.id);
+
+                //rlBindShaderBuffer(chunksGridPosSSBO, 3);
 
                 //DrawMeshMultiInstancedDrawIndirect(renderQuad, screenRenderMaterial
                 //    , megaVertPositions.megaArrayOfAllPositions.data(), megaVertPositions.megaArrayOfAllPositions.size()
