@@ -475,6 +475,10 @@ int main()
     PlaneFacingDir(up, renderQuad);
     renderQuad.instanceVBOID = 0;
 
+    GenerativeMesh cullingRenderQuad = { 0 };
+    PlaneFacingDir(up, cullingRenderQuad);
+    cullingRenderQuad.instanceVBOID = 0;
+
     int indirectBufferVBO = 0;
 
     std::vector<Vector3> renderTraversalOrder;
@@ -605,6 +609,41 @@ int main()
     SetShaderValue(cullingShader, cutOffDepthLoc, &cutOffDepthValue, SHADER_UNIFORM_FLOAT);
 
     unsigned int chunksGridPosSSBO = rlLoadShaderBuffer(chunksGridCoordinates.size() * sizeof(float3), chunksGridCoordinates.data(), RL_DYNAMIC_DRAW);
+
+    std::vector<int> megaArrayOfAllPositions2;
+    std::vector<int> startPositions2;
+    std::vector<int> sizes2;
+    std::vector<DrawArraysIndirectCommand> drawArraysIndirectCommands2;
+
+    for (int i = 0; i < 6; i++)
+    {
+        startPositions2.push_back(megaArrayOfAllPositions2.size());
+        for (int y = 0; y < 3; y++)
+        {
+            for (int x = 0; x < 64; x++)
+            {
+                for (int z = 0; z < 64; z++)
+                {
+                    int largeChunkCentrePos = x << 12;
+                    largeChunkCentrePos = largeChunkCentrePos | y << 6;
+                    largeChunkCentrePos = largeChunkCentrePos | z;
+                    largeChunkCentrePos = largeChunkCentrePos | (i << 19);
+                    largeChunkCentrePos = largeChunkCentrePos | (1 << 22);
+
+                    //std::cout << largeChunkCentrePos << std::endl;
+
+                    megaArrayOfAllPositions2.push_back(largeChunkCentrePos);
+                }
+            }
+        }
+        sizes2.push_back(megaArrayOfAllPositions2.size());
+    }
+
+    for (int i = 0; i < startPositions2.size(); i++)
+    {
+        DrawArraysIndirectCommand curCommand = { 4, sizes2[i], 0, startPositions2[i] };
+        drawArraysIndirectCommands2.push_back(curCommand);
+    }
 
     while (!WindowShouldClose())
     {
@@ -1018,21 +1057,25 @@ int main()
         BeginTextureMode(rd2D);
             ClearBackground(RAYWHITE);
             
-                rlEnableShader(cullingShader.id);
+                rlEnableShader(screenRenderMaterial.shader.id);
+
+                BeginMode3D(camera);
 
                 rlActiveTextureSlot(bindDepthTextureAtPosition);
                 rlEnableTexture(target.depthColourTexture.id);
 
-                //rlBindShaderBuffer(chunksGridPosSSBO, 3);
+                rlBindShaderBuffer(chunksGridPosSSBO, 3);
 
-                //DrawMeshMultiInstancedDrawIndirect(renderQuad, screenRenderMaterial
-                //    , megaVertPositions.megaArrayOfAllPositions.data(), megaVertPositions.megaArrayOfAllPositions.size()
-                //    , drawArraysIndirectCommands, drawArraysIndirectCommands.size());
-
-                //rlLoadDrawQuad();
-                BeginMode3D(camera);
-
-                DrawCube(Vector3{ 0,0,0 }, 10, 10, 10, RED);
+                DrawMeshMultiInstancedDrawIndirect(cullingRenderQuad, screenRenderMaterial
+                    , megaArrayOfAllPositions2.data(), megaArrayOfAllPositions2.size()
+                    , drawArraysIndirectCommands2, drawArraysIndirectCommands2.size()
+                    , false);
+                //for (int i = 0; i < chunksGridCoordinates.size(); i++)
+                //{
+                //    Vector3 chunkPos = Vector3{ chunksGridCoordinates[i].v[0], chunksGridCoordinates[i].v[1], chunksGridCoordinates[i].v[2] };
+                //    chunkPos *= chunkSize;
+                //    DrawCubeWires(chunkPos, 32, 32, 32, BLUE);
+                //}
 
                 EndMode3D();
 

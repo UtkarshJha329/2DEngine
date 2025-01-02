@@ -293,7 +293,7 @@ void DrawMeshInstancedFlattenedPositions(Mesh& genMesh, Material material, const
     //RL_FREE(instanceTransforms);
 }
 
-void DrawMeshMultiInstancedDrawIndirect(GenerativeMesh& genMesh, Material material, const int* instancePositions, int instances, std::vector<DrawArraysIndirectCommand> &commands, unsigned int numCommands)
+void DrawMeshMultiInstancedDrawIndirect(GenerativeMesh& genMesh, Material material, const int* instancePositions, int instances, std::vector<DrawArraysIndirectCommand> &commands, unsigned int numCommands, bool bindTextures = true)
 {
     // Bind shader program
     rlEnableShader(material.shader.id);
@@ -373,23 +373,24 @@ void DrawMeshMultiInstancedDrawIndirect(GenerativeMesh& genMesh, Material materi
 
     //-----------------------------------------------------
 
-    for (int i = 0; i < MAX_MATERIAL_MAPS; i++)
-    {
-        if (material.maps[i].texture.id > 0)
+    if (bindTextures) {
+        for (int i = 0; i < MAX_MATERIAL_MAPS; i++)
         {
-            // Select current shader texture slot
-            rlActiveTextureSlot(i);
+            if (material.maps[i].texture.id > 0)
+            {
+                // Select current shader texture slot
+                rlActiveTextureSlot(i);
 
-            // Enable texture for active slot
-            if ((i == MATERIAL_MAP_IRRADIANCE) ||
-                (i == MATERIAL_MAP_PREFILTER) ||
-                (i == MATERIAL_MAP_CUBEMAP)) rlEnableTextureCubemap(material.maps[i].texture.id);
-            else rlEnableTexture(material.maps[i].texture.id);
+                // Enable texture for active slot
+                if ((i == MATERIAL_MAP_IRRADIANCE) ||
+                    (i == MATERIAL_MAP_PREFILTER) ||
+                    (i == MATERIAL_MAP_CUBEMAP)) rlEnableTextureCubemap(material.maps[i].texture.id);
+                else rlEnableTexture(material.maps[i].texture.id);
 
-            rlSetUniform(material.shader.locs[SHADER_LOC_MAP_DIFFUSE + i], &i, SHADER_UNIFORM_INT, 1);
+                rlSetUniform(material.shader.locs[SHADER_LOC_MAP_DIFFUSE + i], &i, SHADER_UNIFORM_INT, 1);
+            }
         }
     }
-
     // Try binding vertex array objects (VAO)
     // or use VBOs if not possible
     if (!rlEnableVertexArray(genMesh.mesh.vaoId))
@@ -535,19 +536,21 @@ void DrawMeshMultiInstancedDrawIndirect(GenerativeMesh& genMesh, Material materi
         }
     }
 
-    // Unbind all bound texture maps
-    for (int i = 0; i < MAX_MATERIAL_MAPS; i++)
-    {
-        if (material.maps[i].texture.id > 0)
+    if (bindTextures) {
+        // Unbind all bound texture maps
+        for (int i = 0; i < MAX_MATERIAL_MAPS; i++)
         {
-            // Select current shader texture slot
-            rlActiveTextureSlot(i);
+            if (material.maps[i].texture.id > 0)
+            {
+                // Select current shader texture slot
+                rlActiveTextureSlot(i);
 
-            // Disable texture for active slot
-            if ((i == MATERIAL_MAP_IRRADIANCE) ||
-                (i == MATERIAL_MAP_PREFILTER) ||
-                (i == MATERIAL_MAP_CUBEMAP)) rlDisableTextureCubemap();
-            else rlDisableTexture();
+                // Disable texture for active slot
+                if ((i == MATERIAL_MAP_IRRADIANCE) ||
+                    (i == MATERIAL_MAP_PREFILTER) ||
+                    (i == MATERIAL_MAP_CUBEMAP)) rlDisableTextureCubemap();
+                else rlDisableTexture();
+            }
         }
     }
 

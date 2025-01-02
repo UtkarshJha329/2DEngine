@@ -1,6 +1,7 @@
 #version 460 core
 
 in vec2 texCoord;
+flat in float zPos;
 
 layout (location = 0) out vec4 FragColor;
 
@@ -16,17 +17,42 @@ int chunkSize = 32;
 
 void main()
 {
-//    vec4 depth = texture(depthValueTexture, texCoord);
-//
-//    vec3 remappedDepth = vec3(depth.x * totalNumChunksWidth * chunkSize, depth.y * totalNumChunksWidth_Y * chunkSize, depth.z * totalNumChunksWidth * chunkSize);
-//
+
+    vec2 viewport_wh = vec2(1280, 720);
+    //vec2 ndc = (2.0 * gl_FragCoord.xy / viewport_wh) - 1.0;
+    vec2 ndc = (gl_FragCoord.xy / viewport_wh);
+
+    vec2 screenCoord = ndc;
+    //vec3 ndc = gl_FragCoord.xyz / gl_FragCoord.w;
+
+    // Step 2: Convert NDC to screen space coordinates
+    //vec2 screenCoord = (ndc.xy * 0.5 + 0.5) / vec2(1280, 720);
+
+    vec4 depth = texture(depthValueTexture, vec2(screenCoord.x, screenCoord.y));
+
+    vec3 remappedDepth = vec3(depth.x * totalNumChunksWidth, depth.y * totalNumChunksWidth_Y, depth.z * totalNumChunksWidth);
+    remappedDepth = vec3(remappedDepth.x - halfNumChunksWidth, remappedDepth.y, remappedDepth.z - halfNumChunksWidth);
+    remappedDepth = remappedDepth * chunkSize;
+
 //    if(length(vec2(remappedDepth.x, remappedDepth.z)) < cutOffDepth * totalNumChunksWidth * chunkSize){
 //        discard;
 //    }
-//
-//    FragColor = vec4(vec3(depth), 1.0);
 
-    FragColor = vec4(1.0, 0.0, 0.0, 1.0);
+    //length(vec2(remappedDepth.x, remappedDepth.z))
+    if(zPos < length(vec2(remappedDepth.x, remappedDepth.z))){
+        //FragColor = vec4(screenCoord, 0.0, 1.0);
+        //FragColor = vec4(vec3(depth), 1.0);
+        FragColor = vec4(0.0, 1.0, 0.0, 1.0);
+    }
+    else{
+        //FragColor = vec4(screenCoord, 0.0, 1.0);
+        FragColor = vec4(1.0, 0.0, 0.0, 1.0);
+        //FragColor = vec4(vec3(depth), 1.0);
+    }
+
+    //depth = texture(depthValueTexture, texCoord);
+    //FragColor = vec4(vec3(depth), 1.0);
+
     //FragColor = vec4(vec3(0.0), 1.0);
     //FragColor = vec4(vec2(texCoord), 1.0 ,1.0);
 }
