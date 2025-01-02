@@ -30,8 +30,8 @@ void TexCoords(float* texCoords) {
     texCoords[4] = (xTopLeft + (1.0f / (float)numTexturesX));
     texCoords[5] = (yTopLeft + (1.0f / (float)numTexturesY));
 
-    //texCoords[6] = (xTopLeft + (1.0f / (float)numTexturesY));
-    //texCoords[7] = (yTopLeft);
+    texCoords[6] = (xTopLeft + (1.0f / (float)numTexturesY));
+    texCoords[7] = (yTopLeft);
 }
 
 void FaceVerticesTop(float* vertices, float offsetX, float offsetY, float offsetZ) {
@@ -48,9 +48,9 @@ void FaceVerticesTop(float* vertices, float offsetX, float offsetY, float offset
     vertices[7] = (0.5 + offsetY);
     vertices[8] = (-0.5 + offsetZ);
 
-    //vertices[9] = (0.5 + offsetX);
-    //vertices[10] =(0.5 + offsetY);
-    //vertices[11] =(0.5 + offsetZ);
+    vertices[9] = (0.5 + offsetX);
+    vertices[10] =(0.5 + offsetY);
+    vertices[11] =(0.5 + offsetZ);
 }
 
 void FaceVerticesBottom(float* vertices, float offsetX, float offsetY, float offsetZ) {

@@ -453,6 +453,7 @@ int main()
     rlSetClipPlanes(0.1f, farPlaneDistance);
 
     Texture2D textureLoad = LoadTexture("texture_test_small.png");
+    Texture2D textureLoad2 = LoadTexture("texture_test.png");
     SecondRenderTexture target = LoadRenderTextureDepthTex(screenWidth, screenHeight);
 
     std::unordered_map<int, bool> chunkGenerated;
@@ -460,6 +461,7 @@ int main()
     std::vector<std::future<void>> chunkMeshGenThreads;
 
     std::vector<float3> chunkPositions;
+    std::vector<float3> chunksGridCoordinates;
     VertexPositions megaVertPositions;
 
     Vector3 cameraChunkIndex = { (int)camera.position.x / chunkSize, (int)camera.position.y / chunkSize, (int)camera.position.z / chunkSize };
@@ -484,6 +486,7 @@ int main()
         //std::cout << chunkIndex.x << ", " << chunkIndex.y << ", " << chunkIndex.z << std::endl;
         mappedInnerIndexMap[megaVertPositions.InnerIndexFlattened(chunkIndex)] = chunkIndex;
         innerIndexWhereNewMeshNeedsToBeCalculated[megaVertPositions.InnerIndexFlattened(chunkIndex)] = true;
+        chunksGridCoordinates.push_back(float3{ 0, (float)y, 0 });
     }
 
     int curLayerNum = 1;
@@ -497,6 +500,7 @@ int main()
                 //std::cout << chunkIndex.x << ", " << chunkIndex.y << ", " << chunkIndex.z << std::endl;
                 mappedInnerIndexMap[megaVertPositions.InnerIndexFlattened(chunkIndex)] = chunkIndex;
                 innerIndexWhereNewMeshNeedsToBeCalculated[megaVertPositions.InnerIndexFlattened(chunkIndex)] = true;
+                chunksGridCoordinates.push_back(float3{ (float)curLayerNum, (float)y, (float)z });
             }
 
         }
@@ -509,6 +513,7 @@ int main()
                 //std::cout << chunkIndex.x << ", " << chunkIndex.y << ", " << chunkIndex.z << std::endl;
                 mappedInnerIndexMap[megaVertPositions.InnerIndexFlattened(chunkIndex)] = chunkIndex;
                 innerIndexWhereNewMeshNeedsToBeCalculated[megaVertPositions.InnerIndexFlattened(chunkIndex)] = true;
+                chunksGridCoordinates.push_back(float3{ (float)-curLayerNum, (float)y, (float)z });
             }
         }
 
@@ -520,6 +525,7 @@ int main()
                 //std::cout << chunkIndex.x << ", " << chunkIndex.y << ", " << chunkIndex.z << std::endl;
                 mappedInnerIndexMap[megaVertPositions.InnerIndexFlattened(chunkIndex)] = chunkIndex;
                 innerIndexWhereNewMeshNeedsToBeCalculated[megaVertPositions.InnerIndexFlattened(chunkIndex)] = true;
+                chunksGridCoordinates.push_back(float3{ (float)x, (float)y, (float)curLayerNum });
             }
         }
 
@@ -531,6 +537,8 @@ int main()
                 //std::cout << chunkIndex.x << ", " << chunkIndex.y << ", " << chunkIndex.z << std::endl;
                 mappedInnerIndexMap[megaVertPositions.InnerIndexFlattened(chunkIndex)] = chunkIndex;
                 innerIndexWhereNewMeshNeedsToBeCalculated[megaVertPositions.InnerIndexFlattened(chunkIndex)] = true;
+                chunksGridCoordinates.push_back(float3{ (float)x, (float)y, (float)-curLayerNum });
+
             }
         }
         curLayerNum++;
@@ -578,6 +586,22 @@ int main()
     Image chunksIDImage = LoadImageFromTexture(target.secondColourTexture);
     Image chunksDepthImage = LoadImageFromTexture(target.depthColourTexture);
 
+    Shader cullingShader = LoadShader(TextFormat("Shaders/SimpleShaderCullingTest.vert", GLSL_VERSION),
+        TextFormat("Shaders/SimpleShaderCullingTest.frag", GLSL_VERSION));
+    //cullingShader.locs[SHADER_LOC_VECTOR_VIEW] = GetShaderLocation(cullingShader, "viewPosition");
+
+    SecondRenderTexture rd2D = LoadRenderTextureDepthTex(screenWidth, screenHeight);
+    Material screenRenderMaterial = LoadMaterialDefault();
+    screenRenderMaterial.shader = cullingShader;
+
+    const int bindDepthTextureAtPosition = 0;
+    rlEnableShader(cullingShader.id);
+        int textureLocation = rlGetLocationUniform(cullingShader.id, "depthValueTexture");
+        rlSetUniform(textureLocation, &bindDepthTextureAtPosition, RL_SHADER_UNIFORM_SAMPLER2D, 1);
+    rlDisableShader();
+
+    unsigned int chunksGridPosSSBO = rlLoadShaderBuffer(chunksGridCoordinates.size() * sizeof(float3), chunksGridCoordinates.data(), RL_DYNAMIC_DRAW);
+
     while (!WindowShouldClose())
     {
 
@@ -616,7 +640,7 @@ int main()
 
         if (IsKeyPressed(KEY_ZERO)) {
             randValue++;
-            randValue = randValue > 3 ? 0 : randValue;
+            randValue = randValue > 4 ? 0 : randValue;
             SetShaderValue(instanceShader, randValueLoc, &randValue, SHADER_UNIFORM_FLOAT);
         }
 
@@ -977,6 +1001,30 @@ int main()
         }
         EndTextureMode();
 
+        BeginTextureMode(rd2D);
+            ClearBackground(RAYWHITE);
+            rlEnableShader(cullingShader.id);
+
+                rlActiveTextureSlot(bindDepthTextureAtPosition);
+                rlEnableTexture(target.depthColourTexture.id);
+
+                //DrawMeshMultiInstancedDrawIndirect(renderQuad, screenRenderMaterial
+                //    , megaVertPositions.megaArrayOfAllPositions.data(), megaVertPositions.megaArrayOfAllPositions.size()
+                //    , drawArraysIndirectCommands, drawArraysIndirectCommands.size());
+
+                rlLoadDrawQuad();
+
+            rlDisableShader();
+        EndTextureMode();
+
+        //BeginTextureMode(rd2D);
+        //    ClearBackground(RAYWHITE);
+        //    BeginShaderMode(cullingShader);
+        //        SetShaderValueTexture(cullingShader, GetShaderLocation(cullingShader, "depthValueTexture"), target.depthColourTexture);
+        //        DrawTexture(target.depthColourTexture, 100, 100, WHITE);
+        //    EndShaderMode();
+        //EndTextureMode();
+
         BeginDrawing();
             ClearBackground(RAYWHITE);
             if (randValue == 0) {
@@ -991,6 +1039,9 @@ int main()
             else if(randValue == 3) {
                 DrawTextureRec(target.depthColourTexture, Rectangle { 0, 0, (float)screenWidth, (float)-screenHeight }, Vector2 { 0, 0 }, WHITE);
             }
+            else if(randValue == 4) {
+                DrawTextureRec(rd2D.texture, Rectangle { 0, 0, (float)screenWidth, (float)-screenHeight }, Vector2 { 0, 0 }, WHITE);
+            }
             DrawCircle(screenWidth / 2, screenHeight / 2, 1.0f, RED);
             DrawFPS(40, 40);
         EndDrawing();
@@ -998,9 +1049,15 @@ int main()
 
     //rlUnloadShaderBuffer(chunkPosSSBO);
     UnloadRenderTextureDepthTex(target);
+    UnloadRenderTextureDepthTex(rd2D);
+
     rlUnloadVertexBuffer(indirectBufferVBO);
+
     UnloadShader(instanceShader);
+    UnloadShader(cullingShader);
+
     UnloadTexture(textureLoad);
+
     CloseWindow();
 
     Instrumentor::Instance().EndSession();
@@ -1479,7 +1536,7 @@ void PlaneFacingDir(Vector3 dir, GenerativeMesh &curMesh) {
 
     PROFILE_FUNCTION();
 
-    int numVertices = 3;
+    int numVertices = 4;
     curMesh.mesh.vertices = (float*)MemAlloc(numVertices * 3 * sizeof(float));
     curMesh.mesh.texcoords = (float*)MemAlloc(numVertices * 2 * sizeof(float));
     //curMesh.indices = (unsigned short*)MemAlloc(6 * sizeof(unsigned short*));
@@ -1510,7 +1567,7 @@ void PlaneFacingDir(Vector3 dir, GenerativeMesh &curMesh) {
     }
     TexCoords(curMesh.mesh.texcoords);
 
-    curMesh.mesh.triangleCount = 1;
+    curMesh.mesh.triangleCount = 2;
     curMesh.mesh.vertexCount = numVertices;
 
     UploadMesh(&curMesh.mesh, false);
