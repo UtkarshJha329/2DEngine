@@ -2,8 +2,14 @@
 
 in vec2 texCoord;
 flat in float zPos;
+flat in int curChunkFlattenedIndex;
 
 layout (location = 0) out vec4 FragColor;
+
+layout(std430, binding = 4) buffer VisibleChunksBuffer
+{
+    int visibleChunks[];
+};
 
 uniform sampler2D depthValueTexture;
 
@@ -42,11 +48,12 @@ void main()
     if(zPos < length(vec2(remappedDepth.x, remappedDepth.z))){
         //FragColor = vec4(screenCoord, 0.0, 1.0);
         //FragColor = vec4(vec3(depth), 1.0);
-        FragColor = vec4(0.0, 1.0, 0.0, 1.0);
+        //FragColor = vec4(0.0, 1.0, 0.0, 1.0);
+        visibleChunks[curChunkFlattenedIndex] = 1;
     }
     else{
         //FragColor = vec4(screenCoord, 0.0, 1.0);
-        FragColor = vec4(1.0, 0.0, 0.0, 1.0);
+        //FragColor = vec4(1.0, 0.0, 0.0, 1.0);
         //FragColor = vec4(vec3(depth), 1.0);
     }
 

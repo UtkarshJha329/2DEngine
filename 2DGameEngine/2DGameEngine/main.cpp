@@ -439,6 +439,9 @@ std::unordered_map<int, bool> innerIndexWhereNewMeshNeedsToBeCalculated;
 const int screenWidth = 1280;
 const int screenHeight = 720;
 
+std::vector<int> chunksVisibility(totalNumChunks, 0);
+bool once = true;
+
 int main()
 {
     Instrumentor::Instance().BeginSession("Profile");
@@ -645,10 +648,20 @@ int main()
         drawArraysIndirectCommands2.push_back(curCommand);
     }
 
+    for (int i = 0; i < chunksVisibility.size(); i++)
+    {
+        chunksVisibility[i] = 0;
+    }
+
+    bool shouldUpdateOcclusionCulling = true;
+
     while (!WindowShouldClose())
     {
-
         PROFILE_SCOPE("Game Loop");
+
+        if (IsKeyPressed(KEY_ONE)) {
+            shouldUpdateOcclusionCulling = !shouldUpdateOcclusionCulling;
+        }
 
         //std::cout << GetMousePosition().x << ", " << GetMousePosition().y << std::endl;
 
@@ -956,19 +969,20 @@ int main()
 
                             if (renderChunk) {
 
-                                ReadyIndirectDrawListOfDrawableChunksAndFaces(/*renderTraversalOrder[i]*/
-                                    offsetRenderTraversalOrder, curChunkTraversalIndex
-                                    , camera, cameraChunkIndex
-                                    , instanceShader, instancedMaterial
-                                    , megaVertPositions, chunkPositions
-                                    , renderQuad
-                                    , nearPlane
-                                    , farPlane
-                                    , rightPlane
-                                    , leftPlane
-                                    , topPlane
-                                    , bottomPlane);
-
+                                if (chunksVisibility[renderTraversalIndexFlattened] == 1 || once) {
+                                    ReadyIndirectDrawListOfDrawableChunksAndFaces(/*renderTraversalOrder[i]*/
+                                        offsetRenderTraversalOrder, curChunkTraversalIndex
+                                        , camera, cameraChunkIndex
+                                        , instanceShader, instancedMaterial
+                                        , megaVertPositions, chunkPositions
+                                        , renderQuad
+                                        , nearPlane
+                                        , farPlane
+                                        , rightPlane
+                                        , leftPlane
+                                        , topPlane
+                                        , bottomPlane);
+                                }
                                 //std::cout << curChunkTraversalIndex.x << ", " << curChunkTraversalIndex.y << ", " <<curChunkTraversalIndex.z << std::endl;
                             }
                         }
@@ -1051,6 +1065,13 @@ int main()
             //EndDrawing();
             oldCameraChunkPosition = cameraChunkIndex;
             oldCameraPos = camera.position;
+
+            if (shouldUpdateOcclusionCulling) {
+                for (int i = 0; i < chunksVisibility.size(); i++)
+                {
+                    chunksVisibility[i] = 0;
+                }
+            }
         }
         EndTextureMode();
 
@@ -1066,6 +1087,9 @@ int main()
 
                 rlBindShaderBuffer(chunksGridPosSSBO, 3);
 
+                unsigned int chunkVisiibilitySSBO = rlLoadShaderBuffer(chunksVisibility.size() * sizeof(int), chunksVisibility.data(), RL_DYNAMIC_DRAW);
+                rlBindShaderBuffer(chunkVisiibilitySSBO, 4);
+
                 DrawMeshMultiInstancedDrawIndirect(cullingRenderQuad, screenRenderMaterial
                     , megaArrayOfAllPositions2.data(), megaArrayOfAllPositions2.size()
                     , drawArraysIndirectCommands2, drawArraysIndirectCommands2.size()
@@ -1076,6 +1100,29 @@ int main()
                 //    chunkPos *= chunkSize;
                 //    DrawCubeWires(chunkPos, 32, 32, 32, BLUE);
                 //}
+
+                if (shouldUpdateOcclusionCulling) {
+                    rlReadShaderBuffer(chunkVisiibilitySSBO, chunksVisibility.data(), chunksVisibility.size() * sizeof(int), 0);
+                    rlUnloadShaderBuffer(chunkVisiibilitySSBO);
+                }
+
+                if (!shouldUpdateOcclusionCulling) {
+                    //std::cout << "Drawing Debug Occlusion culling frames." << std::endl;
+                    for (int i = 0; i < renderTraversalOrder.size(); i++)
+                    {
+                        int flattenedIndex = megaVertPositions.ChunkFlatIndexWithoutVoxels(renderTraversalOrder[i]);
+
+                        if (chunksVisibility[flattenedIndex] == 1) {
+                            DrawCubeWires(Vector3{ (float)renderTraversalOrder[i].x * chunkSize, (float)renderTraversalOrder[i].y * chunkSize, (float)renderTraversalOrder[i].z * chunkSize }, 32, 32, 32, GREEN);
+                        }
+                        else {
+                            //DrawCubeWires(Vector3{ (float)renderTraversalOrder[i].x * chunkSize, (float)renderTraversalOrder[i].y * chunkSize, (float)renderTraversalOrder[i].z * chunkSize }, 32, 32, 32, RED);
+                        }
+
+                    }
+                }
+
+
 
                 EndMode3D();
 
@@ -1110,6 +1157,8 @@ int main()
             DrawCircle(screenWidth / 2, screenHeight / 2, 1.0f, RED);
             DrawFPS(40, 40);
         EndDrawing();
+
+        once = false;
     }
 
     //rlUnloadShaderBuffer(chunkPosSSBO);
