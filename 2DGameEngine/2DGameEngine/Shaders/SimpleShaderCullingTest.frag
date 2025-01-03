@@ -15,11 +15,11 @@ uniform sampler2D depthValueTexture;
 
 uniform float cutOffDepth;
 
-int halfNumChunksWidth = 32;
-int totalNumChunksWidth = (2 * halfNumChunksWidth) + 1;
-int totalNumChunksWidth_Y = 3;
+uniform int halfNumChunksWidth;
+uniform int totalNumChunksWidth_Y;
+uniform int chunkSize;
 
-int chunkSize = 32;
+int totalNumChunksWidth = (2 * halfNumChunksWidth) + 1;
 
 void main()
 {
@@ -45,15 +45,15 @@ void main()
 //    }
 
     //length(vec2(remappedDepth.x, remappedDepth.z))
-    if(zPos < length(vec2(remappedDepth.x, remappedDepth.z))){
+    if(zPos < length(vec2(remappedDepth.x, remappedDepth.z)) + (32 * 1.732)){
         //FragColor = vec4(screenCoord, 0.0, 1.0);
         //FragColor = vec4(vec3(depth), 1.0);
-        //FragColor = vec4(0.0, 1.0, 0.0, 1.0);
+        FragColor = vec4(0.0, 1.0, 0.0, 1.0);
         visibleChunks[curChunkFlattenedIndex] = 1;
     }
     else{
         //FragColor = vec4(screenCoord, 0.0, 1.0);
-        //FragColor = vec4(1.0, 0.0, 0.0, 1.0);
+        FragColor = vec4(1.0, 0.0, 0.0, 1.0);
         //FragColor = vec4(vec3(depth), 1.0);
     }
 

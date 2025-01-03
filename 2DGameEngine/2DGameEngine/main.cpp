@@ -84,7 +84,6 @@ bool ShouldDrawChunk(Vector3 curChunkPos, Camera camera
 
 static void ReadyIndirectDrawListOfDrawableChunksAndFaces(Vector3 innerChunkIndex, Vector3 drawChunkIndex
                                                         , Camera camera, Vector3 cameraChunkIndex
-                                                        , Shader instanceShader, Material instancedMaterial
                                                         , VertexPositions& megaVertPositions
                                                         , std::vector<float3>& chunkPositions
                                                         , GenerativeMesh& renderQuad
@@ -559,6 +558,29 @@ int main()
     instanceShader.locs[SHADER_LOC_VECTOR_VIEW] = GetShaderLocation(instanceShader, "viewPos");
     instanceShader.locs[SHADER_LOC_MATRIX_MODEL] = GetShaderLocationAttrib(instanceShader, "instanceTransform");
 
+    Shader depthPrePassShader = LoadShader(TextFormat("Shaders/depthPrePass.vert", GLSL_VERSION),
+        TextFormat("Shaders/depthPrePass.frag", GLSL_VERSION));
+    // Get instanceShader locations
+    depthPrePassShader.locs[SHADER_LOC_MATRIX_MVP] = GetShaderLocation(depthPrePassShader, "mvp");
+    depthPrePassShader.locs[SHADER_LOC_VECTOR_VIEW] = GetShaderLocation(depthPrePassShader, "viewPos");
+    depthPrePassShader.locs[SHADER_LOC_MATRIX_MODEL] = GetShaderLocationAttrib(depthPrePassShader, "instanceTransform");
+
+    int depthPrePassNumChunksLoc = GetShaderLocation(depthPrePassShader, "halfNumChunksWidth");
+    float depthPrePassNumChunks = numChunksHalfWidth;
+    SetShaderValue(depthPrePassShader, depthPrePassNumChunksLoc, &depthPrePassNumChunks, SHADER_UNIFORM_FLOAT);
+
+    int depthPrePassCameraPosLoc = GetShaderLocation(depthPrePassShader, "cameraPos");
+    float depthPrePassCameraPos[3] = { camera.position.x, camera.position.y, camera.position.z };
+    SetShaderValue(depthPrePassShader, depthPrePassCameraPosLoc, depthPrePassCameraPos, SHADER_UNIFORM_VEC3);
+
+    float randValue = 1.0f;
+    int depthPrePassRandValueLoc = GetShaderLocation(depthPrePassShader, "switchColours");
+    SetShaderValue(depthPrePassShader, depthPrePassRandValueLoc, &randValue, SHADER_UNIFORM_FLOAT);
+
+    int depthPrePassNumChunksPerLodLoc = GetShaderLocation(depthPrePassShader, "numChunksPerLOD");
+    float numChunksPerLod = lodLevelOffset;
+    SetShaderValue(depthPrePassShader, depthPrePassNumChunksPerLodLoc, &numChunksPerLod, SHADER_UNIFORM_FLOAT);
+
     // Set instanceShader value: ambient light level
     //int ambientLoc = GetShaderLocation(instanceShader, "ambient");
     //float ambientValue[4] = { 0.2f, 0.2f, 0.2f, 1.0f };
@@ -567,10 +589,13 @@ int main()
     Material instancedMaterial = LoadMaterialDefault();
     instancedMaterial.shader = instanceShader;
     instancedMaterial.maps[MATERIAL_MAP_DIFFUSE].texture = textureLoad;
+
+    Material depthPreaPassMaterial = LoadMaterialDefault();
+    depthPreaPassMaterial.shader = depthPrePassShader;
+    depthPreaPassMaterial.maps[MATERIAL_MAP_DIFFUSE].texture = textureLoad;
     
     DisableCursor();
 
-    float randValue = 1.0f;
     int randValueLoc = GetShaderLocation(instanceShader, "switchColours");
     SetShaderValue(instanceShader, randValueLoc, &randValue, SHADER_UNIFORM_FLOAT);
 
@@ -579,7 +604,6 @@ int main()
     SetShaderValue(instanceShader, lodLevelLoc, &lodScale, SHADER_UNIFORM_FLOAT);
 
     int numChunksPerLodLoc = GetShaderLocation(instanceShader, "numChunksPerLOD");
-    float numChunksPerLod = lodLevelOffset;
     SetShaderValue(instanceShader, numChunksPerLodLoc, &numChunksPerLod, SHADER_UNIFORM_FLOAT);
 
     int numChunksLoc = GetShaderLocation(instanceShader, "halfNumChunksWidth");
@@ -593,23 +617,40 @@ int main()
     Image chunksIDImage = LoadImageFromTexture(target.secondColourTexture);
     Image chunksDepthImage = LoadImageFromTexture(target.depthColourTexture);
 
-    Shader cullingShader = LoadShader(TextFormat("Shaders/SimpleShaderCullingTest.vert", GLSL_VERSION),
-        TextFormat("Shaders/SimpleShaderCullingTest.frag", GLSL_VERSION));
-    //cullingShader.locs[SHADER_LOC_VECTOR_VIEW] = GetShaderLocation(cullingShader, "viewPosition");
+    //Shader cullingShader = LoadShader(TextFormat("Shaders/SimpleShaderCullingTest.vert", GLSL_VERSION),
+    //    TextFormat("Shaders/SimpleShaderCullingTest.frag", GLSL_VERSION));
+    ////cullingShader.locs[SHADER_LOC_VECTOR_VIEW] = GetShaderLocation(cullingShader, "viewPosition");
 
-    SecondRenderTexture rd2D = LoadRenderTextureDepthTex(screenWidth, screenHeight);
-    Material screenRenderMaterial = LoadMaterialDefault();
-    screenRenderMaterial.shader = cullingShader;
+    //int cameraPosLoc2 = GetShaderLocation(cullingShader, "cameraPos");
+    //SetShaderValue(cullingShader, cameraPosLoc2, cameraPos, SHADER_UNIFORM_VEC3);
 
-    const int bindDepthTextureAtPosition = 0;
-    rlEnableShader(cullingShader.id);
-        int textureLocation = rlGetLocationUniform(cullingShader.id, "depthValueTexture");
-        rlSetUniform(textureLocation, &bindDepthTextureAtPosition, RL_SHADER_UNIFORM_SAMPLER2D, 1);
-    rlDisableShader();
+    //int cutOffDepthLoc = GetShaderLocation(cullingShader, "cutOffDepth");
+    //float cutOffDepthValue = 0.25f;
+    //SetShaderValue(cullingShader, cutOffDepthLoc, &cutOffDepthValue, SHADER_UNIFORM_FLOAT);
 
-    int cutOffDepthLoc = GetShaderLocation(cullingShader, "cutOffDepth");
-    float cutOffDepthValue = 0.25f;
-    SetShaderValue(cullingShader, cutOffDepthLoc, &cutOffDepthValue, SHADER_UNIFORM_FLOAT);
+    //int halfNumChunksWidthLoc = GetShaderLocation(cullingShader, "halfNumChunksWidth");
+    //SetShaderValue(cullingShader, halfNumChunksWidthLoc, &numChunksHalfWidth, SHADER_UNIFORM_FLOAT);
+
+    //int numChunksWidthYLoc = GetShaderLocation(cullingShader, "halfNumChunksWidth_Y");
+    //SetShaderValue(cullingShader, numChunksWidthYLoc, &numChunksFullWidth_Y, SHADER_UNIFORM_FLOAT);
+
+    //int chunkSizeLoc = GetShaderLocation(cullingShader, "chunkSize");
+    //SetShaderValue(cullingShader, chunkSizeLoc, &chunkSize, SHADER_UNIFORM_FLOAT);
+
+
+    //SecondRenderTexture rd2D = LoadRenderTextureDepthTex(screenWidth, screenHeight);
+    //Material screenRenderMaterial = LoadMaterialDefault();
+    //screenRenderMaterial.shader = cullingShader;
+
+    //const int bindDepthTextureAtPosition = 0;
+    //rlEnableShader(cullingShader.id);
+    //    int textureLocation = rlGetLocationUniform(cullingShader.id, "depthValueTexture");
+    //    rlSetUniform(textureLocation, &bindDepthTextureAtPosition, RL_SHADER_UNIFORM_SAMPLER2D, 1);
+    //rlDisableShader();
+
+    //int cutOffDepthLoc = GetShaderLocation(cullingShader, "cutOffDepth");
+    //float cutOffDepthValue = 0.25f;
+    //SetShaderValue(cullingShader, cutOffDepthLoc, &cutOffDepthValue, SHADER_UNIFORM_FLOAT);
 
     unsigned int chunksGridPosSSBO = rlLoadShaderBuffer(chunksGridCoordinates.size() * sizeof(float3), chunksGridCoordinates.data(), RL_DYNAMIC_DRAW);
 
@@ -623,9 +664,9 @@ int main()
         startPositions2.push_back(megaArrayOfAllPositions2.size());
         for (int y = 0; y < 3; y++)
         {
-            for (int x = 0; x < 64; x++)
+            for (int x = 0; x < numChunksFullWidth; x++)
             {
-                for (int z = 0; z < 64; z++)
+                for (int z = 0; z < numChunksFullWidth; z++)
                 {
                     int largeChunkCentrePos = x << 12;
                     largeChunkCentrePos = largeChunkCentrePos | y << 6;
@@ -694,10 +735,19 @@ int main()
         cameraPos[2] = camera.position.z;
         SetShaderValue(instanceShader, cameraPosLoc, cameraPos, SHADER_UNIFORM_VEC3);
 
+        depthPrePassCameraPos[0] = camera.position.x;
+        depthPrePassCameraPos[1] = camera.position.y;
+        depthPrePassCameraPos[2] = camera.position.z;
+        SetShaderValue(depthPrePassShader, depthPrePassCameraPosLoc, depthPrePassCameraPos, SHADER_UNIFORM_VEC3);
+
+        //SetShaderValue(cullingShader, cameraPosLoc2, cameraPos, SHADER_UNIFORM_VEC3);
+
         if (IsKeyPressed(KEY_ZERO)) {
             randValue++;
-            randValue = randValue > 4 ? 0 : randValue;
+            randValue = randValue > 3 ? 0 : randValue;
             SetShaderValue(instanceShader, randValueLoc, &randValue, SHADER_UNIFORM_FLOAT);
+            SetShaderValue(depthPrePassShader, depthPrePassRandValueLoc, &randValue, SHADER_UNIFORM_FLOAT);
+            //std::cout << randValue << std::endl;
         }
 
         UpdateCamera(&camera, CAMERA_FREE);
@@ -798,16 +848,16 @@ int main()
             SetShaderValue(instanceShader, lodLevelLoc, &lodScale, SHADER_UNIFORM_FLOAT);
         }
 
-        if (IsKeyPressed(KEY_FOUR)) {
-            cutOffDepthValue += 0.05;
-            SetShaderValue(cullingShader, cutOffDepthLoc, &cutOffDepthValue, SHADER_UNIFORM_FLOAT);
-            std::cout << cutOffDepthValue << std::endl;
-        }
-        if (IsKeyPressed(KEY_THREE)) {
-            cutOffDepthValue -= 0.05;
-            std::cout << cutOffDepthValue << std::endl;
-            SetShaderValue(cullingShader, cutOffDepthLoc, &cutOffDepthValue, SHADER_UNIFORM_FLOAT);
-        }
+        //if (IsKeyPressed(KEY_FOUR)) {
+        //    cutOffDepthValue += 0.05;
+        //    SetShaderValue(cullingShader, cutOffDepthLoc, &cutOffDepthValue, SHADER_UNIFORM_FLOAT);
+        //    std::cout << cutOffDepthValue << std::endl;
+        //}
+        //if (IsKeyPressed(KEY_THREE)) {
+        //    cutOffDepthValue -= 0.05;
+        //    std::cout << cutOffDepthValue << std::endl;
+        //    SetShaderValue(cullingShader, cutOffDepthLoc, &cutOffDepthValue, SHADER_UNIFORM_FLOAT);
+        //}
 
         float diagonalDist = 3 * chunkSize * 1.732f;
 
@@ -969,11 +1019,10 @@ int main()
 
                             if (renderChunk) {
 
-                                if (chunksVisibility[renderTraversalIndexFlattened] == 1 || once) {
+                                if (/*chunksVisibility[renderTraversalIndexFlattened] == 1 || once*/true) {
                                     ReadyIndirectDrawListOfDrawableChunksAndFaces(/*renderTraversalOrder[i]*/
                                         offsetRenderTraversalOrder, curChunkTraversalIndex
                                         , camera, cameraChunkIndex
-                                        , instanceShader, instancedMaterial
                                         , megaVertPositions, chunkPositions
                                         , renderQuad
                                         , nearPlane
@@ -991,6 +1040,9 @@ int main()
                     }
                     unsigned int chunkPosSSBO = rlLoadShaderBuffer(chunkPositions.size() * sizeof(float3), chunkPositions.data(), RL_DYNAMIC_DRAW);
                     rlBindShaderBuffer(chunkPosSSBO, 3);
+
+                    unsigned int chunkVisiibilitySSBO = rlLoadShaderBuffer(chunksVisibility.size() * sizeof(int), chunksVisibility.data(), RL_DYNAMIC_DRAW);
+                    rlBindShaderBuffer(chunkVisiibilitySSBO, 4);
 
                     //OPTIMISE!!!!
                     if ((chunkBeingGeneratedCount == 0 && chunksChanged) || IsKeyPressed(KEY_U)) {
@@ -1037,9 +1089,30 @@ int main()
                         chunkUpdatedVoxelPositionInBigArrayMappedToChunkPositionInArray.clear();
                     }
 
+                    //DrawMeshMultiInstancedDrawIndirect(renderQuad, instancedMaterial
+                    //    , megaVertPositions.megaArrayOfAllPositions.data(), megaVertPositions.megaArrayOfAllPositions.size()
+                    //    , drawArraysIndirectCommands, drawArraysIndirectCommands.size());
+
+                    //DrawMeshMultiInstancedDrawIndirect(renderQuad, depthPreaPassMaterial
+                    //    , megaVertPositions.megaArrayOfAllPositions.data(), megaVertPositions.megaArrayOfAllPositions.size()
+                    //    , drawArraysIndirectCommands, drawArraysIndirectCommands.size());
+
+                    //rlSetDepthFuncToLess();
+                    //rlColorMask(false, false, false, false);
+
+                    //DrawMeshMultiInstancedDrawIndirect(renderQuad, depthPreaPassMaterial
+                    //    , megaVertPositions.megaArrayOfAllPositions.data(), megaVertPositions.megaArrayOfAllPositions.size()
+                    //    , drawArraysIndirectCommands, drawArraysIndirectCommands.size());
+
+                    //rlSetDepthFuncToEqual();
+                    //rlColorMask(true, true, true, true);
+
                     DrawMeshMultiInstancedDrawIndirect(renderQuad, instancedMaterial
                         , megaVertPositions.megaArrayOfAllPositions.data(), megaVertPositions.megaArrayOfAllPositions.size()
                         , drawArraysIndirectCommands, drawArraysIndirectCommands.size());
+
+                    //rlSetDepthFuncToLess();
+
                     rlUnloadShaderBuffer(chunkPosSSBO);
                 }
             }
@@ -1065,69 +1138,62 @@ int main()
             //EndDrawing();
             oldCameraChunkPosition = cameraChunkIndex;
             oldCameraPos = camera.position;
-
-            if (shouldUpdateOcclusionCulling) {
-                for (int i = 0; i < chunksVisibility.size(); i++)
-                {
-                    chunksVisibility[i] = 0;
-                }
-            }
         }
         EndTextureMode();
 
-        BeginTextureMode(rd2D);
-            ClearBackground(RAYWHITE);
-            
-                rlEnableShader(screenRenderMaterial.shader.id);
+        //BeginTextureMode(rd2D);
+        //    ClearBackground(RAYWHITE);
+        //    
+        //        rlEnableShader(screenRenderMaterial.shader.id);
 
-                BeginMode3D(camera);
+        //        BeginMode3D(camera);
 
-                rlActiveTextureSlot(bindDepthTextureAtPosition);
-                rlEnableTexture(target.depthColourTexture.id);
+        //        rlActiveTextureSlot(bindDepthTextureAtPosition);
+        //        rlEnableTexture(target.depthColourTexture.id);
 
-                rlBindShaderBuffer(chunksGridPosSSBO, 3);
+        //        rlBindShaderBuffer(chunksGridPosSSBO, 3);
 
-                unsigned int chunkVisiibilitySSBO = rlLoadShaderBuffer(chunksVisibility.size() * sizeof(int), chunksVisibility.data(), RL_DYNAMIC_DRAW);
-                rlBindShaderBuffer(chunkVisiibilitySSBO, 4);
+        //        unsigned int chunkVisiibilitySSBO = rlLoadShaderBuffer(chunksVisibility.size() * sizeof(int), chunksVisibility.data(), RL_DYNAMIC_DRAW);
+        //        rlBindShaderBuffer(chunkVisiibilitySSBO, 4);
 
-                DrawMeshMultiInstancedDrawIndirect(cullingRenderQuad, screenRenderMaterial
-                    , megaArrayOfAllPositions2.data(), megaArrayOfAllPositions2.size()
-                    , drawArraysIndirectCommands2, drawArraysIndirectCommands2.size()
-                    , false);
-                //for (int i = 0; i < chunksGridCoordinates.size(); i++)
-                //{
-                //    Vector3 chunkPos = Vector3{ chunksGridCoordinates[i].v[0], chunksGridCoordinates[i].v[1], chunksGridCoordinates[i].v[2] };
-                //    chunkPos *= chunkSize;
-                //    DrawCubeWires(chunkPos, 32, 32, 32, BLUE);
-                //}
+        //        DrawMeshMultiInstancedDrawIndirect(cullingRenderQuad, screenRenderMaterial
+        //            , megaArrayOfAllPositions2.data(), megaArrayOfAllPositions2.size()
+        //            , drawArraysIndirectCommands2, drawArraysIndirectCommands2.size()
+        //            , false);
 
-                if (shouldUpdateOcclusionCulling) {
-                    rlReadShaderBuffer(chunkVisiibilitySSBO, chunksVisibility.data(), chunksVisibility.size() * sizeof(int), 0);
-                    rlUnloadShaderBuffer(chunkVisiibilitySSBO);
-                }
+        //        if (shouldUpdateOcclusionCulling) {
+        //            for (int i = 0; i < chunksVisibility.size(); i++)
+        //            {
+        //                chunksVisibility[i] = 0;
+        //            }
 
-                if (!shouldUpdateOcclusionCulling) {
-                    //std::cout << "Drawing Debug Occlusion culling frames." << std::endl;
-                    for (int i = 0; i < renderTraversalOrder.size(); i++)
-                    {
-                        int flattenedIndex = megaVertPositions.ChunkFlatIndexWithoutVoxels(renderTraversalOrder[i]);
+        //            rlReadShaderBuffer(chunkVisiibilitySSBO, chunksVisibility.data(), chunksVisibility.size() * sizeof(int), 0);
+        //            rlUnloadShaderBuffer(chunkVisiibilitySSBO);
+        //        }
 
-                        if (chunksVisibility[flattenedIndex] == 1) {
-                            DrawCubeWires(Vector3{ (float)renderTraversalOrder[i].x * chunkSize, (float)renderTraversalOrder[i].y * chunkSize, (float)renderTraversalOrder[i].z * chunkSize }, 32, 32, 32, GREEN);
-                        }
-                        else {
-                            //DrawCubeWires(Vector3{ (float)renderTraversalOrder[i].x * chunkSize, (float)renderTraversalOrder[i].y * chunkSize, (float)renderTraversalOrder[i].z * chunkSize }, 32, 32, 32, RED);
-                        }
+        //        //if (!shouldUpdateOcclusionCulling) {
+        //        //    //std::cout << "Drawing Debug Occlusion culling frames." << std::endl;
+        //        //    for (int i = 0; i < renderTraversalOrder.size(); i++)
+        //        //    {
+        //        //        int flattenedIndex = megaVertPositions.ChunkFlatIndexWithoutVoxels(renderTraversalOrder[i]);
 
-                    }
-                }
+        //        //        if (chunksVisibility[flattenedIndex] == 1) {
+        //        //            float drawScale = 2;
+        //        //            DrawCubeWires(Vector3{ (float)renderTraversalOrder[i].x * chunkSize, (float)renderTraversalOrder[i].y * chunkSize, (float)renderTraversalOrder[i].z * chunkSize }, drawScale, drawScale, drawScale, GREEN);
+        //        //        }
+        //        //        else {
+        //        //            //DrawCubeWires(Vector3{ (float)renderTraversalOrder[i].x * chunkSize, (float)renderTraversalOrder[i].y * chunkSize, (float)renderTraversalOrder[i].z * chunkSize }, 32, 32, 32, RED);
+        //        //        }
+
+        //        //    }
+        //        //}
 
 
 
-                EndMode3D();
+        //        EndMode3D();
 
-            rlDisableShader();
-        EndTextureMode();
+        //    rlDisableShader();
+        //EndTextureMode();
 
         //BeginTextureMode(rd2D);
         //    ClearBackground(RAYWHITE);
@@ -1152,7 +1218,7 @@ int main()
                 DrawTextureRec(target.depthColourTexture, Rectangle { 0, 0, (float)screenWidth, (float)-screenHeight }, Vector2 { 0, 0 }, WHITE);
             }
             else if(randValue == 4) {
-                DrawTextureRec(rd2D.texture, Rectangle { 0, 0, (float)screenWidth, (float)-screenHeight }, Vector2 { 0, 0 }, WHITE);
+                //DrawTextureRec(rd2D.texture, Rectangle { 0, 0, (float)screenWidth, (float)-screenHeight }, Vector2 { 0, 0 }, WHITE);
             }
             DrawCircle(screenWidth / 2, screenHeight / 2, 1.0f, RED);
             DrawFPS(40, 40);
@@ -1163,12 +1229,12 @@ int main()
 
     //rlUnloadShaderBuffer(chunkPosSSBO);
     UnloadRenderTextureDepthTex(target);
-    UnloadRenderTextureDepthTex(rd2D);
+    //UnloadRenderTextureDepthTex(rd2D);
 
     rlUnloadVertexBuffer(indirectBufferVBO);
 
     UnloadShader(instanceShader);
-    UnloadShader(cullingShader);
+    //UnloadShader(cullingShader);
 
     UnloadTexture(textureLoad);
 
@@ -1181,7 +1247,6 @@ int main()
 
 static void ReadyIndirectDrawListOfDrawableChunksAndFaces(Vector3 innerChunkIndex, Vector3 drawChunkIndex
     , Camera camera, Vector3 cameraChunkIndex
-    , Shader instanceShader, Material instancedMaterial
     , VertexPositions& megaVertPositions
     , std::vector<float3>& chunkPositions
     , GenerativeMesh& renderQuad

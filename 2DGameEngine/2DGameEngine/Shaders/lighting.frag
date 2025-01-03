@@ -22,6 +22,11 @@ layout (location = 2) out vec4 depthTarget;
 
 // NOTE: Add here your custom variables
 
+layout(std430, binding = 4) buffer VisibleChunksBuffer
+{
+    int visibleChunks[];
+};
+
 uniform vec4 ambient;
 //uniform vec3 viewPos;
 uniform float switchColours;
@@ -83,6 +88,20 @@ void main()
     vec3 relChunkCoordsAbs = vec3(abs(relChunkPos.x) / chunkSize, relChunkPos.y / chunkSize, abs(relChunkPos.z) / chunkSize);
     vec3 relChunkCoords = vec3((relChunkPos.x / chunkSize) + halfNumChunksWidth, relChunkPos.y / chunkSize, (relChunkPos.z / chunkSize) + halfNumChunksWidth);
     //float totalNumChunksPerLOD = numChunksPerLOD * 2;
+
+//    if(switchColours == 0){
+//        int flattenedChunkIndex = int(relChunkCoords.y * totalNumChunksWidth * totalNumChunksWidth + relChunkCoords.z * totalNumChunksWidth + relChunkCoords.x);
+//        if(visibleChunks[flattenedChunkIndex] == 1){
+//            finalColor = vec4(0.0, 1.0, 0.0, 1.0);
+//        }
+//        else{
+//            finalColor = vec4(1.0, 0.0, 0.0, 1.0);
+//        }
+//    }
+
+    if(switchColours == 0){
+        finalColor = vec4(vec3(relChunkCoords.x / totalNumChunksWidth, relChunkCoords.y / totalNumChunksWidth_Y, relChunkCoords.z / totalNumChunksWidth), 1.0);
+    }
 
     if(switchColours == 1){
         //vec3 mappedChunkPos = vec3(mod(chunkPos.x, numChunks), mod(chunkPos.y, numChunksY), mod(chunkPos.z, numChunks));

@@ -1,47 +1,3 @@
-//#version 460 core
-//
-//#extension GL_ARB_shader_draw_parameters: enable
-//
-//layout (location = 0) in vec3 vertexPosition;
-//layout (location = 1) in vec2 vertexTexCoord;
-//
-//layout (location = 3) in int instancePosition;
-//
-//// Input uniform values
-//uniform mat4 mvp;
-//
-//struct Position{
-//    float x, y, z;
-//};
-//
-//layout(std430, binding = 3) buffer ChunkPositionBuffer
-//{
-//    Position chunkPosition[];
-//};
-//
-//out vec2 texCoord;
-//
-//void main() {
-//
-//    //vec3 curPos = vec3(chunkPosition[gl_DrawIDARB].x, chunkPosition[gl_DrawIDARB].y, chunkPosition[gl_DrawIDARB].z);
-//    vec3 curPos = vec3((instancePosition >> 10) & 31, (instancePosition >> 5) & 31, (instancePosition) & 31);
-//
-//    mat4 translationMatrix = mat4(1.0);  // Identity matrix
-//    translationMatrix[3] = vec4(curPos, 1.0);
-//
-//    mat4 tempMVP = mat4(1.0);
-//
-//    float scale = 1.0;
-//    tempMVP[0][0] = scale;
-//    tempMVP[1][1] = scale;
-//    tempMVP[2][2] = scale;
-//
-//    //gl_Position = mvp * translationMatrix  * vec4(vertexPosition, 1.0);
-//    gl_Position = tempMVP * vec4(vertexPosition, 1.0);
-//    //gl_Position = vec4(vertexPosition, 1.0);
-//    texCoord = vertexTexCoord;
-//}
-
 #version 460
 
 #extension GL_ARB_shader_draw_parameters: enable
@@ -74,12 +30,10 @@ out vec3 fragPosition;
 out vec2 fragTexCoord;
 out vec4 fragColor;
 out vec3 fragNormal;
+out int faceDir;
 out vec3 chunkPos;
 out vec3 relChunkPos;
 out vec3 innerVoxelPos;
-flat out float zPos;
-out vec2 texCoord;
-flat out int curChunkFlattenedIndex;
 //out vec3 meshVertexPos;
 
 // NOTE: Add here your custom variables
@@ -117,34 +71,60 @@ vec3 verticesLEFT[4] = vec3[4]( vec3(-0.5, -0.5, -0.5),
                                 vec3(-0.5, 0.5, -0.5),
                                 vec3(-0.5, 0.5, 0.5));
 
+//vec3 verticesUP[4] = vec3[4]( vec3(-0.5, 0.5, -0.5), 
+//                              vec3(-0.5, 0.5, 2.0),
+//                              vec3(2.0, 0.5, -0.5),
+//                              vec3(-0.5, 0.5, -0.5));
+//
+//vec3 verticesDOWN[4] = vec3[4]( vec3(0.5, -0.5, -0.5),
+//                                vec3(0.5, -0.5, 0.5), 
+//                                vec3(-0.5, -0.5, -0.5),
+//                                vec3(-0.5, -0.5, 0.5));
+//
+//
+//vec3 verticesFRONT[4] = vec3[4]( vec3(0.5, -0.5, 0.5),
+//                                vec3(0.5, 2.0, 0.5),  
+//                                vec3(-2.0, -0.5, 0.5),
+//                                vec3(0.5, -0.5, 0.5));
+//
+//vec3 verticesBACK[4] = vec3[4]( vec3(-0.5, -0.5, -0.5),
+//                                vec3(-0.5, 2.0, -0.5),
+//                                vec3(2.0, -0.5, -0.5),
+//                                vec3(-0.5, -0.5, -0.5));
+//
+//vec3 verticesRIGHT[4] = vec3[4]( vec3(0.5, 0.5, -0.5),
+//                                vec3(0.5, 0.5, 2.0),  
+//                                vec3(0.5, -2.0, -0.5),
+//                                vec3(0.5, 0.5, -0.5));
+//
+//vec3 verticesLEFT[4] = vec3[4]( vec3(-0.5, -0.5, -0.5),
+//                                vec3(-0.5, -0.5, 2.0),
+//                                vec3(-0.5, 2.0, -0.5),
+//                                vec3(-0.5, -0.5, -0.5));
+
+uniform float lodScale;
+
+float curScale;
 
 int xPosInPackedInt = 10;
 int yPosInPackedInt = 5;
 int zPosInPackedInt = 0;
 
-int faceDirPosInPackedInt = 19;
+int faceDirPosInPackedInt = 16;
 int curScalePosInPackedInt = 19;
-
-int halfNumChunksWidth = 3;
-int totalNumChunksFullWidth = (2 * halfNumChunksWidth) + 1;
-int chunkSize = 32;
 
 void main()
 {
-    vec3 curPos = vec3((instancePosition >> 12) & 63, (instancePosition >> 6) & 63, (instancePosition) & 63);
+    vec3 curVoxelPosUncompressed = vec3((instancePosition >> xPosInPackedInt) & 31, (instancePosition >> yPosInPackedInt) & 31, (instancePosition >> zPosInPackedInt) & 31);
+    faceDir = (instancePosition >> faceDirPosInPackedInt) & 7;
 
-    curChunkFlattenedIndex = int(curPos.y) * totalNumChunksFullWidth * totalNumChunksFullWidth + int(curPos.z) * totalNumChunksFullWidth + int(curPos.x);
+    curScale = (instancePosition >> curScalePosInPackedInt) & 31;
 
-    curPos = curPos - vec3(halfNumChunksWidth, 0, halfNumChunksWidth);
-    curPos *= chunkSize;
+    chunkPos = vec3(chunkPosition[gl_DrawIDARB].x, chunkPosition[gl_DrawIDARB].y, chunkPosition[gl_DrawIDARB].z);
+    relChunkPos = vec3(chunkPos.x - cameraPos.x, chunkPos.y, chunkPos.z - cameraPos.z);
 
-    zPos = length(vec2(abs(curPos.x), abs(curPos.z)));
-
-    curPos += vec3(cameraPos.x, 0, cameraPos.z);
-
-    int faceDir = (instancePosition >> faceDirPosInPackedInt) & 7;
-    //float scale = (instancePosition >> 22) & 31;
-    float scale = 1;
+    vec3 curPos = vec3(chunkPosition[gl_DrawIDARB].x, chunkPosition[gl_DrawIDARB].y, chunkPosition[gl_DrawIDARB].z) + curVoxelPosUncompressed;
+    innerVoxelPos = curVoxelPosUncompressed;
 
     //vec3 curPos = chunkPosition + curVoxelPos;
     mat4 translationMatrix = mat4(1.0);  // Identity matrix
@@ -173,11 +153,10 @@ void main()
     }
 
     curVertex += 0.5;
-    curVertex *= scale;
+    curVertex *= curScale;
 
     fragPosition = vec3(translationMatrix * vec4(curVertex, 1.0));
     fragTexCoord = vertexTexCoord;
-    texCoord = vertexTexCoord;
     //fragColor = vertexColor;
     fragNormal = normalize(vec3(matNormal * vec4(curVertex, 1.0)));
 
