@@ -16,7 +16,7 @@ uniform sampler2D depthValueTexture;
 
 uniform float cutOffDepth;
 
-int halfNumChunksWidth = 32;
+int halfNumChunksWidth = 80;
 int totalNumChunksWidth = (2 * halfNumChunksWidth) + 1;
 int totalNumChunksWidth_Y = 3;
 
@@ -46,13 +46,14 @@ void main()
 //    }
 
     //length(vec2(remappedDepth.x, remappedDepth.z))
-    if(zPos < length(vec2(remappedDepth.x, remappedDepth.z))){
-        //FragColor = vec4(screenCoord, 0.0, 1.0);
-        //FragColor = vec4(vec3(depth), 1.0);
-        FragColor = vec4(0.0, 1.0, 0.0, 1.0);
-        chunksVisibility[flattenedChunkIndex] = 2;
-    }
-    else if(zPos < length(vec2(remappedDepth.x, remappedDepth.z)) + (1.713 * 32)){
+//    if(zPos < length(vec2(remappedDepth.x, remappedDepth.z))){
+//        //FragColor = vec4(screenCoord, 0.0, 1.0);
+//        //FragColor = vec4(vec3(depth), 1.0);
+//        FragColor = vec4(0.0, 1.0, 0.0, 1.0);
+//        //chunksVisibility[flattenedChunkIndex] = 2;
+//    }
+//    else 
+    if(zPos <= length(vec2(remappedDepth.x, remappedDepth.z)) + (1.713 * 32)){
         //FragColor = vec4(screenCoord, 0.0, 1.0);
         //FragColor = vec4(vec3(depth), 1.0);
         FragColor = vec4(0.0, 0.0, 1.0, 1.0);
@@ -60,8 +61,9 @@ void main()
     }
     else{
         //FragColor = vec4(screenCoord, 0.0, 1.0);
-        //FragColor = vec4(1.0, 0.0, 0.0, 1.0);
+        FragColor = vec4(1.0, 0.0, 0.0, 1.0);
         //FragColor = vec4(vec3(depth), 1.0);
+        //chunksVisibility[flattenedChunkIndex] = 0;
     }
 
     //depth = texture(depthValueTexture, texCoord);

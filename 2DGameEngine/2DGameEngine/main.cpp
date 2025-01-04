@@ -93,7 +93,9 @@ static void ReadyIndirectDrawListOfDrawableChunksAndFaces(Vector3 innerChunkInde
                                                         , Plane& rightPlane
                                                         , Plane& leftPlane
                                                         , Plane& topPlane
-                                                        , Plane& bottomPlane);
+                                                        , Plane& bottomPlane
+                                                        , int& numChunksDrawn
+                                                        , int& numChunksDrawnWithoutFrustum);
 
 static std::vector<int> chunkUpdatedVoxelPositionInBigArrayMappedToChunkPositionInArray;
 
@@ -468,7 +470,7 @@ int main()
 
     for (int i = 0; i < chunkVisibility.size(); i++)
     {
-        chunkVisibility[i] = 0;
+        chunkVisibility[i] = 1;
     }
 
     Vector3 cameraChunkIndex = { (int)camera.position.x / chunkSize, (int)camera.position.y / chunkSize, (int)camera.position.z / chunkSize };
@@ -590,6 +592,10 @@ int main()
     float numChunks = numChunksHalfWidth;
     SetShaderValue(instanceShader, numChunksLoc, &numChunks, SHADER_UNIFORM_FLOAT);
 
+    int renderAllLoc = GetShaderLocation(instanceShader, "renderAll");
+    float renderAllValue = 1;
+    SetShaderValue(instanceShader, renderAllLoc, &renderAllValue, SHADER_UNIFORM_FLOAT);
+
     int cameraPosLoc = GetShaderLocation(instanceShader, "cameraPos");
     float cameraPos[3] = {camera.position.x, camera.position.y, camera.position.z};
     SetShaderValue(instanceShader, cameraPosLoc, cameraPos, SHADER_UNIFORM_VEC3);
@@ -625,20 +631,20 @@ int main()
     std::vector<int> sizes2;
     std::vector<DrawArraysIndirectCommand> drawArraysIndirectCommands2;
 
-    for (int i = 0; i < 6; i++)
+    for (int i = 0; i < NUM_FACES; i++)
     {
         startPositions2.push_back(megaArrayOfAllPositions2.size());
-        for (int y = 0; y < 3; y++)
+        for (int y = 0; y < numChunksFullWidth_Y; y++)
         {
-            for (int x = 0; x < 64; x++)
+            for (int x = 0; x < numChunksFullWidth; x++)
             {
-                for (int z = 0; z < 64; z++)
+                for (int z = 0; z < numChunksFullWidth; z++)
                 {
-                    int largeChunkCentrePos = x << 12;
-                    largeChunkCentrePos = largeChunkCentrePos | y << 6;
+                    int largeChunkCentrePos = x << 14;
+                    largeChunkCentrePos = largeChunkCentrePos | y << 7;
                     largeChunkCentrePos = largeChunkCentrePos | z;
-                    largeChunkCentrePos = largeChunkCentrePos | (i << 19);
-                    largeChunkCentrePos = largeChunkCentrePos | (1 << 22);
+                    largeChunkCentrePos = largeChunkCentrePos | (i << 22);
+                    largeChunkCentrePos = largeChunkCentrePos | (1 << 25);
 
                     //std::cout << largeChunkCentrePos << std::endl;
 
@@ -655,10 +661,16 @@ int main()
         drawArraysIndirectCommands2.push_back(curCommand);
     }
 
+    unsigned int chunkVisibilitySSBO = rlLoadShaderBuffer(chunkVisibility.size() * sizeof(int), chunkVisibility.data(), RL_DYNAMIC_DRAW);
+    int frameCounter = -1;
+    int numChunksDrawn = 0;
+    int numChunksDrawnWithoutFrustum = 0;
     while (!WindowShouldClose())
     {
 
         PROFILE_SCOPE("Game Loop");
+
+        frameCounter++;
 
         //std::cout << GetMousePosition().x << ", " << GetMousePosition().y << std::endl;
 
@@ -825,6 +837,8 @@ int main()
         Plane topPlane = { position, Vector3CrossProduct(cameraRight, Vector3RotateByAxisAngle(cameraDir, cameraRight, DEG2RAD * camera.fovy * 0.5f)) };
         Plane bottomPlane = { position, Vector3CrossProduct(cameraRight, Vector3RotateByAxisAngle(cameraDir, cameraRight, DEG2RAD * camera.fovy * -0.5f)) };
 
+        rlReadShaderBuffer(chunkVisibilitySSBO, chunkVisibility.data(), chunkVisibility.size() * sizeof(int), 0);
+
         BeginTextureMode(target);
         {
             //BeginDrawing();
@@ -833,6 +847,18 @@ int main()
             BeginMode3D(camera);
             {
                 PROFILE_SCOPE("Drawing Chunks");
+
+                //rlReadShaderBuffer(chunkVisibilitySSBO, chunkVisibility.data(), chunkVisibility.size() * sizeof(int), 0);
+                ////rlUnloadShaderBuffer(chunkVisibilitySSBO);
+
+                //for (int i = 0; i < renderTraversalOrder.size(); i++)
+                //{
+                //    int flattenedRenderTraversalIndex = megaVertPositions.ChunkFlatIndexWithoutVoxels(renderTraversalOrder[i]);
+                //    if (chunkVisibility[flattenedRenderTraversalIndex] == 1) {
+                //        int wireCubeSize = 32;
+                //        DrawCubeWires(renderTraversalOrder[i] * chunkSize, wireCubeSize, wireCubeSize, wireCubeSize, BLUE);
+                //    }
+                //}
 
                 {
                     for (int i = 0; i < renderTraversalOrder.size(); i++)
@@ -970,20 +996,25 @@ int main()
 
                             if (renderChunk) {
 
-                                ReadyIndirectDrawListOfDrawableChunksAndFaces(/*renderTraversalOrder[i]*/
-                                    offsetRenderTraversalOrder, curChunkTraversalIndex
-                                    , camera, cameraChunkIndex
-                                    , instanceShader, instancedMaterial
-                                    , megaVertPositions, chunkPositions
-                                    , renderQuad
-                                    , nearPlane
-                                    , farPlane
-                                    , rightPlane
-                                    , leftPlane
-                                    , topPlane
-                                    , bottomPlane);
+                                if (renderAllValue == 1 || chunkVisibility[renderTraversalIndexFlattened] == 1/*true*/) {
 
-                                //std::cout << curChunkTraversalIndex.x << ", " << curChunkTraversalIndex.y << ", " <<curChunkTraversalIndex.z << std::endl;
+                                    ReadyIndirectDrawListOfDrawableChunksAndFaces(/*renderTraversalOrder[i]*/
+                                        offsetRenderTraversalOrder, curChunkTraversalIndex
+                                        , camera, cameraChunkIndex
+                                        , instanceShader, instancedMaterial
+                                        , megaVertPositions, chunkPositions
+                                        , renderQuad
+                                        , nearPlane
+                                        , farPlane
+                                        , rightPlane
+                                        , leftPlane
+                                        , topPlane
+                                        , bottomPlane
+                                        , numChunksDrawn
+                                        , numChunksDrawnWithoutFrustum);
+
+                                    //std::cout << curChunkTraversalIndex.x << ", " << curChunkTraversalIndex.y << ", " <<curChunkTraversalIndex.z << std::endl;
+                                }
                             }
                         }
 
@@ -992,8 +1023,10 @@ int main()
                     unsigned int chunkPosSSBO = rlLoadShaderBuffer(chunkPositions.size() * sizeof(float3), chunkPositions.data(), RL_DYNAMIC_DRAW);
                     rlBindShaderBuffer(chunkPosSSBO, 3);
 
+                    rlBindShaderBuffer(chunkVisibilitySSBO, 4);
+
                     //OPTIMISE!!!!
-                    if ((chunkBeingGeneratedCount == 0 && chunksChanged) || IsKeyPressed(KEY_U)) {
+                    if ((chunkBeingGeneratedCount == 0 && chunksChanged)) {
                         rlEnableVertexArray(renderQuad.mesh.vaoId);
 
                         //renderQuad.instanceVBOID = rlLoadVertexBuffer(megaVertPositions.megaArrayOfAllPositions.data(), megaVertPositions.megaArrayOfAllPositions.size() * sizeof(int), true);
@@ -1043,8 +1076,12 @@ int main()
                     rlUnloadShaderBuffer(chunkPosSSBO);
                 }
             }
+            //std::cout << numChunksDrawn << ", " << numChunksDrawnWithoutFrustum << std::endl;
+            numChunksDrawn = 0;
+            numChunksDrawnWithoutFrustum = 0;
 
             DrawGrid(10, 1.0);
+
             EndMode3D();
 
             //int numVoxelsPerChunk = chunkSize * 2;
@@ -1068,9 +1105,19 @@ int main()
         }
         EndTextureMode();
 
-        BeginTextureMode(rd2D);
-            ClearBackground(RAYWHITE);
-            
+        if (frameCounter >= 100)
+        {
+            renderAllValue = 0;
+            SetShaderValue(instanceShader, renderAllLoc, &renderAllValue, SHADER_UNIFORM_FLOAT);
+        }
+
+
+        if(true)
+        {
+            BeginTextureMode(rd2D);
+            {
+                ClearBackground(RAYWHITE);
+
                 rlEnableShader(screenRenderMaterial.shader.id);
 
                 BeginMode3D(camera);
@@ -1086,7 +1133,7 @@ int main()
                         chunkVisibility[i] = 0;
                     }
 
-                    unsigned int chunkVisibilitySSBO = rlLoadShaderBuffer(chunkVisibility.size() * sizeof(int), chunkVisibility.data(), RL_DYNAMIC_DRAW);
+                    rlUpdateShaderBuffer(chunkVisibilitySSBO, chunkVisibility.data(), chunkVisibility.size() * sizeof(int), 0);
                     rlBindShaderBuffer(chunkVisibilitySSBO, 4);
 
                     rlEnableWireMode();
@@ -1096,8 +1143,8 @@ int main()
                         , false);
                     rlDisableWireMode();
 
-                    rlReadShaderBuffer(chunkVisibilitySSBO, chunkVisibility.data(), chunkVisibility.size() * sizeof(int), 0);
-                    rlUnloadShaderBuffer(chunkVisibilitySSBO);
+                    //rlReadShaderBuffer(chunkVisibilitySSBO, chunkVisibility.data(), chunkVisibility.size() * sizeof(int), 0);
+                    ////rlUnloadShaderBuffer(chunkVisibilitySSBO);
 
                     //for (int i = 0; i < renderTraversalOrder.size(); i++)
                     //{
@@ -1118,8 +1165,10 @@ int main()
 
                 EndMode3D();
 
-            rlDisableShader();
-        EndTextureMode();
+                rlDisableShader();
+            }
+            EndTextureMode();
+        }
 
         //BeginTextureMode(rd2D);
         //    ClearBackground(RAYWHITE);
@@ -1180,7 +1229,9 @@ static void ReadyIndirectDrawListOfDrawableChunksAndFaces(Vector3 innerChunkInde
     , Plane& rightPlane
     , Plane& leftPlane
     , Plane& topPlane
-    , Plane& bottomPlane)
+    , Plane& bottomPlane
+    , int &numChunksDrawn
+    , int &numChunksDrawnWithoutFrustum)
 {
     PROFILE_FUNCTION();
 
@@ -1197,8 +1248,10 @@ static void ReadyIndirectDrawListOfDrawableChunksAndFaces(Vector3 innerChunkInde
     bool shouldDrawChunk = ShouldDrawChunk(drawCurChunkPos, camera, nearPlane, farPlane, rightPlane, leftPlane, topPlane, bottomPlane);
 
     constexpr bool drawAll = false;
-
+    numChunksDrawnWithoutFrustum++;
     if (shouldDrawChunk) {
+
+        numChunksDrawn++;
 
         //std::cout << "Chunk Created." << std::endl;
 

@@ -19,6 +19,11 @@ layout(std430, binding = 3) buffer ChunkPositionBuffer
     Position chunkPosition[];
 };
 
+layout(std430, binding = 4) buffer ChunkVisibilityBuffer
+{
+    int chunksVisibility[];
+};
+
 //layout (location = 4) in vec3 chunkPositionInstanced;
 
 // Input uniform values
@@ -103,6 +108,7 @@ vec3 verticesLEFT[4] = vec3[4]( vec3(-0.5, -0.5, -0.5),
 //                                vec3(-0.5, -0.5, -0.5));
 
 uniform float lodScale;
+uniform float renderAll;
 
 float curScale;
 
@@ -115,52 +121,70 @@ int curScalePosInPackedInt = 19;
 
 void main()
 {
-    vec3 curVoxelPosUncompressed = vec3((instancePosition >> xPosInPackedInt) & 31, (instancePosition >> yPosInPackedInt) & 31, (instancePosition >> zPosInPackedInt) & 31);
-    faceDir = (instancePosition >> faceDirPosInPackedInt) & 7;
-
-    curScale = (instancePosition >> curScalePosInPackedInt) & 31;
-
+    int chunkSize = 32;
+    int halfNumChunksWidth = 80;
+    int totalNumChunksWidth = (2 * halfNumChunksWidth) + 1;
     chunkPos = vec3(chunkPosition[gl_DrawIDARB].x, chunkPosition[gl_DrawIDARB].y, chunkPosition[gl_DrawIDARB].z);
     relChunkPos = vec3(chunkPos.x - cameraPos.x, chunkPos.y, chunkPos.z - cameraPos.z);
 
-    vec3 curPos = vec3(chunkPosition[gl_DrawIDARB].x, chunkPosition[gl_DrawIDARB].y, chunkPosition[gl_DrawIDARB].z) + curVoxelPosUncompressed;
-    innerVoxelPos = curVoxelPosUncompressed;
+    vec3 relChunkCoords = vec3((relChunkPos.x / chunkSize) + halfNumChunksWidth, relChunkPos.y / chunkSize, (relChunkPos.z / chunkSize) + halfNumChunksWidth);
+    int flattenedChunkCoords = int(relChunkCoords.y * totalNumChunksWidth * totalNumChunksWidth + relChunkCoords.z * totalNumChunksWidth + relChunkCoords.x);
 
-    //vec3 curPos = chunkPosition + curVoxelPos;
-    mat4 translationMatrix = mat4(1.0);  // Identity matrix
-    translationMatrix[3] = vec4(curPos, 1.0);
+//  chunksVisibility[flattenedChunkCoords] != 2 && chunksVisibility[flattenedChunkCoords] != 0
+//  chunksVisibility[flattenedChunkCoords] == 1
+    if(true){
+//    if(renderAll == 1 || chunksVisibility[flattenedChunkCoords] == 1){
+        
+        vec3 curVoxelPosUncompressed = vec3((instancePosition >> xPosInPackedInt) & 31, (instancePosition >> yPosInPackedInt) & 31, (instancePosition >> zPosInPackedInt) & 31);
+        faceDir = (instancePosition >> faceDirPosInPackedInt) & 7;
+
+        curScale = (instancePosition >> curScalePosInPackedInt) & 31;
+
+
+        vec3 curPos = vec3(chunkPosition[gl_DrawIDARB].x, chunkPosition[gl_DrawIDARB].y, chunkPosition[gl_DrawIDARB].z) + curVoxelPosUncompressed;
+        innerVoxelPos = curVoxelPosUncompressed;
+
+        //vec3 curPos = chunkPosition + curVoxelPos;
+        mat4 translationMatrix = mat4(1.0);  // Identity matrix
+        translationMatrix[3] = vec4(curPos, 1.0);
     
-    vec3 curVertex = vec3(0.0);
+        vec3 curVertex = vec3(0.0);
     
-    float multiplyFac = 1.0;
-    if(faceDir == 0){
-        curVertex = verticesUP[gl_VertexID];
-    }
-    else if(faceDir == 1){
-        curVertex = verticesDOWN[gl_VertexID];
-    }
-    else if(faceDir == 2){
-        curVertex = verticesFRONT[gl_VertexID];
-    }
-    else if(faceDir == 3){
-        curVertex = verticesBACK[gl_VertexID];
-    }
-    else if(faceDir == 4){
-        curVertex = verticesRIGHT[gl_VertexID];
-    }
-    else if(faceDir == 5){
-        curVertex = verticesLEFT[gl_VertexID];
-    }
+        float multiplyFac = 1.0;
+        if(faceDir == 0){
+            curVertex = verticesUP[gl_VertexID];
+        }
+        else if(faceDir == 1){
+            curVertex = verticesDOWN[gl_VertexID];
+        }
+        else if(faceDir == 2){
+            curVertex = verticesFRONT[gl_VertexID];
+        }
+        else if(faceDir == 3){
+            curVertex = verticesBACK[gl_VertexID];
+        }
+        else if(faceDir == 4){
+            curVertex = verticesRIGHT[gl_VertexID];
+        }
+        else if(faceDir == 5){
+            curVertex = verticesLEFT[gl_VertexID];
+        }
 
-    curVertex += 0.5;
-    curVertex *= curScale;
+        curVertex += 0.5;
+        curVertex *= curScale;
 
-    fragPosition = vec3(translationMatrix * vec4(curVertex, 1.0));
-    fragTexCoord = vertexTexCoord;
-    //fragColor = vertexColor;
-    fragNormal = normalize(vec3(matNormal * vec4(curVertex, 1.0)));
+        fragPosition = vec3(translationMatrix * vec4(curVertex, 1.0));
+        fragTexCoord = vertexTexCoord;
+        //fragColor = vertexColor;
+        fragNormal = normalize(vec3(matNormal * vec4(curVertex, 1.0)));
 
-    gl_Position = mvp * translationMatrix  * vec4(curVertex, 1.0);
+        gl_Position = mvp * translationMatrix  * vec4(curVertex, 1.0);
 
-    //using current position X Y and Z coordinates scale appropriately?
+        //using current position X Y and Z coordinates scale appropriately?
+    }
+    else
+    {
+        gl_Position = vec4(vec3(0.0), 1.0);
+    }
 }
+

@@ -84,6 +84,8 @@ void main()
     vec3 relChunkCoords = vec3((relChunkPos.x / chunkSize) + halfNumChunksWidth, relChunkPos.y / chunkSize, (relChunkPos.z / chunkSize) + halfNumChunksWidth);
     //float totalNumChunksPerLOD = numChunksPerLOD * 2;
 
+    bool all = true;
+
     if(switchColours == 1){
         //vec3 mappedChunkPos = vec3(mod(chunkPos.x, numChunks), mod(chunkPos.y, numChunksY), mod(chunkPos.z, numChunks));
         vec3 colour = vec3(0.0, 0.0, 0.0);
@@ -123,7 +125,7 @@ void main()
         //renderTarget2 = vec4(vec3(abs(curVoxelPos.x / (halfNumChunksWidth * chunkSize)), curVoxelPos.y, abs(curVoxelPos.z / (halfNumChunksWidth * chunkSize))), 1.0);
         //renderTarget2 = vec4(1 - (vec3(length(relChunkCoords) * (1 / numChunks))), 1.0);
     }
-    else if(switchColours == 3 || switchColours == 4)
+    if(switchColours == 3 || switchColours == 4 || all)
     {
         float depth = LinearizeDepth(gl_FragCoord.z) / far; // divide by far for demonstration
         //depthTarget = vec4(vec3(depth), 1.0);

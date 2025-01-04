@@ -119,31 +119,35 @@ vec3 verticesLEFT[4] = vec3[4]( vec3(-0.5, -0.5, -0.5),
                                 vec3(-0.5, 0.5, 0.5));
 
 
-int xPosInPackedInt = 10;
-int yPosInPackedInt = 5;
+int xPosInPackedInt = 14;
+int yPosInPackedInt = 7;
 int zPosInPackedInt = 0;
 
-int faceDirPosInPackedInt = 19;
-int curScalePosInPackedInt = 19;
+int unpackMask = 127;
+
+int faceDirPosInPackedInt = 22;
+int curScalePosInPackedInt = 25;
 
 int chunkSize = 32;
-int numChunksHalfWidth = 32;
+int numChunksHalfWidth = 80;
 int totalNumChunksWidth = (2 * numChunksHalfWidth) + 1;
+
+int scale = 32;
 
 void main()
 {
-    vec3 curPos = vec3((instancePosition >> 12) & 63, (instancePosition >> 6) & 63, (instancePosition) & 63);
+    vec3 curPos = vec3((instancePosition >> xPosInPackedInt) & unpackMask, (instancePosition >> yPosInPackedInt) & unpackMask, (instancePosition >> zPosInPackedInt) & unpackMask);
     
     flattenedChunkIndex = int(curPos.y * totalNumChunksWidth * totalNumChunksWidth + curPos.z * totalNumChunksWidth + curPos.x);
     
-    curPos = curPos - vec3(32, 0, 32);
-    curPos *= 32;
+    //curPos = curPos - vec3(numChunksHalfWidth, 0, numChunksHalfWidth);
+    curPos = curPos - vec3(numChunksHalfWidth, 0, numChunksHalfWidth);
+    curPos *= chunkSize;
 
     zPos = length(vec2(abs(curPos.x), abs(curPos.z)));
 
     faceDir = (instancePosition >> faceDirPosInPackedInt) & 7;
     //float scale = (instancePosition >> 22) & 31;
-    float scale = 32;
 
     //vec3 curPos = chunkPosition + curVoxelPos;
     mat4 translationMatrix = mat4(1.0);  // Identity matrix
