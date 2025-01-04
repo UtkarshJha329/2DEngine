@@ -677,6 +677,8 @@ RLAPI void rlEnableColorBlend(void);                    // Enable color blending
 RLAPI void rlDisableColorBlend(void);                   // Disable color blending
 RLAPI void rlEnableDepthTest(void);                     // Enable depth test
 RLAPI void rlDisableDepthTest(void);                    // Disable depth test
+RLAPI void rlSetDepthFuncToEqual(void);                 // Enable depth test
+RLAPI void rlSetDepthFuncToLess(void);                  // Enable depth test
 RLAPI void rlEnableDepthMask(void);                     // Enable depth write
 RLAPI void rlDisableDepthMask(void);                    // Disable depth write
 RLAPI void rlEnableBackfaceCulling(void);               // Enable backface culling
@@ -696,6 +698,7 @@ RLAPI void rlDisableSmoothLines(void);                  // Disable line aliasing
 RLAPI void rlEnableStereoRender(void);                  // Enable stereo rendering
 RLAPI void rlDisableStereoRender(void);                 // Disable stereo rendering
 RLAPI bool rlIsStereoRenderEnabled(void);               // Check if stereo render is enabled
+RLAPI void rlMemoryBarrierShaderStorage(void);          // Set up a Memory Barrier for Shader Storage Objects.
 
 RLAPI void rlClearColor(unsigned char r, unsigned char g, unsigned char b, unsigned char a); // Clear color buffer with color
 RLAPI void rlClearScreenBuffers(void);                  // Clear used screen buffers (color and depth)
@@ -1944,6 +1947,15 @@ void rlEnableDepthTest(void) { glEnable(GL_DEPTH_TEST); }
 // Disable depth test
 void rlDisableDepthTest(void) { glDisable(GL_DEPTH_TEST); }
 
+// Set Depth Func To Equal
+void rlSetDepthFuncToEqual(void) { glDepthFunc(GL_EQUAL); }
+
+// Set Depth Func To Less
+void rlSetDepthFuncToLess(void) { glDepthFunc(GL_LESS); }                  
+
+// Set Colour Mask
+void rlSetColourMask(bool r, bool g, bool b, bool a) { glColorMask(r, g, b, a); } 
+
 // Enable depth write
 void rlEnableDepthMask(void) { glDepthMask(GL_TRUE); }
 
@@ -2058,6 +2070,11 @@ bool rlIsStereoRenderEnabled(void)
 #else
     return false;
 #endif
+}
+// Set up a Memory Barrier for Shader Storage Objects.
+void rlMemoryBarrierShaderStorage(void)
+{
+    glMemoryBarrier(GL_SHADER_STORAGE_BARRIER_BIT);
 }
 
 // Clear color buffer with color

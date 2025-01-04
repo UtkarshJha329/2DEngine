@@ -555,13 +555,19 @@ int main()
         curLayerNum++;
     }
 
-    // Load lighting instanceShader
     Shader instanceShader = LoadShader(TextFormat("Shaders/lighting_instancing.vert", GLSL_VERSION),
         TextFormat("Shaders/lighting.frag", GLSL_VERSION));
     // Get instanceShader locations
     instanceShader.locs[SHADER_LOC_MATRIX_MVP] = GetShaderLocation(instanceShader, "mvp");
     instanceShader.locs[SHADER_LOC_VECTOR_VIEW] = GetShaderLocation(instanceShader, "viewPos");
     instanceShader.locs[SHADER_LOC_MATRIX_MODEL] = GetShaderLocationAttrib(instanceShader, "instanceTransform");
+
+    Shader zPrePassShader = LoadShader(TextFormat("Shaders/ZPrePass.vert", GLSL_VERSION),
+        TextFormat("Shaders/ZPrePass.frag", GLSL_VERSION));
+    // Get instanceShader locations
+    zPrePassShader.locs[SHADER_LOC_MATRIX_MVP] = GetShaderLocation(zPrePassShader, "mvp");
+    zPrePassShader.locs[SHADER_LOC_VECTOR_VIEW] = GetShaderLocation(zPrePassShader, "viewPos");
+    zPrePassShader.locs[SHADER_LOC_MATRIX_MODEL] = GetShaderLocationAttrib(zPrePassShader, "instanceTransform");
 
     // Set instanceShader value: ambient light level
     //int ambientLoc = GetShaderLocation(instanceShader, "ambient");
@@ -571,6 +577,9 @@ int main()
     Material instancedMaterial = LoadMaterialDefault();
     instancedMaterial.shader = instanceShader;
     instancedMaterial.maps[MATERIAL_MAP_DIFFUSE].texture = textureLoad;
+
+    Material zPrePassMaterial = LoadMaterialDefault();
+    zPrePassMaterial.shader = zPrePassShader;
     
     DisableCursor();
 
@@ -746,61 +755,6 @@ int main()
                     innerIndexWhereNewMeshNeedsToBeCalculated[megaVertPositions.InnerIndexFlattened(renderTraversalOrder[i])] = true;
                 }
             }
-        }
-
-        if (IsKeyPressed(KEY_NINE)) {
-            for (auto& it : mappedInnerIndexMap) {
-
-                std::cout << it.second.x << ", " << it.second.y << ", " << it.second.z << std::endl;
-            }
-        }
-
-
-        if (IsKeyPressed(KEY_EIGHT)) {
-
-            std::cout << std::endl;
-
-        }
-
-        if (IsKeyPressed(KEY_COMMA)) {
-            LODLevel++;
-            if (LODLevel > 5) {
-                LODLevel = 5;
-            }
-
-            for (int i = 0; i < renderTraversalOrder.size(); i++)
-            {
-                innerIndexWhereNewMeshNeedsToBeCalculated[megaVertPositions.InnerIndexFlattened(renderTraversalOrder[i])] = true;
-            }
-
-            lodScale = pow(2, LODLevel);
-            SetShaderValue(instanceShader, lodLevelLoc, &lodScale, SHADER_UNIFORM_FLOAT);
-        }
-
-        if (IsKeyPressed(KEY_PERIOD)) {
-            LODLevel--;
-            if (LODLevel < 0) {
-                LODLevel = 0;
-            }
-
-            for (int i = 0; i < renderTraversalOrder.size(); i++)
-            {
-                innerIndexWhereNewMeshNeedsToBeCalculated[megaVertPositions.InnerIndexFlattened(renderTraversalOrder[i])] = true;
-            }
-
-            lodScale = pow(2, LODLevel);
-            SetShaderValue(instanceShader, lodLevelLoc, &lodScale, SHADER_UNIFORM_FLOAT);
-        }
-
-        if (IsKeyPressed(KEY_FOUR)) {
-            cutOffDepthValue += 0.05;
-            SetShaderValue(cullingShader, cutOffDepthLoc, &cutOffDepthValue, SHADER_UNIFORM_FLOAT);
-            std::cout << cutOffDepthValue << std::endl;
-        }
-        if (IsKeyPressed(KEY_THREE)) {
-            cutOffDepthValue -= 0.05;
-            std::cout << cutOffDepthValue << std::endl;
-            SetShaderValue(cullingShader, cutOffDepthLoc, &cutOffDepthValue, SHADER_UNIFORM_FLOAT);
         }
 
         float diagonalDist = 3 * chunkSize * 1.732f;
@@ -1030,10 +984,24 @@ int main()
                         chunkUpdatedVoxelPositionInBigArrayMappedToChunkPositionInArray.clear();
                     }
 
+                    rlSetDepthFuncToLess();
+                    rlColorMask(false, false, false, false);
+
+                    rlEnableShader(zPrePassShader.id);
+
+                    DrawMeshMultiInstancedDrawIndirect(renderQuad, zPrePassMaterial
+                        , megaVertPositions.megaArrayOfAllPositions.data(), megaVertPositions.megaArrayOfAllPositions.size()
+                        , drawArraysIndirectCommands, drawArraysIndirectCommands.size());
+
+                    rlSetDepthFuncToEqual();
+                    rlColorMask(true, true, true, true);
+
                     DrawMeshMultiInstancedDrawIndirect(renderQuad, instancedMaterial
                         , megaVertPositions.megaArrayOfAllPositions.data(), megaVertPositions.megaArrayOfAllPositions.size()
                         , drawArraysIndirectCommands, drawArraysIndirectCommands.size());
                     rlUnloadShaderBuffer(chunkPosSSBO);
+
+                    rlSetDepthFuncToLess();
                 }
             }
 
