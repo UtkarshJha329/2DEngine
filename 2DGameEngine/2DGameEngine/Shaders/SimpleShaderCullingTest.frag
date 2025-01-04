@@ -16,7 +16,7 @@ uniform sampler2D depthValueTexture;
 
 uniform float cutOffDepth;
 
-int halfNumChunksWidth = 32;
+int halfNumChunksWidth = 64;
 int totalNumChunksWidth = (2 * halfNumChunksWidth) + 1;
 int totalNumChunksWidth_Y = 3;
 

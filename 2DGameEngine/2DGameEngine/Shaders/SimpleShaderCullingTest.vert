@@ -127,7 +127,7 @@ int faceDirPosInPackedInt = 19;
 int curScalePosInPackedInt = 19;
 
 int chunkSize = 32;
-int numChunksHalfWidth = 32;
+int numChunksHalfWidth = 64;
 int totalNumChunksWidth = (2 * numChunksHalfWidth) + 1;
 
 void main()

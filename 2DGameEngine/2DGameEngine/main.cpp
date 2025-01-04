@@ -1061,58 +1061,61 @@ int main()
         }
         EndTextureMode();
 
-        BeginTextureMode(rd2D);
+        if(false)
+        {
+            BeginTextureMode(rd2D);
             ClearBackground(RAYWHITE);
-            
-                rlEnableShader(screenRenderMaterial.shader.id);
 
-                BeginMode3D(camera);
+            rlEnableShader(screenRenderMaterial.shader.id);
 
-                rlActiveTextureSlot(bindDepthTextureAtPosition);
-                rlEnableTexture(target.depthColourTexture.id);
+            BeginMode3D(camera);
 
-                rlBindShaderBuffer(chunksGridPosSSBO, 3);
+            rlActiveTextureSlot(bindDepthTextureAtPosition);
+            rlEnableTexture(target.depthColourTexture.id);
 
-                if (shouldPerformOcclusionCulling) {
-                    for (int i = 0; i < chunkVisibility.size(); i++)
-                    {
-                        chunkVisibility[i] = 0;
-                    }
+            rlBindShaderBuffer(chunksGridPosSSBO, 3);
 
-                    unsigned int chunkVisibilitySSBO = rlLoadShaderBuffer(chunkVisibility.size() * sizeof(int), chunkVisibility.data(), RL_DYNAMIC_DRAW);
-                    rlBindShaderBuffer(chunkVisibilitySSBO, 4);
-
-                    rlEnableWireMode();
-                    DrawMeshMultiInstancedDrawIndirect(cullingRenderQuad, screenRenderMaterial
-                        , megaArrayOfAllPositions2.data(), megaArrayOfAllPositions2.size()
-                        , drawArraysIndirectCommands2, drawArraysIndirectCommands2.size()
-                        , false);
-                    rlDisableWireMode();
-
-                    rlReadShaderBuffer(chunkVisibilitySSBO, chunkVisibility.data(), chunkVisibility.size() * sizeof(int), 0);
-                    rlUnloadShaderBuffer(chunkVisibilitySSBO);
-
-                    //for (int i = 0; i < renderTraversalOrder.size(); i++)
-                    //{
-                    //    int flattenedRenderTraversalIndex = megaVertPositions.ChunkFlatIndexWithoutVoxels(renderTraversalOrder[i]);
-                    //    if (chunkVisibility[flattenedRenderTraversalIndex] == 1) {
-                    //        int wireCubeSize = 32;
-                    //        DrawCubeWires(renderTraversalOrder[i] * chunkSize, wireCubeSize, wireCubeSize, wireCubeSize, GREEN);
-                    //    }
-                    //}
+            if (shouldPerformOcclusionCulling) {
+                for (int i = 0; i < chunkVisibility.size(); i++)
+                {
+                    chunkVisibility[i] = 0;
                 }
 
-                //for (int i = 0; i < chunksGridCoordinates.size(); i++)
-                //{
-                //    Vector3 chunkPos = Vector3{ chunksGridCoordinates[i].v[0], chunksGridCoordinates[i].v[1], chunksGridCoordinates[i].v[2] };
-                //    chunkPos *= chunkSize;
-                //    DrawCubeWires(chunkPos, 32, 32, 32, BLUE);
-                //}
+                unsigned int chunkVisibilitySSBO = rlLoadShaderBuffer(chunkVisibility.size() * sizeof(int), chunkVisibility.data(), RL_DYNAMIC_DRAW);
+                rlBindShaderBuffer(chunkVisibilitySSBO, 4);
 
-                EndMode3D();
+                rlEnableWireMode();
+                DrawMeshMultiInstancedDrawIndirect(cullingRenderQuad, screenRenderMaterial
+                    , megaArrayOfAllPositions2.data(), megaArrayOfAllPositions2.size()
+                    , drawArraysIndirectCommands2, drawArraysIndirectCommands2.size()
+                    , false);
+                rlDisableWireMode();
+
+                rlReadShaderBuffer(chunkVisibilitySSBO, chunkVisibility.data(), chunkVisibility.size() * sizeof(int), 0);
+                rlUnloadShaderBuffer(chunkVisibilitySSBO);
+
+                //for (int i = 0; i < renderTraversalOrder.size(); i++)
+                //{
+                //    int flattenedRenderTraversalIndex = megaVertPositions.ChunkFlatIndexWithoutVoxels(renderTraversalOrder[i]);
+                //    if (chunkVisibility[flattenedRenderTraversalIndex] == 1) {
+                //        int wireCubeSize = 32;
+                //        DrawCubeWires(renderTraversalOrder[i] * chunkSize, wireCubeSize, wireCubeSize, wireCubeSize, GREEN);
+                //    }
+                //}
+            }
+
+            //for (int i = 0; i < chunksGridCoordinates.size(); i++)
+            //{
+            //    Vector3 chunkPos = Vector3{ chunksGridCoordinates[i].v[0], chunksGridCoordinates[i].v[1], chunksGridCoordinates[i].v[2] };
+            //    chunkPos *= chunkSize;
+            //    DrawCubeWires(chunkPos, 32, 32, 32, BLUE);
+            //}
+
+            EndMode3D();
 
             rlDisableShader();
-        EndTextureMode();
+            EndTextureMode();
+        }
 
         //BeginTextureMode(rd2D);
         //    ClearBackground(RAYWHITE);
