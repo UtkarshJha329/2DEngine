@@ -615,6 +615,9 @@ int main()
     float cutOffDepthValue = 0.25f;
     SetShaderValue(cullingShader, cutOffDepthLoc, &cutOffDepthValue, SHADER_UNIFORM_FLOAT);
 
+    int numChunksHalfWidthLoc = GetShaderLocation(cullingShader, "numChunksHalfWidth");
+    SetShaderValue(cullingShader, numChunksHalfWidthLoc, &numChunksHalfWidth, SHADER_UNIFORM_FLOAT);
+
     unsigned int chunksGridPosSSBO = rlLoadShaderBuffer(chunksGridCoordinates.size() * sizeof(float3), chunksGridCoordinates.data(), RL_DYNAMIC_DRAW);
 
     std::vector<int> megaArrayOfAllPositions2;
@@ -658,6 +661,10 @@ int main()
         PROFILE_SCOPE("Game Loop");
 
         //std::cout << GetMousePosition().x << ", " << GetMousePosition().y << std::endl;
+
+        if (IsKeyPressed(KEY_ONE)) {
+            shouldPerformOcclusionCulling = !shouldPerformOcclusionCulling;
+        }
 
         if (IsKeyPressed(KEY_FIVE)) {
 
@@ -1097,7 +1104,7 @@ int main()
                     //    int flattenedRenderTraversalIndex = megaVertPositions.ChunkFlatIndexWithoutVoxels(renderTraversalOrder[i]);
                     //    if (chunkVisibility[flattenedRenderTraversalIndex] == 1) {
                     //        int wireCubeSize = 32;
-                    //        DrawCubeWires(renderTraversalOrder[i] * chunkSize, wireCubeSize, wireCubeSize, wireCubeSize, GREEN);
+                    //        DrawCubeWires(renderTraversalOrder[i] * chunkSize, wireCubeSize, wireCubeSize, wireCubeSize, BLUE);
                     //    }
                     //}
                 }
