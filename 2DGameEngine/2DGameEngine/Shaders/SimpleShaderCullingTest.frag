@@ -46,15 +46,21 @@ void main()
 //    }
 
     //length(vec2(remappedDepth.x, remappedDepth.z))
-    if(zPos <= length(vec2(remappedDepth.x, remappedDepth.z))){
+    if(zPos < length(vec2(remappedDepth.x, remappedDepth.z))){
         //FragColor = vec4(screenCoord, 0.0, 1.0);
         //FragColor = vec4(vec3(depth), 1.0);
-        FragColor = vec4(0.0, 1.0, 0.0, 1.0);
+        //FragColor = vec4(0.0, 1.0, 0.0, 1.0);
+        chunksVisibility[flattenedChunkIndex] = 1;
+    }
+    else if(zPos < length(vec2(remappedDepth.x, remappedDepth.z)) + (1.713 * 32)){
+        //FragColor = vec4(screenCoord, 0.0, 1.0);
+        //FragColor = vec4(vec3(depth), 1.0);
+        FragColor = vec4(0.0, 0.0, 1.0, 1.0);
         chunksVisibility[flattenedChunkIndex] = 1;
     }
     else{
         //FragColor = vec4(screenCoord, 0.0, 1.0);
-        FragColor = vec4(1.0, 0.0, 0.0, 1.0);
+        //FragColor = vec4(1.0, 0.0, 0.0, 1.0);
         //FragColor = vec4(vec3(depth), 1.0);
     }
 
