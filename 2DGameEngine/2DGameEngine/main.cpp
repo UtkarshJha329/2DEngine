@@ -837,7 +837,7 @@ int main()
         Plane topPlane = { position, Vector3CrossProduct(cameraRight, Vector3RotateByAxisAngle(cameraDir, cameraRight, DEG2RAD * camera.fovy * 0.5f)) };
         Plane bottomPlane = { position, Vector3CrossProduct(cameraRight, Vector3RotateByAxisAngle(cameraDir, cameraRight, DEG2RAD * camera.fovy * -0.5f)) };
 
-        rlReadShaderBuffer(chunkVisibilitySSBO, chunkVisibility.data(), chunkVisibility.size() * sizeof(int), 0);
+        //rlReadShaderBuffer(chunkVisibilitySSBO, chunkVisibility.data(), chunkVisibility.size() * sizeof(int), 0);
 
         BeginTextureMode(target);
         {
@@ -1023,7 +1023,7 @@ int main()
                     unsigned int chunkPosSSBO = rlLoadShaderBuffer(chunkPositions.size() * sizeof(float3), chunkPositions.data(), RL_DYNAMIC_DRAW);
                     rlBindShaderBuffer(chunkPosSSBO, 3);
 
-                    rlBindShaderBuffer(chunkVisibilitySSBO, 4);
+                    //rlBindShaderBuffer(chunkVisibilitySSBO, 4);
 
                     //OPTIMISE!!!!
                     if ((chunkBeingGeneratedCount == 0 && chunksChanged)) {
@@ -1070,6 +1070,8 @@ int main()
                         chunkUpdatedVoxelPositionInBigArrayMappedToChunkPositionInArray.clear();
                     }
 
+
+
                     DrawMeshMultiInstancedDrawIndirect(renderQuad, instancedMaterial
                         , megaVertPositions.megaArrayOfAllPositions.data(), megaVertPositions.megaArrayOfAllPositions.size()
                         , drawArraysIndirectCommands, drawArraysIndirectCommands.size());
@@ -1112,7 +1114,7 @@ int main()
         }
 
 
-        if(true)
+        if(false)
         {
             BeginTextureMode(rd2D);
             {
