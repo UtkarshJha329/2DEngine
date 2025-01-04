@@ -2,8 +2,15 @@
 
 in vec2 texCoord;
 flat in float zPos;
+flat in int flattenedChunkIndex;
 
 layout (location = 0) out vec4 FragColor;
+
+layout(std430, binding = 4) buffer ChunkVisibilityBuffer
+{
+    int chunksVisibility[];
+};
+
 
 uniform sampler2D depthValueTexture;
 
@@ -39,10 +46,11 @@ void main()
 //    }
 
     //length(vec2(remappedDepth.x, remappedDepth.z))
-    if(zPos < length(vec2(remappedDepth.x, remappedDepth.z))){
+    if(zPos <= length(vec2(remappedDepth.x, remappedDepth.z))){
         //FragColor = vec4(screenCoord, 0.0, 1.0);
         //FragColor = vec4(vec3(depth), 1.0);
         FragColor = vec4(0.0, 1.0, 0.0, 1.0);
+        chunksVisibility[flattenedChunkIndex] = 1;
     }
     else{
         //FragColor = vec4(screenCoord, 0.0, 1.0);

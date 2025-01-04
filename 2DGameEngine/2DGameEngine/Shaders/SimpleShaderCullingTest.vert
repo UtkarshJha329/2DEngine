@@ -80,6 +80,7 @@ out vec3 relChunkPos;
 out vec3 innerVoxelPos;
 flat out float zPos;
 out vec2 texCoord;
+flat out int flattenedChunkIndex;
 //out vec3 meshVertexPos;
 
 // NOTE: Add here your custom variables
@@ -125,9 +126,16 @@ int zPosInPackedInt = 0;
 int faceDirPosInPackedInt = 19;
 int curScalePosInPackedInt = 19;
 
+int chunkSize = 32;
+int numChunksHalfWidth = 32;
+int totalNumChunksWidth = (2 * numChunksHalfWidth) + 1;
+
 void main()
 {
     vec3 curPos = vec3((instancePosition >> 12) & 63, (instancePosition >> 6) & 63, (instancePosition) & 63);
+    
+    flattenedChunkIndex = int(curPos.y * totalNumChunksWidth * totalNumChunksWidth + curPos.z * totalNumChunksWidth + curPos.x);
+    
     curPos = curPos - vec3(32, 0, 32);
     curPos *= 32;
 
@@ -135,7 +143,7 @@ void main()
 
     faceDir = (instancePosition >> faceDirPosInPackedInt) & 7;
     //float scale = (instancePosition >> 22) & 31;
-    float scale = 1;
+    float scale = 32;
 
     //vec3 curPos = chunkPosition + curVoxelPos;
     mat4 translationMatrix = mat4(1.0);  // Identity matrix

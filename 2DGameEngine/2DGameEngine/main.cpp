@@ -464,6 +464,13 @@ int main()
     std::vector<float3> chunksGridCoordinates;
     VertexPositions megaVertPositions;
 
+    std::vector<int> chunkVisibility(totalNumChunks, 0);
+
+    for (int i = 0; i < chunkVisibility.size(); i++)
+    {
+        chunkVisibility[i] = 0;
+    }
+
     Vector3 cameraChunkIndex = { (int)camera.position.x / chunkSize, (int)camera.position.y / chunkSize, (int)camera.position.z / chunkSize };
     Vector3 oldCameraChunkPosition = cameraChunkIndex;
     Vector3 oldCameraPos = camera.position;
@@ -1066,10 +1073,35 @@ int main()
 
                 rlBindShaderBuffer(chunksGridPosSSBO, 3);
 
-                DrawMeshMultiInstancedDrawIndirect(cullingRenderQuad, screenRenderMaterial
-                    , megaArrayOfAllPositions2.data(), megaArrayOfAllPositions2.size()
-                    , drawArraysIndirectCommands2, drawArraysIndirectCommands2.size()
-                    , false);
+                if (shouldPerformOcclusionCulling) {
+                    for (int i = 0; i < chunkVisibility.size(); i++)
+                    {
+                        chunkVisibility[i] = 0;
+                    }
+
+                    unsigned int chunkVisibilitySSBO = rlLoadShaderBuffer(chunkVisibility.size() * sizeof(int), chunkVisibility.data(), RL_DYNAMIC_DRAW);
+                    rlBindShaderBuffer(chunkVisibilitySSBO, 4);
+
+                    rlEnableWireMode();
+                    DrawMeshMultiInstancedDrawIndirect(cullingRenderQuad, screenRenderMaterial
+                        , megaArrayOfAllPositions2.data(), megaArrayOfAllPositions2.size()
+                        , drawArraysIndirectCommands2, drawArraysIndirectCommands2.size()
+                        , false);
+                    rlDisableWireMode();
+
+                    rlReadShaderBuffer(chunkVisibilitySSBO, chunkVisibility.data(), chunkVisibility.size() * sizeof(int), 0);
+                    rlUnloadShaderBuffer(chunkVisibilitySSBO);
+
+                    //for (int i = 0; i < renderTraversalOrder.size(); i++)
+                    //{
+                    //    int flattenedRenderTraversalIndex = megaVertPositions.ChunkFlatIndexWithoutVoxels(renderTraversalOrder[i]);
+                    //    if (chunkVisibility[flattenedRenderTraversalIndex] == 1) {
+                    //        int wireCubeSize = 32;
+                    //        DrawCubeWires(renderTraversalOrder[i] * chunkSize, wireCubeSize, wireCubeSize, wireCubeSize, GREEN);
+                    //    }
+                    //}
+                }
+
                 //for (int i = 0; i < chunksGridCoordinates.size(); i++)
                 //{
                 //    Vector3 chunkPos = Vector3{ chunksGridCoordinates[i].v[0], chunksGridCoordinates[i].v[1], chunksGridCoordinates[i].v[2] };

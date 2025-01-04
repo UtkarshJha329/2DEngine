@@ -52,6 +52,8 @@ const int maxLODLevel = 5;
 float LODLevel = 0.0f;
 const bool saveChunkToFile = false;
 
+bool shouldPerformOcclusionCulling = true;
+
 Vector3 up = { 0, 1, 0 };
 Vector3 down = { 0, -1, 0 };
 Vector3 front = { 0, 0, 1 };
