@@ -767,61 +767,6 @@ int main()
             }
         }
 
-        if (IsKeyPressed(KEY_NINE)) {
-            for (auto& it : mappedInnerIndexMap) {
-
-                std::cout << it.second.x << ", " << it.second.y << ", " << it.second.z << std::endl;
-            }
-        }
-
-
-        if (IsKeyPressed(KEY_EIGHT)) {
-
-            std::cout << std::endl;
-
-        }
-
-        if (IsKeyPressed(KEY_COMMA)) {
-            LODLevel++;
-            if (LODLevel > 5) {
-                LODLevel = 5;
-            }
-
-            for (int i = 0; i < renderTraversalOrder.size(); i++)
-            {
-                innerIndexWhereNewMeshNeedsToBeCalculated[megaVertPositions.InnerIndexFlattened(renderTraversalOrder[i])] = true;
-            }
-
-            lodScale = pow(2, LODLevel);
-            SetShaderValue(instanceShader, lodLevelLoc, &lodScale, SHADER_UNIFORM_FLOAT);
-        }
-
-        if (IsKeyPressed(KEY_PERIOD)) {
-            LODLevel--;
-            if (LODLevel < 0) {
-                LODLevel = 0;
-            }
-
-            for (int i = 0; i < renderTraversalOrder.size(); i++)
-            {
-                innerIndexWhereNewMeshNeedsToBeCalculated[megaVertPositions.InnerIndexFlattened(renderTraversalOrder[i])] = true;
-            }
-
-            lodScale = pow(2, LODLevel);
-            SetShaderValue(instanceShader, lodLevelLoc, &lodScale, SHADER_UNIFORM_FLOAT);
-        }
-
-        if (IsKeyPressed(KEY_FOUR)) {
-            cutOffDepthValue += 0.05;
-            SetShaderValue(cullingShader, cutOffDepthLoc, &cutOffDepthValue, SHADER_UNIFORM_FLOAT);
-            std::cout << cutOffDepthValue << std::endl;
-        }
-        if (IsKeyPressed(KEY_THREE)) {
-            cutOffDepthValue -= 0.05;
-            std::cout << cutOffDepthValue << std::endl;
-            SetShaderValue(cullingShader, cutOffDepthLoc, &cutOffDepthValue, SHADER_UNIFORM_FLOAT);
-        }
-
         float diagonalDist = 3 * chunkSize * 1.732f;
 
         Vector3 cameraDir = Vector3Subtract(camera.target, camera.position);
@@ -837,7 +782,7 @@ int main()
         Plane topPlane = { position, Vector3CrossProduct(cameraRight, Vector3RotateByAxisAngle(cameraDir, cameraRight, DEG2RAD * camera.fovy * 0.5f)) };
         Plane bottomPlane = { position, Vector3CrossProduct(cameraRight, Vector3RotateByAxisAngle(cameraDir, cameraRight, DEG2RAD * camera.fovy * -0.5f)) };
 
-        //rlReadShaderBuffer(chunkVisibilitySSBO, chunkVisibility.data(), chunkVisibility.size() * sizeof(int), 0);
+        rlReadShaderBuffer(chunkVisibilitySSBO, chunkVisibility.data(), chunkVisibility.size() * sizeof(int), 0);
 
         BeginTextureMode(target);
         {
@@ -1023,7 +968,7 @@ int main()
                     unsigned int chunkPosSSBO = rlLoadShaderBuffer(chunkPositions.size() * sizeof(float3), chunkPositions.data(), RL_DYNAMIC_DRAW);
                     rlBindShaderBuffer(chunkPosSSBO, 3);
 
-                    //rlBindShaderBuffer(chunkVisibilitySSBO, 4);
+                    rlBindShaderBuffer(chunkVisibilitySSBO, 4);
 
                     //OPTIMISE!!!!
                     if ((chunkBeingGeneratedCount == 0 && chunksChanged)) {
@@ -1070,8 +1015,6 @@ int main()
                         chunkUpdatedVoxelPositionInBigArrayMappedToChunkPositionInArray.clear();
                     }
 
-
-
                     DrawMeshMultiInstancedDrawIndirect(renderQuad, instancedMaterial
                         , megaVertPositions.megaArrayOfAllPositions.data(), megaVertPositions.megaArrayOfAllPositions.size()
                         , drawArraysIndirectCommands, drawArraysIndirectCommands.size());
@@ -1114,7 +1057,7 @@ int main()
         }
 
 
-        if(false)
+        if(true)
         {
             BeginTextureMode(rd2D);
             {
