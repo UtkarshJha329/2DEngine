@@ -136,8 +136,8 @@ void main()
     
     flattenedChunkIndex = int(curPos.y * totalNumChunksWidth * totalNumChunksWidth + curPos.z * totalNumChunksWidth + curPos.x);
     
-    curPos = curPos - vec3(32, 0, 32);
-    curPos *= 32;
+    curPos = curPos - vec3(numChunksHalfWidth, 0, numChunksHalfWidth);
+    curPos *= chunkSize;
 
     zPos = length(vec2(abs(curPos.x), abs(curPos.z)));
 

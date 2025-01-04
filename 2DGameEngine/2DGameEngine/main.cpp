@@ -939,8 +939,7 @@ int main()
                     unsigned int chunkPosSSBO = rlLoadShaderBuffer(chunkPositions.size() * sizeof(float3), chunkPositions.data(), RL_DYNAMIC_DRAW);
                     rlBindShaderBuffer(chunkPosSSBO, 3);
 
-                    //OPTIMISE!!!!
-                    if ((chunkBeingGeneratedCount == 0 && chunksChanged) || IsKeyPressed(KEY_U)) {
+                    if ((chunkBeingGeneratedCount == 0 && chunksChanged)) {
                         rlEnableVertexArray(renderQuad.mesh.vaoId);
 
                         //renderQuad.instanceVBOID = rlLoadVertexBuffer(megaVertPositions.megaArrayOfAllPositions.data(), megaVertPositions.megaArrayOfAllPositions.size() * sizeof(int), true);
