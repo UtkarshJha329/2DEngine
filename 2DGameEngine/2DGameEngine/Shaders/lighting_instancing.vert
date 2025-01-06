@@ -14,7 +14,7 @@ struct Position{
     float x, y, z;
 };
 
-layout(std430, binding = 3) buffer ChunkPositionBuffer
+layout(std430, binding = 13) buffer ChunkPositionBuffer
 {
     Position chunkPosition[];
 };

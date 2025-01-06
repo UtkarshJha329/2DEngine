@@ -468,6 +468,11 @@ int main()
 
     std::vector<int> chunkVisibility(totalNumChunks, 0);
 
+    std::vector<DrawArraysIndirectCommand> drawArraysIndirectCommandsGPU(totalNumChunks * NUM_FACES, { 0, 0, 0, 0 });
+    std::vector<float3> drawArraysIndirectChunkPositions(totalNumChunks * NUM_FACES, { 0, 0, 0});
+    unsigned int nextIndirectdrawCommandIndexBufferID = 0;
+    int nextIndirectdrawCommandIndexBufferValue = -1;
+
     for (int i = 0; i < chunkVisibility.size(); i++)
     {
         chunkVisibility[i] = 1;
@@ -688,6 +693,18 @@ int main()
         DrawArraysIndirectCommand curCommand = { 4, sizes2[i], 0, startPositions2[i] };
         drawArraysIndirectCommands2.push_back(curCommand);
     }
+
+    renderQuad.upFacesMetadaBufferID = rlLoadShaderBuffer(megaVertPositions.upFacesMetadata.size() * sizeof(ChunkFacePositionMetaData), megaVertPositions.upFacesMetadata.data(), RL_DYNAMIC_DRAW);
+    renderQuad.downFacesMetadaBufferID = rlLoadShaderBuffer(megaVertPositions.downFacesMetadata.size() * sizeof(ChunkFacePositionMetaData), megaVertPositions.downFacesMetadata.data(), RL_DYNAMIC_DRAW);
+    renderQuad.frontFacesMetadaBufferID = rlLoadShaderBuffer(megaVertPositions.frontFacesMetadata.size() * sizeof(ChunkFacePositionMetaData), megaVertPositions.frontFacesMetadata.data(), RL_DYNAMIC_DRAW);
+    renderQuad.backFacesMetadaBufferID = rlLoadShaderBuffer(megaVertPositions.backFacesMetadata.size() * sizeof(ChunkFacePositionMetaData), megaVertPositions.backFacesMetadata.data(), RL_DYNAMIC_DRAW);
+    renderQuad.rightFacesMetadaBufferID = rlLoadShaderBuffer(megaVertPositions.rightFacesMetadata.size() * sizeof(ChunkFacePositionMetaData), megaVertPositions.rightFacesMetadata.data(), RL_DYNAMIC_DRAW);
+    renderQuad.leftFacesMetadaBufferID = rlLoadShaderBuffer(megaVertPositions.leftFacesMetadata.size() * sizeof(ChunkFacePositionMetaData), megaVertPositions.leftFacesMetadata.data(), RL_DYNAMIC_DRAW);
+
+    nextIndirectdrawCommandIndexBufferID = rlLoadShaderBuffer(sizeof(int), &nextIndirectdrawCommandIndexBufferValue, RL_DYNAMIC_DRAW);
+
+    renderQuad.commandsBufferVBOID = rlLoadShaderBuffer(drawArraysIndirectCommandsGPU.size() * sizeof(DrawArraysIndirectCommand), drawArraysIndirectCommandsGPU.data(), RL_DYNAMIC_DRAW);
+    renderQuad.chunkPositionsVBOID = rlLoadShaderBuffer(drawArraysIndirectChunkPositions.size() * sizeof(float3), drawArraysIndirectChunkPositions.data(), RL_DYNAMIC_DRAW);
 
     unsigned int chunkVisibilitySSBO = rlLoadShaderBuffer(chunkVisibility.size() * sizeof(int), chunkVisibility.data(), RL_DYNAMIC_DRAW);
     int frameCounter = -1;
@@ -999,10 +1016,6 @@ int main()
 
 
                     }
-                    unsigned int chunkPosSSBO = rlLoadShaderBuffer(chunkPositions.size() * sizeof(float3), chunkPositions.data(), RL_DYNAMIC_DRAW);
-                    rlBindShaderBuffer(chunkPosSSBO, 3);
-
-                    rlBindShaderBuffer(chunkVisibilitySSBO, 4);
 
                     //OPTIMISE!!!!
                     if ((chunkBeingGeneratedCount == 0 && chunksChanged)) {
@@ -1015,26 +1028,32 @@ int main()
                             int startUp = megaVertPositions.upFacesMetadata[it].startPositionInBigArray;
                             int sizeUp = megaVertPositions.upFacesMetadata[it].size;
                             rlUpdateVertexBuffer(renderQuad.instanceVBOID, megaVertPositions.megaArrayOfAllPositions.data() + startUp, sizeUp * sizeof(int), startUp * sizeof(int));
+                            rlUpdateShaderBuffer(renderQuad.upFacesMetadaBufferID, megaVertPositions.upFacesMetadata.data() + it, 1 * sizeof(ChunkFacePositionMetaData), it * sizeof(ChunkFacePositionMetaData));
 
                             int startDown = megaVertPositions.downFacesMetadata[it].startPositionInBigArray;
                             int sizeDown = megaVertPositions.downFacesMetadata[it].size;
                             rlUpdateVertexBuffer(renderQuad.instanceVBOID, megaVertPositions.megaArrayOfAllPositions.data() + startDown, sizeDown * sizeof(int), startDown * sizeof(int));
+                            rlUpdateShaderBuffer(renderQuad.downFacesMetadaBufferID, megaVertPositions.downFacesMetadata.data() + it, 1 * sizeof(ChunkFacePositionMetaData), it * sizeof(ChunkFacePositionMetaData));
 
                             int startFront = megaVertPositions.frontFacesMetadata[it].startPositionInBigArray;
                             int sizeFront = megaVertPositions.frontFacesMetadata[it].size;
                             rlUpdateVertexBuffer(renderQuad.instanceVBOID, megaVertPositions.megaArrayOfAllPositions.data() + startFront, sizeFront * sizeof(int), startFront * sizeof(int));
+                            rlUpdateShaderBuffer(renderQuad.frontFacesMetadaBufferID, megaVertPositions.frontFacesMetadata.data() + it, 1 * sizeof(ChunkFacePositionMetaData), it * sizeof(ChunkFacePositionMetaData));
 
                             int startBack = megaVertPositions.backFacesMetadata[it].startPositionInBigArray;
                             int sizeBack = megaVertPositions.backFacesMetadata[it].size;
                             rlUpdateVertexBuffer(renderQuad.instanceVBOID, megaVertPositions.megaArrayOfAllPositions.data() + startBack, sizeBack * sizeof(int), startBack * sizeof(int));
+                            rlUpdateShaderBuffer(renderQuad.backFacesMetadaBufferID, megaVertPositions.backFacesMetadata.data() + it, 1 * sizeof(ChunkFacePositionMetaData), it * sizeof(ChunkFacePositionMetaData));
 
                             int startRight = megaVertPositions.rightFacesMetadata[it].startPositionInBigArray;
                             int sizeRight = megaVertPositions.rightFacesMetadata[it].size;
                             rlUpdateVertexBuffer(renderQuad.instanceVBOID, megaVertPositions.megaArrayOfAllPositions.data() + startRight, sizeRight * sizeof(int), startRight * sizeof(int));
+                            rlUpdateShaderBuffer(renderQuad.rightFacesMetadaBufferID, megaVertPositions.rightFacesMetadata.data() + it, 1 * sizeof(ChunkFacePositionMetaData), it * sizeof(ChunkFacePositionMetaData));
 
                             int startLeft = megaVertPositions.leftFacesMetadata[it].startPositionInBigArray;
                             int sizeLeft = megaVertPositions.leftFacesMetadata[it].size;
                             rlUpdateVertexBuffer(renderQuad.instanceVBOID, megaVertPositions.megaArrayOfAllPositions.data() + startLeft, sizeLeft * sizeof(int), startLeft * sizeof(int));
+                            rlUpdateShaderBuffer(renderQuad.leftFacesMetadaBufferID, megaVertPositions.leftFacesMetadata.data() + it, 1 * sizeof(ChunkFacePositionMetaData), it * sizeof(ChunkFacePositionMetaData));
                         }
 
                         //std::cout << megaVertPositions.totalFilled << std::endl;
@@ -1049,15 +1068,34 @@ int main()
                         chunkUpdatedVoxelPositionInBigArrayMappedToChunkPositionInArray.clear();
                     }
 
-                    DrawMeshMultiInstancedDrawIndirect(renderQuad, instancedMaterial
+                    //unsigned int chunkPosSSBO = rlLoadShaderBuffer(chunkPositions.size() * sizeof(float3), chunkPositions.data(), RL_DYNAMIC_DRAW);
+                    //rlBindShaderBuffer(chunkPosSSBO, 13);
+
+                    //rlBindShaderBuffer(chunkVisibilitySSBO, 4);
+
+                    //DrawMeshMultiInstancedDrawIndirect(renderQuad, instancedMaterial
+                    //    , megaVertPositions.megaArrayOfAllPositions.data(), megaVertPositions.megaArrayOfAllPositions.size()
+                    //    , drawArraysIndirectCommands, drawArraysIndirectCommands.size());
+
+                    rlBindShaderBuffer(renderQuad.chunkPositionsVBOID, 13);
+                    rlBindShaderBuffer(chunkVisibilitySSBO, 4);
+
+                    rlReadShaderBuffer(nextIndirectdrawCommandIndexBufferID, &nextIndirectdrawCommandIndexBufferValue, sizeof(int), 0);
+                    std::cout << "CPU : " << drawArraysIndirectCommands.size() << ", GPU : " << nextIndirectdrawCommandIndexBufferValue << std::endl;
+
+                    DrawMeshMultiInstancedDrawIndirectGPU(renderQuad, instancedMaterial
                         , megaVertPositions.megaArrayOfAllPositions.data(), megaVertPositions.megaArrayOfAllPositions.size()
-                        , drawArraysIndirectCommands, drawArraysIndirectCommands.size());
-                    rlUnloadShaderBuffer(chunkPosSSBO);
+                        , drawArraysIndirectCommands, nextIndirectdrawCommandIndexBufferValue);
+
+                    //rlUnloadShaderBuffer(chunkPosSSBO);
                 }
             }
             std::cout << totalNumChunks << ", Chunks Drawn: " << numChunksDrawn << ", Chunks Drawn Without Frustum Culling: " << numChunksDrawnWithoutFrustum << std::endl;
             numChunksDrawn = 0;
             numChunksDrawnWithoutFrustum = 0;
+
+            //rlReadShaderBuffer(nextIndirectdrawCommandIndexBufferID, &nextIndirectdrawCommandIndexBufferValue, sizeof(int), 0);
+            //std::cout << "CPU : " << drawArraysIndirectCommands.size() << ", GPU : " << nextIndirectdrawCommandIndexBufferValue << std::endl;
 
             DrawGrid(10, 1.0);
 
@@ -1159,8 +1197,23 @@ int main()
         //    EndShaderMode();
         //EndTextureMode();
 
+        nextIndirectdrawCommandIndexBufferValue = -1;
+        rlUpdateShaderBuffer(nextIndirectdrawCommandIndexBufferID, &nextIndirectdrawCommandIndexBufferValue, 1 * sizeof(int), 0);
+
         rlEnableShader(testComputeProgram);
         rlBindShaderBuffer(chunkVisibilitySSBO, 4);
+
+        rlBindShaderBuffer(nextIndirectdrawCommandIndexBufferID, 5);
+        rlBindShaderBuffer(renderQuad.commandsBufferVBOID, 6);
+
+        rlBindShaderBuffer(renderQuad.upFacesMetadaBufferID, 7);
+        rlBindShaderBuffer(renderQuad.downFacesMetadaBufferID, 8);
+        rlBindShaderBuffer(renderQuad.frontFacesMetadaBufferID, 9);
+        rlBindShaderBuffer(renderQuad.backFacesMetadaBufferID, 10);
+        rlBindShaderBuffer(renderQuad.upFacesMetadaBufferID, 11);
+        rlBindShaderBuffer(renderQuad.downFacesMetadaBufferID, 12);
+
+        rlBindShaderBuffer(renderQuad.chunkPositionsVBOID, 13);
          
         float3 nearPlaneNormal = { nearPlane.normal.x,  nearPlane.normal.y,  nearPlane.normal.z };
         float3 farPlaneNormal = { farPlane.normal.x,  farPlane.normal.y,  farPlane.normal.z };
@@ -1183,6 +1236,10 @@ int main()
         float3 cameraDirectionToSend = { cameraDirection.x, cameraDirection.y, cameraDirection.z };
         int cameraDirLoc = rlGetLocationUniform(testComputeProgram, "cameraDir");
         rlSetUniform(cameraDirLoc, &cameraDirectionToSend, SHADER_UNIFORM_VEC3, 1);
+
+        float3 cameraPositionToSend = { camera.position.x, camera.position.y, camera.position.z };
+        int cameraPositionLoc = rlGetLocationUniform(testComputeProgram, "cameraPosition");
+        rlSetUniform(cameraPositionLoc, &cameraPositionToSend, SHADER_UNIFORM_VEC3, 1);
 
         rlSetUniform(rlGetLocationUniform(testComputeProgram, "diagonalDist"), &diagonalDist, SHADER_UNIFORM_FLOAT, 1);
 
