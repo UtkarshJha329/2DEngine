@@ -698,7 +698,9 @@ RLAPI void rlDisableSmoothLines(void);                  // Disable line aliasing
 RLAPI void rlEnableStereoRender(void);                  // Enable stereo rendering
 RLAPI void rlDisableStereoRender(void);                 // Disable stereo rendering
 RLAPI bool rlIsStereoRenderEnabled(void);               // Check if stereo render is enabled
+
 RLAPI void rlMemoryBarrierShaderStorage(void);          // Set up a Memory Barrier for Shader Storage Objects.
+RLAPI void rlMemoryBarrierShaderImageAccess(void);          // Set up a Memory Barrier for Shader Storage Objects.
 
 RLAPI void rlClearColor(unsigned char r, unsigned char g, unsigned char b, unsigned char a); // Clear color buffer with color
 RLAPI void rlClearScreenBuffers(void);                  // Clear used screen buffers (color and depth)
@@ -2071,10 +2073,17 @@ bool rlIsStereoRenderEnabled(void)
     return false;
 #endif
 }
+
 // Set up a Memory Barrier for Shader Storage Objects.
 void rlMemoryBarrierShaderStorage(void)
 {
     glMemoryBarrier(GL_SHADER_STORAGE_BARRIER_BIT);
+}
+
+// Set up a Memory Barrier for Shader Image Access.
+void rlMemoryBarrierShaderImageAccess(void)
+{
+    glMemoryBarrier(GL_SHADER_IMAGE_ACCESS_BARRIER_BIT);
 }
 
 // Clear color buffer with color

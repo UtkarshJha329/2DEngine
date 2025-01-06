@@ -54,6 +54,8 @@ const bool saveChunkToFile = false;
 
 bool shouldPerformOcclusionCulling = true;
 
+constexpr float diagonalDist = 3 * chunkSize * 1.732f;
+
 Vector3 up = { 0, 1, 0 };
 Vector3 down = { 0, -1, 0 };
 Vector3 front = { 0, 0, 1 };

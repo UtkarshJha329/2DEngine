@@ -557,6 +557,34 @@ int main()
         curLayerNum++;
     }
 
+    //char* drawIndirectBufferSetterCode = LoadFileText("drawIndirectBufferSetter.glsl");
+    //unsigned int drawIndirectBufferSetterShader = rlCompileShader(drawIndirectBufferSetterCode, RL_COMPUTE_SHADER);
+    //unsigned int golLogicProgram = rlLoadComputeShaderProgram(drawIndirectBufferSetterShader);
+    //UnloadFileText(drawIndirectBufferSetterCode);
+
+    char* testComputeCode = LoadFileText("Shaders/testCompute.glsl");
+    unsigned int testComputeShader = rlCompileShader(testComputeCode, RL_COMPUTE_SHADER);
+    unsigned int testComputeProgram = rlLoadComputeShaderProgram(testComputeShader);
+    UnloadFileText(testComputeCode);
+    Shader testComputeShaderClass = { testComputeShader, NULL };
+
+    const unsigned int computeTextureWidth = 512;
+    const unsigned int computeTextureHeight = 512;
+
+    Image randImage = GenImageColor(computeTextureWidth, computeTextureHeight, DARKGREEN);
+    ImageFormat(&randImage, PIXELFORMAT_UNCOMPRESSED_R32G32B32A32);
+    Texture2D textureTestingCompute = LoadTextureFromImage(randImage);
+
+    /*
+    * TODO:
+    *       Bind a large command buffer for rendering all things currently.
+    *               Should be x * y * z * 6 commands long because of total number of chunks and 6 faces per chunk
+    *       Bind the 6 faces metadata arrays to gpu buffers. (Preferably SSBO's.)
+    *               These are needed to send to the compute shader so that draw commands can be filled appropriately with appropriate start and number of instances values.
+    *       Send Commands buffer to GPU to fill in with required commands based on occlusion tests.
+    *       Bind Commands Buffer to appropriate binding and proceed to render using glMultiDrawArraysIndirect.
+    */
+
     // Load lighting instanceShader
     Shader instanceShader = LoadShader(TextFormat("Shaders/lighting_instancing.vert", GLSL_VERSION),
         TextFormat("Shaders/lighting.frag", GLSL_VERSION));
@@ -711,6 +739,9 @@ int main()
             randValue++;
             randValue = randValue > 4 ? 0 : randValue;
             SetShaderValue(instanceShader, randValueLoc, &randValue, SHADER_UNIFORM_FLOAT);
+            //if (randValue == 4) {
+            //    std::cout << "drawing compute result." << std::endl;
+            //}
         }
 
         UpdateCamera(&camera, CAMERA_FREE);
@@ -766,8 +797,6 @@ int main()
                 }
             }
         }
-
-        float diagonalDist = 3 * chunkSize * 1.732f;
 
         Vector3 cameraDir = Vector3Subtract(camera.target, camera.position);
         cameraDir = Vector3Normalize(cameraDir);
@@ -943,22 +972,27 @@ int main()
 
                                 if (renderAllValue == 1 || chunkVisibility[renderTraversalIndexFlattened] == 1/*true*/) {
 
-                                    ReadyIndirectDrawListOfDrawableChunksAndFaces(/*renderTraversalOrder[i]*/
-                                        offsetRenderTraversalOrder, curChunkTraversalIndex
-                                        , camera, cameraChunkIndex
-                                        , instanceShader, instancedMaterial
-                                        , megaVertPositions, chunkPositions
-                                        , renderQuad
-                                        , nearPlane
-                                        , farPlane
-                                        , rightPlane
-                                        , leftPlane
-                                        , topPlane
-                                        , bottomPlane
-                                        , numChunksDrawn
-                                        , numChunksDrawnWithoutFrustum);
+                                    if (/*Vector3DotProduct(Vector3{ 0, 0, 1 }, renderTraversalOrder[i]) > 0*/true) {
 
-                                    //std::cout << curChunkTraversalIndex.x << ", " << curChunkTraversalIndex.y << ", " <<curChunkTraversalIndex.z << std::endl;
+                                        ReadyIndirectDrawListOfDrawableChunksAndFaces(/*renderTraversalOrder[i]*/
+                                            offsetRenderTraversalOrder, curChunkTraversalIndex
+                                            , camera, cameraChunkIndex
+                                            , instanceShader, instancedMaterial
+                                            , megaVertPositions, chunkPositions
+                                            , renderQuad
+                                            , nearPlane
+                                            , farPlane
+                                            , rightPlane
+                                            , leftPlane
+                                            , topPlane
+                                            , bottomPlane
+                                            , numChunksDrawn
+                                            , numChunksDrawnWithoutFrustum);
+
+                                        //std::cout << curChunkTraversalIndex.x << ", " << curChunkTraversalIndex.y << ", " <<curChunkTraversalIndex.z << std::endl;
+
+                                    }
+
                                 }
                             }
                         }
@@ -1021,7 +1055,7 @@ int main()
                     rlUnloadShaderBuffer(chunkPosSSBO);
                 }
             }
-            //std::cout << numChunksDrawn << ", " << numChunksDrawnWithoutFrustum << std::endl;
+            std::cout << totalNumChunks << ", Chunks Drawn: " << numChunksDrawn << ", Chunks Drawn Without Frustum Culling: " << numChunksDrawnWithoutFrustum << std::endl;
             numChunksDrawn = 0;
             numChunksDrawnWithoutFrustum = 0;
 
@@ -1052,12 +1086,13 @@ int main()
 
         if (frameCounter >= 100)
         {
+            std::cout << "DON'T RENDER ALL ANYMORE!" << std::endl;
             renderAllValue = 0;
             SetShaderValue(instanceShader, renderAllLoc, &renderAllValue, SHADER_UNIFORM_FLOAT);
         }
 
 
-        if(true)
+        if(false)
         {
             BeginTextureMode(rd2D);
             {
@@ -1107,6 +1142,7 @@ int main()
                 //    chunkPos *= chunkSize;
                 //    DrawCubeWires(chunkPos, 32, 32, 32, BLUE);
                 //}
+                rlMemoryBarrierShaderStorage();
 
                 EndMode3D();
 
@@ -1123,6 +1159,38 @@ int main()
         //    EndShaderMode();
         //EndTextureMode();
 
+        rlEnableShader(testComputeProgram);
+        rlBindShaderBuffer(chunkVisibilitySSBO, 4);
+         
+        float3 nearPlaneNormal = { nearPlane.normal.x,  nearPlane.normal.y,  nearPlane.normal.z };
+        float3 farPlaneNormal = { farPlane.normal.x,  farPlane.normal.y,  farPlane.normal.z };
+        float3 rightPlaneNormal = { rightPlane.normal.x,  rightPlane.normal.y,  rightPlane.normal.z };
+        float3 leftPlaneNormal = { leftPlane.normal.x,  leftPlane.normal.y,  leftPlane.normal.z };
+        float3 topPlaneNormal = { topPlane.normal.x,  topPlane.normal.y,  topPlane.normal.z };
+        float3 bottomPlaneNormal = { bottomPlane.normal.x,  bottomPlane.normal.y,  bottomPlane.normal.z };
+        rlSetUniform(rlGetLocationUniform(testComputeProgram, "nearPlaneNormal"), &nearPlaneNormal, SHADER_UNIFORM_VEC3, 1);
+        rlSetUniform(rlGetLocationUniform(testComputeProgram, "farPlaneNormal"), &farPlaneNormal, SHADER_UNIFORM_VEC3, 1);
+        rlSetUniform(rlGetLocationUniform(testComputeProgram, "rightPlaneNormal"), &rightPlaneNormal, SHADER_UNIFORM_VEC3, 1);
+        rlSetUniform(rlGetLocationUniform(testComputeProgram, "leftPlaneNormal"), &leftPlaneNormal, SHADER_UNIFORM_VEC3, 1);
+        rlSetUniform(rlGetLocationUniform(testComputeProgram, "topPlaneNormal"), &topPlaneNormal, SHADER_UNIFORM_VEC3, 1);
+        rlSetUniform(rlGetLocationUniform(testComputeProgram, "bottomPlaneNormal"), &bottomPlaneNormal, SHADER_UNIFORM_VEC3, 1);
+
+        //float3 positionToSend = { camera.position.x, camera.position.y, camera.position.z };
+        //rlSetUniform(rlGetLocationUniform(testComputeProgram, "positionOnFrustum"), &positionToSend, SHADER_UNIFORM_VEC3, 1);
+
+        Vector3 cameraDirection = Vector3Subtract(camera.target, camera.position);
+        cameraDirection = Vector3Normalize(cameraDirection);
+        float3 cameraDirectionToSend = { cameraDirection.x, cameraDirection.y, cameraDirection.z };
+        int cameraDirLoc = rlGetLocationUniform(testComputeProgram, "cameraDir");
+        rlSetUniform(cameraDirLoc, &cameraDirectionToSend, SHADER_UNIFORM_VEC3, 1);
+
+        rlSetUniform(rlGetLocationUniform(testComputeProgram, "diagonalDist"), &diagonalDist, SHADER_UNIFORM_FLOAT, 1);
+
+        rlComputeShaderDispatch(6, 3, 6);
+
+        rlMemoryBarrierShaderStorage();
+        rlDisableShader();
+
         BeginDrawing();
             ClearBackground(RAYWHITE);
             if (randValue == 0) {
@@ -1138,7 +1206,7 @@ int main()
                 DrawTextureRec(target.depthColourTexture, Rectangle { 0, 0, (float)screenWidth, (float)-screenHeight }, Vector2 { 0, 0 }, WHITE);
             }
             else if(randValue == 4) {
-                DrawTextureRec(rd2D.texture, Rectangle { 0, 0, (float)screenWidth, (float)-screenHeight }, Vector2 { 0, 0 }, WHITE);
+                DrawTextureRec(rd2D.texture, Rectangle { 0, 0, (float)computeTextureWidth, (float)computeTextureHeight * -1.0f}, Vector2 { 0, 0 }, WHITE);
             }
             DrawCircle(screenWidth / 2, screenHeight / 2, 1.0f, RED);
             DrawFPS(40, 40);
