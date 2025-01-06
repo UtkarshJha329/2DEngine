@@ -1210,8 +1210,8 @@ int main()
         rlBindShaderBuffer(renderQuad.downFacesMetadaBufferID, 8);
         rlBindShaderBuffer(renderQuad.frontFacesMetadaBufferID, 9);
         rlBindShaderBuffer(renderQuad.backFacesMetadaBufferID, 10);
-        rlBindShaderBuffer(renderQuad.upFacesMetadaBufferID, 11);
-        rlBindShaderBuffer(renderQuad.downFacesMetadaBufferID, 12);
+        rlBindShaderBuffer(renderQuad.rightFacesMetadaBufferID, 11);
+        rlBindShaderBuffer(renderQuad.leftFacesMetadaBufferID, 12);
 
         rlBindShaderBuffer(renderQuad.chunkPositionsVBOID, 13);
          

@@ -258,7 +258,7 @@ int ChunkFlatIndexWithoutVoxels(vec3 innerChunkIndex, int numChunksWidthFull){
 
 void CreateIndirectDrawOrderBasedOnFaceVisibility(vec3 innerChunkIndex, int numChunksWidthFull, int chunkSize)
 {
-        vec3 dirToChunkFromCamera = (innerChunkIndex * chunkSize);
+        vec3 dirToChunkFromCamera = (innerChunkIndex * chunkSize) - vec3(0.0);
 
         float dotUp = dot(dirToChunkFromCamera, up);
         float dotDown = dot(dirToChunkFromCamera, down);
@@ -276,9 +276,9 @@ void CreateIndirectDrawOrderBasedOnFaceVisibility(vec3 innerChunkIndex, int numC
             int numInstances = upFacesMetadata[curChunkIndexWithoutVoxels].size;
             if (numInstances > 0) {
                 DrawArraysIndirectCommand curCommand = { 4, numInstances, 0, start };
-                atomicAdd(nextIndirectdrawCommandIndex, 1);
-                indirectDrawCommands[nextIndirectdrawCommandIndex] = curCommand;
-                chunkDrawCommandPosiitons[nextIndirectdrawCommandIndex] = drawChunkPos;
+                int index = atomicAdd(nextIndirectdrawCommandIndex, 1);
+                indirectDrawCommands[index] = curCommand;
+                chunkDrawCommandPosiitons[index] = drawChunkPos;
             }
         }
 
@@ -287,9 +287,9 @@ void CreateIndirectDrawOrderBasedOnFaceVisibility(vec3 innerChunkIndex, int numC
             int numInstances = downFacesMetadata[curChunkIndexWithoutVoxels].size;
             if (numInstances > 0) {
                 DrawArraysIndirectCommand curCommand = { 4, numInstances, 0, start };
-                atomicAdd(nextIndirectdrawCommandIndex, 1);
-                indirectDrawCommands[nextIndirectdrawCommandIndex] = curCommand;
-                chunkDrawCommandPosiitons[nextIndirectdrawCommandIndex] = drawChunkPos;
+                int index = atomicAdd(nextIndirectdrawCommandIndex, 1);
+                indirectDrawCommands[index] = curCommand;
+                chunkDrawCommandPosiitons[index] = drawChunkPos;
             }
         }
 
@@ -298,9 +298,9 @@ void CreateIndirectDrawOrderBasedOnFaceVisibility(vec3 innerChunkIndex, int numC
             int numInstances = frontFacesMetadata[curChunkIndexWithoutVoxels].size;
             if (numInstances > 0) {
                 DrawArraysIndirectCommand curCommand = { 4, numInstances, 0, start };
-                atomicAdd(nextIndirectdrawCommandIndex, 1);
-                indirectDrawCommands[nextIndirectdrawCommandIndex] = curCommand;
-                chunkDrawCommandPosiitons[nextIndirectdrawCommandIndex] = drawChunkPos;
+                int index = atomicAdd(nextIndirectdrawCommandIndex, 1);
+                indirectDrawCommands[index] = curCommand;
+                chunkDrawCommandPosiitons[index] = drawChunkPos;
             }
         }
 
@@ -309,9 +309,9 @@ void CreateIndirectDrawOrderBasedOnFaceVisibility(vec3 innerChunkIndex, int numC
             int numInstances = backFacesMetadata[curChunkIndexWithoutVoxels].size;
             if (numInstances > 0) {
                 DrawArraysIndirectCommand curCommand = { 4, numInstances, 0, start };
-                atomicAdd(nextIndirectdrawCommandIndex, 1);
-                indirectDrawCommands[nextIndirectdrawCommandIndex] = curCommand;
-                chunkDrawCommandPosiitons[nextIndirectdrawCommandIndex] = drawChunkPos;
+                int index = atomicAdd(nextIndirectdrawCommandIndex, 1);
+                indirectDrawCommands[index] = curCommand;
+                chunkDrawCommandPosiitons[index] = drawChunkPos;
             }
         }
 
@@ -320,9 +320,9 @@ void CreateIndirectDrawOrderBasedOnFaceVisibility(vec3 innerChunkIndex, int numC
             int numInstances = rightFacesMetadata[curChunkIndexWithoutVoxels].size;
             if (numInstances > 0) {
                 DrawArraysIndirectCommand curCommand = { 4, numInstances, 0, start };
-                atomicAdd(nextIndirectdrawCommandIndex, 1);
-                indirectDrawCommands[nextIndirectdrawCommandIndex] = curCommand;
-                chunkDrawCommandPosiitons[nextIndirectdrawCommandIndex] = drawChunkPos;
+                int index = atomicAdd(nextIndirectdrawCommandIndex, 1);
+                indirectDrawCommands[index] = curCommand;
+                chunkDrawCommandPosiitons[index] = drawChunkPos;
             }
         }
 
@@ -331,9 +331,9 @@ void CreateIndirectDrawOrderBasedOnFaceVisibility(vec3 innerChunkIndex, int numC
             int numInstances = leftFacesMetadata[curChunkIndexWithoutVoxels].size;
             if (numInstances > 0) {
                 DrawArraysIndirectCommand curCommand = { 4, numInstances, 0, start };
-                atomicAdd(nextIndirectdrawCommandIndex, 1);
-                indirectDrawCommands[nextIndirectdrawCommandIndex] = curCommand;
-                chunkDrawCommandPosiitons[nextIndirectdrawCommandIndex] = drawChunkPos;
+                int index = atomicAdd(nextIndirectdrawCommandIndex, 1);
+                indirectDrawCommands[index] = curCommand;
+                chunkDrawCommandPosiitons[index] = drawChunkPos;
             }
         }
 }
