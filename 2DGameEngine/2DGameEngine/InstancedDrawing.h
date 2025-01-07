@@ -1075,23 +1075,7 @@ void DrawMeshMultiInstancedDrawIndirectGPU2(GenerativeMesh& genMesh, Material ma
 
             rlBindDrawParametersBuffer(genMesh.commandsLengthBOID);
             rlBindDrawBufferIndirect(genMesh.commandsBufferVBOID);
-            //VVVVVVVVVVVVVVVVVVVVVVVV
-            //void rlBindDrawBufferIndirect(unsigned int bufferID)
-            //{
-            //#if defined(GRAPHICS_API_OPENGL_43)
-            //    glBindBuffer(GL_DRAW_INDIRECT_BUFFER, bufferID);
-            //#else
-            //    TRACELOG(RL_LOG_WARNING, "Indirect Draw Buffer: Indirect Draw Buffer not enabled. Define GRAPHICS_API_OPENGL_43");
-            //#endif
-            //}
-            //rlMultiDrawArraysIndirectTriangleStrip(0, numCommands, 0);
             rlMultiDrawArraysIndirectCountTriangleStrip(0, 0, maxNumCommands, 0);
-            // VVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVV
-            //void rlMultiDrawArraysIndirectTriangleStrip(const void* indirect, int drawCount, int stride)
-            //{
-            //    glMultiDrawArraysIndirect(GL_TRIANGLE_STRIP, indirect, drawCount, stride);
-            //}
-            //rlUnloadVertexBuffer(genMesh.commandsBufferVBOID);
         }
     }
 
