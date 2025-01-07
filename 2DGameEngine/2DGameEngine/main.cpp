@@ -470,7 +470,6 @@ int main()
 
     std::vector<DrawArraysIndirectCommand> drawArraysIndirectCommandsGPU(totalNumChunks * NUM_FACES, { 0, 0, 0, 0 });
     std::vector<float3> drawArraysIndirectChunkPositions(totalNumChunks * NUM_FACES, { 0, 0, 0});
-    unsigned int nextIndirectdrawCommandIndexBufferID = 0;
     int nextIndirectdrawCommandIndexBufferValue = -1;
 
     for (int i = 0; i < chunkVisibility.size(); i++)
@@ -701,7 +700,7 @@ int main()
     renderQuad.rightFacesMetadaBufferID = rlLoadShaderBuffer(megaVertPositions.rightFacesMetadata.size() * sizeof(ChunkFacePositionMetaData), megaVertPositions.rightFacesMetadata.data(), RL_DYNAMIC_DRAW);
     renderQuad.leftFacesMetadaBufferID = rlLoadShaderBuffer(megaVertPositions.leftFacesMetadata.size() * sizeof(ChunkFacePositionMetaData), megaVertPositions.leftFacesMetadata.data(), RL_DYNAMIC_DRAW);
 
-    nextIndirectdrawCommandIndexBufferID = rlLoadShaderBuffer(sizeof(int), &nextIndirectdrawCommandIndexBufferValue, RL_DYNAMIC_DRAW);
+    renderQuad.commandsLengthBOID = rlLoadShaderBuffer(sizeof(int), &nextIndirectdrawCommandIndexBufferValue, RL_DYNAMIC_DRAW);
 
     renderQuad.commandsBufferVBOID = rlLoadShaderBuffer(drawArraysIndirectCommandsGPU.size() * sizeof(DrawArraysIndirectCommand), drawArraysIndirectCommandsGPU.data(), RL_DYNAMIC_DRAW);
     renderQuad.chunkPositionsVBOID = rlLoadShaderBuffer(drawArraysIndirectChunkPositions.size() * sizeof(float3), drawArraysIndirectChunkPositions.data(), RL_DYNAMIC_DRAW);
@@ -828,7 +827,7 @@ int main()
         Plane topPlane = { position, Vector3CrossProduct(cameraRight, Vector3RotateByAxisAngle(cameraDir, cameraRight, DEG2RAD * camera.fovy * 0.5f)) };
         Plane bottomPlane = { position, Vector3CrossProduct(cameraRight, Vector3RotateByAxisAngle(cameraDir, cameraRight, DEG2RAD * camera.fovy * -0.5f)) };
 
-        rlReadShaderBuffer(chunkVisibilitySSBO, chunkVisibility.data(), chunkVisibility.size() * sizeof(int), 0);
+        //rlReadShaderBuffer(chunkVisibilitySSBO, chunkVisibility.data(), chunkVisibility.size() * sizeof(int), 0);
 
         BeginTextureMode(target);
         {
@@ -989,7 +988,7 @@ int main()
 
                                 if (renderAllValue == 1 || chunkVisibility[renderTraversalIndexFlattened] == 1/*true*/) {
 
-                                    if (/*Vector3DotProduct(Vector3{ 0, 0, 1 }, renderTraversalOrder[i]) > 0*/true) {
+                                    if (/*Vector3DotProduct(Vector3{ 0, 0, 1 }, renderTraversalOrder[i]) > 0*/false) {
 
                                         ReadyIndirectDrawListOfDrawableChunksAndFaces(/*renderTraversalOrder[i]*/
                                             offsetRenderTraversalOrder, curChunkTraversalIndex
@@ -1080,19 +1079,30 @@ int main()
                     rlBindShaderBuffer(renderQuad.chunkPositionsVBOID, 13);
                     rlBindShaderBuffer(chunkVisibilitySSBO, 4);
 
-                    rlReadShaderBuffer(nextIndirectdrawCommandIndexBufferID, &nextIndirectdrawCommandIndexBufferValue, sizeof(int), 0);
-                    std::cout << "CPU : " << drawArraysIndirectCommands.size() << ", GPU : " << nextIndirectdrawCommandIndexBufferValue << std::endl;
+                    rlReadShaderBuffer(renderQuad.commandsLengthBOID, &nextIndirectdrawCommandIndexBufferValue, sizeof(int), 0);
+                    //std::cout << "CPU : " << drawArraysIndirectCommands.size() << ", GPU : " << nextIndirectdrawCommandIndexBufferValue << std::endl;
 
-                    DrawMeshMultiInstancedDrawIndirectGPU(renderQuad, instancedMaterial
+                    // WORKS FINE! VVVV!!!
+                    //DrawMeshMultiInstancedDrawIndirectGPU(renderQuad, instancedMaterial
+                    //    , megaVertPositions.megaArrayOfAllPositions.data(), megaVertPositions.megaArrayOfAllPositions.size()
+                    //    , drawArraysIndirectCommands, nextIndirectdrawCommandIndexBufferValue);
+ 
+                    ///WORKS FINE!!!! VVVVV !!!!
+                    DrawMeshMultiInstancedDrawIndirectGPU2(renderQuad, instancedMaterial
                         , megaVertPositions.megaArrayOfAllPositions.data(), megaVertPositions.megaArrayOfAllPositions.size()
-                        , drawArraysIndirectCommands, nextIndirectdrawCommandIndexBufferValue);
+                        , nextIndirectdrawCommandIndexBufferValue);
+
+                    //VVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVV DOESN'T WORK!!! VVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVV
+                    //DrawMeshMultiInstancedDrawIndirectGPU2(renderQuad, instancedMaterial
+                    //    , megaVertPositions.megaArrayOfAllPositions.data(), megaVertPositions.megaArrayOfAllPositions.size()
+                    //    , totalNumChunks * NUM_FACES);
 
                     //rlUnloadShaderBuffer(chunkPosSSBO);
                 }
             }
-            std::cout << totalNumChunks << ", Chunks Drawn: " << numChunksDrawn << ", Chunks Drawn Without Frustum Culling: " << numChunksDrawnWithoutFrustum << std::endl;
-            numChunksDrawn = 0;
-            numChunksDrawnWithoutFrustum = 0;
+            //std::cout << totalNumChunks << ", Chunks Drawn: " << numChunksDrawn << ", Chunks Drawn Without Frustum Culling: " << numChunksDrawnWithoutFrustum << std::endl;
+            //numChunksDrawn = 0;
+            //numChunksDrawnWithoutFrustum = 0;
 
             //rlReadShaderBuffer(nextIndirectdrawCommandIndexBufferID, &nextIndirectdrawCommandIndexBufferValue, sizeof(int), 0);
             //std::cout << "CPU : " << drawArraysIndirectCommands.size() << ", GPU : " << nextIndirectdrawCommandIndexBufferValue << std::endl;
@@ -1124,7 +1134,7 @@ int main()
 
         if (frameCounter >= 100)
         {
-            std::cout << "DON'T RENDER ALL ANYMORE!" << std::endl;
+            //std::cout << "DON'T RENDER ALL ANYMORE!" << std::endl;
             renderAllValue = 0;
             SetShaderValue(instanceShader, renderAllLoc, &renderAllValue, SHADER_UNIFORM_FLOAT);
         }
@@ -1198,12 +1208,12 @@ int main()
         //EndTextureMode();
 
         nextIndirectdrawCommandIndexBufferValue = -1;
-        rlUpdateShaderBuffer(nextIndirectdrawCommandIndexBufferID, &nextIndirectdrawCommandIndexBufferValue, 1 * sizeof(int), 0);
+        rlUpdateShaderBuffer(renderQuad.commandsLengthBOID, &nextIndirectdrawCommandIndexBufferValue, 1 * sizeof(int), 0);
 
         rlEnableShader(testComputeProgram);
         rlBindShaderBuffer(chunkVisibilitySSBO, 4);
 
-        rlBindShaderBuffer(nextIndirectdrawCommandIndexBufferID, 5);
+        rlBindShaderBuffer(renderQuad.commandsLengthBOID, 5);
         rlBindShaderBuffer(renderQuad.commandsBufferVBOID, 6);
 
         rlBindShaderBuffer(renderQuad.upFacesMetadaBufferID, 7);

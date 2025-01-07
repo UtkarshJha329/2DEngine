@@ -112,6 +112,7 @@
 
 #define RLGL_VERSION  "5.0"
 
+#define GRAPHICS_API_OPENGL_46
 #define GRAPHICS_API_OPENGL_43
 
 // Function specifiers in case library is build/used as a shared library
@@ -433,6 +434,7 @@ typedef enum {
     RL_OPENGL_21,               // OpenGL 2.1 (GLSL 120)
     RL_OPENGL_33,               // OpenGL 3.3 (GLSL 330)
     RL_OPENGL_43,               // OpenGL 4.3 (using GLSL 330)
+    RL_OPENGL_46,               // OpenGL 4.6 (using GLSL 330)
     RL_OPENGL_ES_20,            // OpenGL ES 2.0 (GLSL 100)
     RL_OPENGL_ES_30             // OpenGL ES 3.0 (GLSL 300 es)
 } rlGlVersion;
@@ -759,6 +761,7 @@ RLAPI void rlDrawVertexArrayInstancedTriangleStrip(int offset, int count, int in
 RLAPI void rlDrawVertexArrayElementsInstanced(int offset, int count, const void *buffer, int instances); // Draw vertex array elements with instancing
 RLAPI void rlDrawArraysInstancedBaseInstanceTriangleStrip(int first, int count, int instanceCount, int baseinstance); // Draw VAO with instancing by controlling instancing slices.
 RLAPI void rlMultiDrawArraysIndirectTriangleStrip(const void* indirect, int drawCount, int stride); // Stack render draw calls and send them to the GPU to be rendered at once.
+RLAPI void rlMultiDrawArraysIndirectCountTriangleStrip(const void* indirect, int drawCountReadOffsetInBytes, int maxDrawCount, int stride); // Tell GPU to render data it already has.
 
 // Textures management
 RLAPI unsigned int rlLoadTexture(const void *data, int width, int height, int format, int mipmapCount); // Load texture data
@@ -805,7 +808,8 @@ RLAPI void rlCopyShaderBuffer(unsigned int destId, unsigned int srcId, unsigned 
 RLAPI unsigned int rlGetShaderBufferSize(unsigned int id);                      // Get SSBO buffer size
 RLAPI unsigned int rlLoadDrawBufferIndirect(unsigned int size, const void* data, bool dynamic);
 RLAPI void rlUpdateDrawBufferIndirect(unsigned int id, const void *data, unsigned int dataSize, unsigned int offset); // Update SSBO draw buffer indirect data
-RLAPI void rlBindDrawBufferIndirect(unsigned int bufferID);
+RLAPI void rlBindDrawBufferIndirect(unsigned int bufferID);                     // Bind the Draw Buffer Indirect buffer.
+RLAPI void rlBindDrawParametersBuffer(unsigned int bufferID);                   // Bind the Draw Parameters Buffer.
 
 // Buffer management
 RLAPI void rlBindImageTexture(unsigned int id, unsigned int index, int format, bool readonly);  // Bind image texture
@@ -2675,6 +2679,8 @@ int rlGetVersion(void)
 #endif
 #if defined(GRAPHICS_API_OPENGL_21)
     glVersion = RL_OPENGL_21;
+#elif defined(GRAPHICS_API_OPENGL_46)
+    glVersion = RL_OPENGL_46;
 #elif defined(GRAPHICS_API_OPENGL_43)
     glVersion = RL_OPENGL_43;
 #elif defined(GRAPHICS_API_OPENGL_33)
@@ -4033,6 +4039,11 @@ void rlMultiDrawArraysIndirectTriangleStrip(const void* indirect, int drawCount,
     glMultiDrawArraysIndirect(GL_TRIANGLE_STRIP, indirect, drawCount, stride);
 }
 
+//Draw With All Data Already On The GPU.
+void rlMultiDrawArraysIndirectCountTriangleStrip(const void* indirect, int drawCountReadOffsetInBytes, int maxDrawCount, int stride)
+{
+    glMultiDrawArraysIndirectCount(GL_TRIANGLE_STRIP, indirect, drawCountReadOffsetInBytes, maxDrawCount, stride);
+}
 
 #if defined(GRAPHICS_API_OPENGL_11)
 // Enable vertex state pointer
@@ -4655,6 +4666,15 @@ void rlBindDrawBufferIndirect(unsigned int bufferID)
     glBindBuffer(GL_DRAW_INDIRECT_BUFFER, bufferID);
 #else
     TRACELOG(RL_LOG_WARNING, "Indirect Draw Buffer: Indirect Draw Buffer not enabled. Define GRAPHICS_API_OPENGL_43");
+#endif
+}
+
+void rlBindDrawParametersBuffer(unsigned int bufferID)
+{
+#if defined(GRAPHICS_API_OPENGL_43)
+    glBindBuffer(GL_PARAMETER_BUFFER, bufferID);
+#else
+    TRACELOG(RL_LOG_WARNING, "Parameters Draw Buffer: Parameters Draw Buffer not enabled. Define GRAPHICS_API_OPENGL_43");
 #endif
 }
 
