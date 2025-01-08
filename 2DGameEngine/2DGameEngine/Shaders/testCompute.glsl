@@ -214,7 +214,7 @@ void CreateIndirectDrawOrderBasedOnFaceVisibility(vec3 innerChunkIndex, vec3 cam
 void main(){
 
     int chunkSize = 32;
-    uint numChunksHalfWidth = 3;
+    uint numChunksHalfWidth = 80;
     uint numChunksFullWidth = (2 * numChunksHalfWidth) + 1;
 
     uvec3 curId = uvec3(gl_GlobalInvocationID);
@@ -237,7 +237,7 @@ void main(){
 
         bool isVisible = InFrustum(curChunkPos, nearPlane, farPlane, rightPlane, leftPlane, topPlane, bottomPlane);
 
-        if(isVisible)
+        if(isVisible && chunksVisibility[flattenedID] == 1)
         {
             chunksVisibility[flattenedID] = 1;
             //atomicAdd(nextIndirectdrawCommandIndex, 1);

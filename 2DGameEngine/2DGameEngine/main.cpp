@@ -829,6 +829,58 @@ int main()
 
         //rlReadShaderBuffer(chunkVisibilitySSBO, chunkVisibility.data(), chunkVisibility.size() * sizeof(int), 0);
 
+        nextIndirectdrawCommandIndexBufferValue = 0;
+        rlUpdateShaderBuffer(renderQuad.commandsLengthBOID, &nextIndirectdrawCommandIndexBufferValue, 1 * sizeof(int), 0);
+
+        rlEnableShader(testComputeProgram);
+        rlBindShaderBuffer(chunkVisibilitySSBO, 4);
+
+        rlBindShaderBuffer(renderQuad.commandsLengthBOID, 5);
+        rlBindShaderBuffer(renderQuad.commandsBufferVBOID, 6);
+
+        rlBindShaderBuffer(renderQuad.upFacesMetadaBufferID, 7);
+        rlBindShaderBuffer(renderQuad.downFacesMetadaBufferID, 8);
+        rlBindShaderBuffer(renderQuad.frontFacesMetadaBufferID, 9);
+        rlBindShaderBuffer(renderQuad.backFacesMetadaBufferID, 10);
+        rlBindShaderBuffer(renderQuad.rightFacesMetadaBufferID, 11);
+        rlBindShaderBuffer(renderQuad.leftFacesMetadaBufferID, 12);
+
+        rlBindShaderBuffer(renderQuad.chunkPositionsVBOID, 13);
+
+        float3 nearPlaneNormal = { nearPlane.normal.x,  nearPlane.normal.y,  nearPlane.normal.z };
+        float3 farPlaneNormal = { farPlane.normal.x,  farPlane.normal.y,  farPlane.normal.z };
+        float3 rightPlaneNormal = { rightPlane.normal.x,  rightPlane.normal.y,  rightPlane.normal.z };
+        float3 leftPlaneNormal = { leftPlane.normal.x,  leftPlane.normal.y,  leftPlane.normal.z };
+        float3 topPlaneNormal = { topPlane.normal.x,  topPlane.normal.y,  topPlane.normal.z };
+        float3 bottomPlaneNormal = { bottomPlane.normal.x,  bottomPlane.normal.y,  bottomPlane.normal.z };
+        rlSetUniform(rlGetLocationUniform(testComputeProgram, "nearPlaneNormal"), &nearPlaneNormal, SHADER_UNIFORM_VEC3, 1);
+        rlSetUniform(rlGetLocationUniform(testComputeProgram, "farPlaneNormal"), &farPlaneNormal, SHADER_UNIFORM_VEC3, 1);
+        rlSetUniform(rlGetLocationUniform(testComputeProgram, "rightPlaneNormal"), &rightPlaneNormal, SHADER_UNIFORM_VEC3, 1);
+        rlSetUniform(rlGetLocationUniform(testComputeProgram, "leftPlaneNormal"), &leftPlaneNormal, SHADER_UNIFORM_VEC3, 1);
+        rlSetUniform(rlGetLocationUniform(testComputeProgram, "topPlaneNormal"), &topPlaneNormal, SHADER_UNIFORM_VEC3, 1);
+        rlSetUniform(rlGetLocationUniform(testComputeProgram, "bottomPlaneNormal"), &bottomPlaneNormal, SHADER_UNIFORM_VEC3, 1);
+
+        //float3 positionToSend = { camera.position.x, camera.position.y, camera.position.z };
+        //rlSetUniform(rlGetLocationUniform(testComputeProgram, "positionOnFrustum"), &positionToSend, SHADER_UNIFORM_VEC3, 1);
+
+        Vector3 cameraDirection = Vector3Subtract(camera.target, camera.position);
+        cameraDirection = Vector3Normalize(cameraDirection);
+        float3 cameraDirectionToSend = { cameraDirection.x, cameraDirection.y, cameraDirection.z };
+        int cameraDirLoc = rlGetLocationUniform(testComputeProgram, "cameraDir");
+        rlSetUniform(cameraDirLoc, &cameraDirectionToSend, SHADER_UNIFORM_VEC3, 1);
+
+        float3 cameraPositionToSend = { camera.position.x, camera.position.y, camera.position.z };
+        int cameraPositionLoc = rlGetLocationUniform(testComputeProgram, "cameraPosition");
+        rlSetUniform(cameraPositionLoc, &cameraPositionToSend, SHADER_UNIFORM_VEC3, 1);
+
+        rlSetUniform(rlGetLocationUniform(testComputeProgram, "diagonalDist"), &diagonalDist, SHADER_UNIFORM_FLOAT, 1);
+
+        rlComputeShaderDispatch(6, 3, 6);
+
+        rlMemoryBarrierShaderStorage();
+        rlDisableShader();
+
+
         BeginTextureMode(target);
         {
             //BeginDrawing();
@@ -1079,8 +1131,10 @@ int main()
                     rlBindShaderBuffer(renderQuad.chunkPositionsVBOID, 13);
                     rlBindShaderBuffer(chunkVisibilitySSBO, 4);
 
-                    rlReadShaderBuffer(renderQuad.commandsLengthBOID, &nextIndirectdrawCommandIndexBufferValue, sizeof(int), 0);
+                    //rlReadShaderBuffer(renderQuad.commandsLengthBOID, &nextIndirectdrawCommandIndexBufferValue, sizeof(int), 0);
                     //std::cout << "CPU : " << drawArraysIndirectCommands.size() << ", GPU : " << nextIndirectdrawCommandIndexBufferValue << std::endl;
+                    //rlReadShaderBuffer(renderQuad.commandsLengthBOID, &nextIndirectdrawCommandIndexBufferValue, sizeof(int), 0);
+                    //std::cout << "GPU : " << nextIndirectdrawCommandIndexBufferValue << std::endl;
 
                     // WORKS FINE! VVVV!!!
                     //DrawMeshMultiInstancedDrawIndirectGPU(renderQuad, instancedMaterial
@@ -1088,14 +1142,14 @@ int main()
                     //    , drawArraysIndirectCommands, nextIndirectdrawCommandIndexBufferValue);
  
                     ///WORKS FINE!!!! VVVVV !!!!
-                    DrawMeshMultiInstancedDrawIndirectGPU2(renderQuad, instancedMaterial
-                        , megaVertPositions.megaArrayOfAllPositions.data(), megaVertPositions.megaArrayOfAllPositions.size()
-                        , nextIndirectdrawCommandIndexBufferValue);
-
-                    //VVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVV DOESN'T WORK!!! VVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVV
                     //DrawMeshMultiInstancedDrawIndirectGPU2(renderQuad, instancedMaterial
                     //    , megaVertPositions.megaArrayOfAllPositions.data(), megaVertPositions.megaArrayOfAllPositions.size()
-                    //    , totalNumChunks * NUM_FACES);
+                    //    , nextIndirectdrawCommandIndexBufferValue);
+
+                    //VVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVV DOESN'T WORK!!! VVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVV
+                    DrawMeshMultiInstancedDrawIndirectGPU2(renderQuad, instancedMaterial
+                        , megaVertPositions.megaArrayOfAllPositions.data(), megaVertPositions.megaArrayOfAllPositions.size()
+                        , totalNumChunks * NUM_FACES);
 
                     //rlUnloadShaderBuffer(chunkPosSSBO);
                 }
@@ -1140,7 +1194,7 @@ int main()
         }
 
 
-        if(false)
+        if(true)
         {
             BeginTextureMode(rd2D);
             {
@@ -1207,56 +1261,56 @@ int main()
         //    EndShaderMode();
         //EndTextureMode();
 
-        nextIndirectdrawCommandIndexBufferValue = -1;
-        rlUpdateShaderBuffer(renderQuad.commandsLengthBOID, &nextIndirectdrawCommandIndexBufferValue, 1 * sizeof(int), 0);
+        //nextIndirectdrawCommandIndexBufferValue = -1;
+        //rlUpdateShaderBuffer(renderQuad.commandsLengthBOID, &nextIndirectdrawCommandIndexBufferValue, 1 * sizeof(int), 0);
 
-        rlEnableShader(testComputeProgram);
-        rlBindShaderBuffer(chunkVisibilitySSBO, 4);
+        //rlEnableShader(testComputeProgram);
+        //rlBindShaderBuffer(chunkVisibilitySSBO, 4);
 
-        rlBindShaderBuffer(renderQuad.commandsLengthBOID, 5);
-        rlBindShaderBuffer(renderQuad.commandsBufferVBOID, 6);
+        //rlBindShaderBuffer(renderQuad.commandsLengthBOID, 5);
+        //rlBindShaderBuffer(renderQuad.commandsBufferVBOID, 6);
 
-        rlBindShaderBuffer(renderQuad.upFacesMetadaBufferID, 7);
-        rlBindShaderBuffer(renderQuad.downFacesMetadaBufferID, 8);
-        rlBindShaderBuffer(renderQuad.frontFacesMetadaBufferID, 9);
-        rlBindShaderBuffer(renderQuad.backFacesMetadaBufferID, 10);
-        rlBindShaderBuffer(renderQuad.rightFacesMetadaBufferID, 11);
-        rlBindShaderBuffer(renderQuad.leftFacesMetadaBufferID, 12);
+        //rlBindShaderBuffer(renderQuad.upFacesMetadaBufferID, 7);
+        //rlBindShaderBuffer(renderQuad.downFacesMetadaBufferID, 8);
+        //rlBindShaderBuffer(renderQuad.frontFacesMetadaBufferID, 9);
+        //rlBindShaderBuffer(renderQuad.backFacesMetadaBufferID, 10);
+        //rlBindShaderBuffer(renderQuad.rightFacesMetadaBufferID, 11);
+        //rlBindShaderBuffer(renderQuad.leftFacesMetadaBufferID, 12);
 
-        rlBindShaderBuffer(renderQuad.chunkPositionsVBOID, 13);
-         
-        float3 nearPlaneNormal = { nearPlane.normal.x,  nearPlane.normal.y,  nearPlane.normal.z };
-        float3 farPlaneNormal = { farPlane.normal.x,  farPlane.normal.y,  farPlane.normal.z };
-        float3 rightPlaneNormal = { rightPlane.normal.x,  rightPlane.normal.y,  rightPlane.normal.z };
-        float3 leftPlaneNormal = { leftPlane.normal.x,  leftPlane.normal.y,  leftPlane.normal.z };
-        float3 topPlaneNormal = { topPlane.normal.x,  topPlane.normal.y,  topPlane.normal.z };
-        float3 bottomPlaneNormal = { bottomPlane.normal.x,  bottomPlane.normal.y,  bottomPlane.normal.z };
-        rlSetUniform(rlGetLocationUniform(testComputeProgram, "nearPlaneNormal"), &nearPlaneNormal, SHADER_UNIFORM_VEC3, 1);
-        rlSetUniform(rlGetLocationUniform(testComputeProgram, "farPlaneNormal"), &farPlaneNormal, SHADER_UNIFORM_VEC3, 1);
-        rlSetUniform(rlGetLocationUniform(testComputeProgram, "rightPlaneNormal"), &rightPlaneNormal, SHADER_UNIFORM_VEC3, 1);
-        rlSetUniform(rlGetLocationUniform(testComputeProgram, "leftPlaneNormal"), &leftPlaneNormal, SHADER_UNIFORM_VEC3, 1);
-        rlSetUniform(rlGetLocationUniform(testComputeProgram, "topPlaneNormal"), &topPlaneNormal, SHADER_UNIFORM_VEC3, 1);
-        rlSetUniform(rlGetLocationUniform(testComputeProgram, "bottomPlaneNormal"), &bottomPlaneNormal, SHADER_UNIFORM_VEC3, 1);
+        //rlBindShaderBuffer(renderQuad.chunkPositionsVBOID, 13);
+        // 
+        //float3 nearPlaneNormal = { nearPlane.normal.x,  nearPlane.normal.y,  nearPlane.normal.z };
+        //float3 farPlaneNormal = { farPlane.normal.x,  farPlane.normal.y,  farPlane.normal.z };
+        //float3 rightPlaneNormal = { rightPlane.normal.x,  rightPlane.normal.y,  rightPlane.normal.z };
+        //float3 leftPlaneNormal = { leftPlane.normal.x,  leftPlane.normal.y,  leftPlane.normal.z };
+        //float3 topPlaneNormal = { topPlane.normal.x,  topPlane.normal.y,  topPlane.normal.z };
+        //float3 bottomPlaneNormal = { bottomPlane.normal.x,  bottomPlane.normal.y,  bottomPlane.normal.z };
+        //rlSetUniform(rlGetLocationUniform(testComputeProgram, "nearPlaneNormal"), &nearPlaneNormal, SHADER_UNIFORM_VEC3, 1);
+        //rlSetUniform(rlGetLocationUniform(testComputeProgram, "farPlaneNormal"), &farPlaneNormal, SHADER_UNIFORM_VEC3, 1);
+        //rlSetUniform(rlGetLocationUniform(testComputeProgram, "rightPlaneNormal"), &rightPlaneNormal, SHADER_UNIFORM_VEC3, 1);
+        //rlSetUniform(rlGetLocationUniform(testComputeProgram, "leftPlaneNormal"), &leftPlaneNormal, SHADER_UNIFORM_VEC3, 1);
+        //rlSetUniform(rlGetLocationUniform(testComputeProgram, "topPlaneNormal"), &topPlaneNormal, SHADER_UNIFORM_VEC3, 1);
+        //rlSetUniform(rlGetLocationUniform(testComputeProgram, "bottomPlaneNormal"), &bottomPlaneNormal, SHADER_UNIFORM_VEC3, 1);
 
-        //float3 positionToSend = { camera.position.x, camera.position.y, camera.position.z };
-        //rlSetUniform(rlGetLocationUniform(testComputeProgram, "positionOnFrustum"), &positionToSend, SHADER_UNIFORM_VEC3, 1);
+        ////float3 positionToSend = { camera.position.x, camera.position.y, camera.position.z };
+        ////rlSetUniform(rlGetLocationUniform(testComputeProgram, "positionOnFrustum"), &positionToSend, SHADER_UNIFORM_VEC3, 1);
 
-        Vector3 cameraDirection = Vector3Subtract(camera.target, camera.position);
-        cameraDirection = Vector3Normalize(cameraDirection);
-        float3 cameraDirectionToSend = { cameraDirection.x, cameraDirection.y, cameraDirection.z };
-        int cameraDirLoc = rlGetLocationUniform(testComputeProgram, "cameraDir");
-        rlSetUniform(cameraDirLoc, &cameraDirectionToSend, SHADER_UNIFORM_VEC3, 1);
+        //Vector3 cameraDirection = Vector3Subtract(camera.target, camera.position);
+        //cameraDirection = Vector3Normalize(cameraDirection);
+        //float3 cameraDirectionToSend = { cameraDirection.x, cameraDirection.y, cameraDirection.z };
+        //int cameraDirLoc = rlGetLocationUniform(testComputeProgram, "cameraDir");
+        //rlSetUniform(cameraDirLoc, &cameraDirectionToSend, SHADER_UNIFORM_VEC3, 1);
 
-        float3 cameraPositionToSend = { camera.position.x, camera.position.y, camera.position.z };
-        int cameraPositionLoc = rlGetLocationUniform(testComputeProgram, "cameraPosition");
-        rlSetUniform(cameraPositionLoc, &cameraPositionToSend, SHADER_UNIFORM_VEC3, 1);
+        //float3 cameraPositionToSend = { camera.position.x, camera.position.y, camera.position.z };
+        //int cameraPositionLoc = rlGetLocationUniform(testComputeProgram, "cameraPosition");
+        //rlSetUniform(cameraPositionLoc, &cameraPositionToSend, SHADER_UNIFORM_VEC3, 1);
 
-        rlSetUniform(rlGetLocationUniform(testComputeProgram, "diagonalDist"), &diagonalDist, SHADER_UNIFORM_FLOAT, 1);
+        //rlSetUniform(rlGetLocationUniform(testComputeProgram, "diagonalDist"), &diagonalDist, SHADER_UNIFORM_FLOAT, 1);
 
-        rlComputeShaderDispatch(6, 3, 6);
+        //rlComputeShaderDispatch(6, 3, 6);
 
-        rlMemoryBarrierShaderStorage();
-        rlDisableShader();
+        //rlMemoryBarrierShaderStorage();
+        //rlDisableShader();
 
         BeginDrawing();
             ClearBackground(RAYWHITE);
@@ -1273,7 +1327,7 @@ int main()
                 DrawTextureRec(target.depthColourTexture, Rectangle { 0, 0, (float)screenWidth, (float)-screenHeight }, Vector2 { 0, 0 }, WHITE);
             }
             else if(randValue == 4) {
-                DrawTextureRec(rd2D.texture, Rectangle { 0, 0, (float)computeTextureWidth, (float)computeTextureHeight * -1.0f}, Vector2 { 0, 0 }, WHITE);
+                DrawTextureRec(rd2D.texture, Rectangle { 0, 0, (float)screenWidth, (float)-screenHeight}, Vector2 { 0, 0 }, WHITE);
             }
             DrawCircle(screenWidth / 2, screenHeight / 2, 1.0f, RED);
             DrawFPS(40, 40);
