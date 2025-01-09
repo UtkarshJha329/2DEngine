@@ -3,6 +3,8 @@
 in vec2 texCoord;
 flat in float zPos;
 flat in int flattenedChunkIndex;
+flat in int _chunkSize;
+flat in int _halfNumChunksWidth;
 
 layout (location = 0) out vec4 FragColor;
 
@@ -16,15 +18,13 @@ uniform sampler2D depthValueTexture;
 
 uniform float cutOffDepth;
 
-int halfNumChunksWidth = 80;
-int totalNumChunksWidth = (2 * halfNumChunksWidth) + 1;
-int totalNumChunksWidth_Y = 3;
-
-int chunkSize = 32;
 
 void main()
 {
 
+    int totalNumChunksWidth = (2 * _halfNumChunksWidth) + 1;
+    int totalNumChunksWidth_Y = 3;
+    
     vec2 viewport_wh = vec2(1280, 720);
     //vec2 ndc = (2.0 * gl_FragCoord.xy / viewport_wh) - 1.0;
     vec2 ndc = (gl_FragCoord.xy / viewport_wh);
@@ -38,8 +38,8 @@ void main()
     vec4 depth = texture(depthValueTexture, vec2(screenCoord.x, screenCoord.y));
 
     vec3 remappedDepth = vec3(depth.x * totalNumChunksWidth, depth.y * totalNumChunksWidth_Y, depth.z * totalNumChunksWidth);
-    remappedDepth = vec3(remappedDepth.x - halfNumChunksWidth, remappedDepth.y, remappedDepth.z - halfNumChunksWidth);
-    remappedDepth = remappedDepth * chunkSize;
+    remappedDepth = vec3(remappedDepth.x - _halfNumChunksWidth, remappedDepth.y, remappedDepth.z - _halfNumChunksWidth);
+    remappedDepth = remappedDepth * _chunkSize;
 
 //    if(length(vec2(remappedDepth.x, remappedDepth.z)) < cutOffDepth * totalNumChunksWidth * chunkSize){
 //        discard;
@@ -61,7 +61,7 @@ void main()
     }
     else{
         //FragColor = vec4(screenCoord, 0.0, 1.0);
-        FragColor = vec4(1.0, 0.0, 0.0, 1.0);
+        //FragColor = vec4(1.0, 0.0, 0.0, 1.0);
         //FragColor = vec4(vec3(depth), 1.0);
         //chunksVisibility[flattenedChunkIndex] = 0;
     }

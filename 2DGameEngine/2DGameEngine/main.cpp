@@ -113,7 +113,10 @@ static void GenChunkMeshWithNoise(VertexPositions &megaVertPositions
 {
     PROFILE_FUNCTION();
 
-    std::vector<std::vector<std::vector<float>>> _noiseForCurChunk(chunkSize + 3, std::vector<std::vector<float>>(chunkSize + 3, std::vector<float>(chunkSize + 3)));
+    //int extraVoxelsToCompute = 2 * pow(2, curLodLevel);
+    int extraVoxelsToCompute = 2 + 1;
+
+    std::vector<std::vector<std::vector<float>>> _noiseForCurChunk(chunkSize + extraVoxelsToCompute, std::vector<std::vector<float>>(chunkSize + extraVoxelsToCompute, std::vector<float>(chunkSize + extraVoxelsToCompute)));
     MakeNoiseForChunk(_noiseForCurChunk, chunkIndex.x, chunkIndex.y, chunkIndex.z, numChunksFullWidth, numChunksFullWidth_Y, chunkSize, scale);
 
     ConvoluteNoise(_noiseForCurChunk, curLodLevel);
@@ -127,17 +130,7 @@ static void GenChunkMeshWithNoise(VertexPositions &megaVertPositions
             std::lock_guard<std::mutex> lockChunkMappingAndAllocatingMutex(chunkMappingAllocatingMutex);
 
             if (reclaimPreviousMemory) {
-                //int chunkFlatPos = megaVertPositions.ChunkFlatIndexWithoutVoxels(innerChunkIndex);
-
-                //std::cout << "Reclaim Memory." << std::endl;
                 megaVertPositions.ClearChunkData(innerChunkIndex);
-
-                //megaVertPositions.ReclaimMemory(megaVertPositions.upFacesMetadata[chunkFlatPos].startPositionInBigArray, megaVertPositions.upFacesMetadata[chunkFlatPos].size);
-                //megaVertPositions.ReclaimMemory(megaVertPositions.downFacesMetadata[chunkFlatPos].startPositionInBigArray, megaVertPositions.downFacesMetadata[chunkFlatPos].size);
-                //megaVertPositions.ReclaimMemory(megaVertPositions.frontFacesMetadata[chunkFlatPos].startPositionInBigArray, megaVertPositions.frontFacesMetadata[chunkFlatPos].size);
-                //megaVertPositions.ReclaimMemory(megaVertPositions.backFacesMetadata[chunkFlatPos].startPositionInBigArray, megaVertPositions.backFacesMetadata[chunkFlatPos].size);
-                //megaVertPositions.ReclaimMemory(megaVertPositions.rightFacesMetadata[chunkFlatPos].startPositionInBigArray, megaVertPositions.rightFacesMetadata[chunkFlatPos].size);
-                //megaVertPositions.ReclaimMemory(megaVertPositions.leftFacesMetadata[chunkFlatPos].startPositionInBigArray, megaVertPositions.leftFacesMetadata[chunkFlatPos].size);
             }
 
             for (int i = 0; i < NUM_FACES; i++)
@@ -146,29 +139,11 @@ static void GenChunkMeshWithNoise(VertexPositions &megaVertPositions
                                                     , chunkMeshData, i * totalNumVoxelsPerChunkWorstCase, chunkFacesMetadata.GetSizeOfFaceDirPositions(i)
                                                     , chunkFacesMetadata.GetAppropriateStartIndexBasedOnFaceDir(i));
 
-                //if (reclaimPreviousMemory) {
-                //    std::cout << chunkFacesMetadata.GetAppropriateStartIndexBasedOnFaceDir(i) << " : " << chunkFacesMetadata.GetSizeOfFaceDirPositions(i) << std::endl;
-                //}
-                //std::cout << *chunkFacesMetadata.GetAppropriateStartIndexBasedOnFaceDir(i) << " : " << chunkFacesMetadata.GetSizeOfFaceDirPositions(i) << std::endl;
             }
 
-            //std::cout << *chunkFacesMetadata.GetAppropriateStartIndexBasedOnFaceDir(0) << std::endl;
-
-            //chunkFacesMetadata.upFacesStartIndex += chunkIndexFlattenedWithVoxels;
-            //chunkFacesMetadata.downFacesStartIndex += chunkIndexFlattenedWithVoxels;
-            //chunkFacesMetadata.frontFacesStartIndex += chunkIndexFlattenedWithVoxels;
-            //chunkFacesMetadata.backFacesStartIndex += chunkIndexFlattenedWithVoxels;
-            //chunkFacesMetadata.rightFacesStartIndex += chunkIndexFlattenedWithVoxels;
-            //chunkFacesMetadata.leftFacesStartIndex += chunkIndexFlattenedWithVoxels;
 
             megaVertPositions.MapChunkMemoryToBigArray(innerChunkIndex, chunkFacesMetadata);
 
-            //megaVertPositions.totalFilled += chunkFacesMetadata.numUpFaces
-            //                                + chunkFacesMetadata.numDownFaces
-            //                                + chunkFacesMetadata.numFrontFaces
-            //                                + chunkFacesMetadata.numBackFaces
-            //                                + chunkFacesMetadata.numRightFaces
-            //                                + chunkFacesMetadata.numLeftFaces;
         }
 
         {
@@ -290,36 +265,6 @@ static void ReloadChunkDataFromFile(std::string curChunkFileName
             , cereal::binary_data(leftFacePositions.data(), sizeof(int) * leftFacePositions.size())
         );
     }
-
-
-    //for (int i = 0; i < NUM_FACES; i++)
-    //{
-    //    std::string curChunkSaveFileName = CHUNK_SAVE_STRING(curChunkIndex, i);
-
-    //    std::ifstream is(worldDataDir + curChunkSaveFileName, std::ios::binary);
-    //    cereal::BinaryInputArchive iarchive(is);
-
-    //    int start = megaVertPositions.ChunkTotalFlatIndexWithVoxels(innerChunkIndex) + (i * totalNumVoxelsPerChunk);
-    //    std::span<int> curChunkSlice(megaVertPositions.megaArrayOfAllPositions.begin() + start, megaVertPositions.GetCurFaceDirChunkDataEndPos(curChunkIndex, i));
-
-    //    iarchive(cereal::binary_data(curChunkSlice.data(), sizeof(int) * curChunkSlice.size()));
-
-    //}
-
-    //std::ifstream is(curChunkFileName, std::ios::binary);
-    //cereal::BinaryInputArchive iarchive(is);
-
-    //int chunkFlatIndexWithoutVoxels = megaVertPositions.ChunkFlatIndexWithoutVoxels(innerChunkIndex);
-    //int start = megaVertPositions.ChunkTotalFlatIndexWithVoxels(innerChunkIndex);
-    //std::span<int> curChunkSlice(megaVertPositions.megaArrayOfAllPositions.begin() + start, totalNumVoxelsPerChunk * NUM_FACES);
-
-    //iarchive(cereal::binary_data(curChunkSlice.data(), sizeof(int) * curChunkSlice.size())
-    //    , megaVertPositions.upEndVoxelPositions[chunkFlatIndexWithoutVoxels]
-    //    , megaVertPositions.downEndVoxelPositions[chunkFlatIndexWithoutVoxels]
-    //    , megaVertPositions.frontEndVoxelPositions[chunkFlatIndexWithoutVoxels]
-    //    , megaVertPositions.backEndVoxelPositions[chunkFlatIndexWithoutVoxels]
-    //    , megaVertPositions.rightEndVoxelPositions[chunkFlatIndexWithoutVoxels]
-    //    , megaVertPositions.leftEndVoxelPositions[chunkFlatIndexWithoutVoxels]);
 
     {
         {
@@ -621,8 +566,10 @@ int main()
     SetShaderValue(instanceShader, numChunksPerLodLoc, &numChunksPerLod, SHADER_UNIFORM_FLOAT);
 
     int numChunksLoc = GetShaderLocation(instanceShader, "halfNumChunksWidth");
-    float numChunks = numChunksHalfWidth;
-    SetShaderValue(instanceShader, numChunksLoc, &numChunks, SHADER_UNIFORM_FLOAT);
+    SetShaderValue(instanceShader, numChunksLoc, &numChunksHalfWidth, SHADER_UNIFORM_INT);
+
+    int chunkSizeLoc = GetShaderLocation(instanceShader, "chunkSize");
+    SetShaderValue(instanceShader, chunkSizeLoc, &chunkSize, SHADER_UNIFORM_INT);
 
     int renderAllLoc = GetShaderLocation(instanceShader, "renderAll");
     float renderAllValue = 1;
@@ -653,8 +600,23 @@ int main()
     float cutOffDepthValue = 0.25f;
     SetShaderValue(cullingShader, cutOffDepthLoc, &cutOffDepthValue, SHADER_UNIFORM_FLOAT);
 
-    int numChunksHalfWidthLoc = GetShaderLocation(cullingShader, "numChunksHalfWidth");
-    SetShaderValue(cullingShader, numChunksHalfWidthLoc, &numChunksHalfWidth, SHADER_UNIFORM_FLOAT);
+    int chunkSizeInCullingShaderLoc = GetShaderLocation(cullingShader, "chunkSize");
+    SetShaderValue(cullingShader, chunkSizeInCullingShaderLoc, &chunkSize, SHADER_UNIFORM_INT);
+
+    int numChunksHalfWidthLocInCullingShader = GetShaderLocation(cullingShader, "numChunksHalfWidth");
+    SetShaderValue(cullingShader, numChunksHalfWidthLocInCullingShader, &numChunksHalfWidth, SHADER_UNIFORM_INT);
+
+    int cameraPosLocInCullingShader = GetShaderLocation(cullingShader, "cameraPos");
+    SetShaderValue(cullingShader, cameraPosLocInCullingShader, cameraPos, SHADER_UNIFORM_VEC3);
+
+
+    int numChunkSizeLocInComputeShader = rlGetLocationUniform(testComputeProgram, "chunkSize");
+    int numChunksHalfWidthLocInComputeShader = rlGetLocationUniform(testComputeProgram, "numChunksHalfWidth");
+
+    rlEnableShader(testComputeProgram);
+    rlSetUniform(numChunkSizeLocInComputeShader, &chunkSize, SHADER_UNIFORM_INT, 1);
+    rlSetUniform(numChunksHalfWidthLocInComputeShader, &numChunksHalfWidth, SHADER_UNIFORM_INT, 1);
+    rlDisableShader();
 
     unsigned int chunksGridPosSSBO = rlLoadShaderBuffer(chunksGridCoordinates.size() * sizeof(float3), chunksGridCoordinates.data(), RL_DYNAMIC_DRAW);
 
@@ -755,9 +717,6 @@ int main()
             randValue++;
             randValue = randValue > 4 ? 0 : randValue;
             SetShaderValue(instanceShader, randValueLoc, &randValue, SHADER_UNIFORM_FLOAT);
-            //if (randValue == 4) {
-            //    std::cout << "drawing compute result." << std::endl;
-            //}
         }
 
         UpdateCamera(&camera, CAMERA_FREE);
@@ -766,21 +725,16 @@ int main()
         SetShaderValue(instancedMaterial.shader, instancedMaterial.shader.locs[SHADER_LOC_VECTOR_VIEW], cameraPos, SHADER_UNIFORM_VEC3);
 
         chunkPositions.clear();
-        //chunkPositionsFlattened.clear();
         drawArraysIndirectCommands.clear();
 
         cameraChunkIndex = { (float)((int)camera.position.x / chunkSize), (float)((int)camera.position.y / chunkSize), (float)((int)camera.position.z / chunkSize) };
 
         if (oldCameraChunkPosition.x != cameraChunkIndex.x || oldCameraChunkPosition.z != cameraChunkIndex.z) {
 
-            //std::cout << std::endl;
-
+            //std::cout << "Detected change in camera chunk position." << std::endl;
             Vector3 offset = Vector3{ cameraChunkIndex.x - oldCameraChunkPosition.x, 0, cameraChunkIndex.z - oldCameraChunkPosition.z };
 
-            //std::cout << "Offset: " << offset.x << ", " << offset.z << std::endl;
             for (auto& it : mappedInnerIndexMap) {
-
-                //std::cout << "\tOriginal: " << it.second.x << ", " << it.second.z;
 
                 it.second = Vector3{ it.second.x + offset.x, it.second.y, it.second.z + offset.z };
 
@@ -799,108 +753,96 @@ int main()
                 if (it.second.z < -numChunksHalfWidth) {
                     it.second.z = (it.second.z * -1) - 1;
                 }
-
-                //std::cout << "\tApplied Offset: " << it.second.x << ", " << it.second.z << std::endl;
             }
 
             //Mark All Chunks That Are New To Be Reaclculated
             for (int i = 0; i < renderTraversalOrder.size(); i++)
             {
+                //if ((offset.x != 0 && renderTraversalOrder[i].x == offset.x * numChunksHalfWidth) || (offset.z != 0 && renderTraversalOrder[i].z == offset.z * numChunksHalfWidth)) {
+                //    innerIndexWhereNewMeshNeedsToBeCalculated[megaVertPositions.InnerIndexFlattened(renderTraversalOrder[i])] = true;
+                //}
+
                 if (LODBorderMesh(renderTraversalOrder[i]))
                 {
-                    //if ((offset.x != 0 && renderTraversalOrder[i].x == offset.x * numChunksHalfWidth) || (offset.z != 0 && renderTraversalOrder[i].z == offset.z * numChunksHalfWidth)) {
+                    //std::cout << "NEED TO RECALCULATE" << std::endl;
                     innerIndexWhereNewMeshNeedsToBeCalculated[megaVertPositions.InnerIndexFlattened(renderTraversalOrder[i])] = true;
                 }
             }
         }
 
-        Vector3 cameraDir = Vector3Subtract(camera.target, camera.position);
-        cameraDir = Vector3Normalize(cameraDir);
+        {
+            PROFILE_SCOPE("GPU FRUSTUM CULLING.");
 
-        Vector3 cameraRight = Vector3CrossProduct(cameraDir, { 0, 1, 0 });
-        Vector3 position = camera.position - cameraDir * diagonalDist * 2 * 1.414f;
+            Vector3 cameraDir = Vector3Subtract(camera.target, camera.position);
+            cameraDir = Vector3Normalize(cameraDir);
 
-        Plane nearPlane = { position, cameraDir };
-        Plane farPlane = { position + (cameraDir * (farPlaneDistance + diagonalDist * 1.414f)), cameraDir * -1 };
-        Plane rightPlane = { position, Vector3CrossProduct(Vector3RotateByAxisAngle(cameraDir, {0, 1, 0}, DEG2RAD * camera.fovy * 0.5f), {0, 1, 0}) };
-        Plane leftPlane = { position, Vector3CrossProduct({0, 1, 0}, Vector3RotateByAxisAngle(cameraDir, {0, 1, 0}, DEG2RAD * camera.fovy * -0.5f)) };
-        Plane topPlane = { position, Vector3CrossProduct(cameraRight, Vector3RotateByAxisAngle(cameraDir, cameraRight, DEG2RAD * camera.fovy * 0.5f)) };
-        Plane bottomPlane = { position, Vector3CrossProduct(cameraRight, Vector3RotateByAxisAngle(cameraDir, cameraRight, DEG2RAD * camera.fovy * -0.5f)) };
+            Vector3 cameraRight = Vector3CrossProduct(cameraDir, { 0, 1, 0 });
+            Vector3 position = camera.position - cameraDir * diagonalDist * 2 * 1.414f;
 
-        //rlReadShaderBuffer(chunkVisibilitySSBO, chunkVisibility.data(), chunkVisibility.size() * sizeof(int), 0);
+            Plane nearPlane = { position, cameraDir };
+            Plane farPlane = { position + (cameraDir * (farPlaneDistance + diagonalDist * 1.414f)), cameraDir * -1 };
+            Plane rightPlane = { position, Vector3CrossProduct(Vector3RotateByAxisAngle(cameraDir, {0, 1, 0}, DEG2RAD * camera.fovy * 0.5f), {0, 1, 0}) };
+            Plane leftPlane = { position, Vector3CrossProduct({0, 1, 0}, Vector3RotateByAxisAngle(cameraDir, {0, 1, 0}, DEG2RAD * camera.fovy * -0.5f)) };
+            Plane topPlane = { position, Vector3CrossProduct(cameraRight, Vector3RotateByAxisAngle(cameraDir, cameraRight, DEG2RAD * camera.fovy * 0.5f)) };
+            Plane bottomPlane = { position, Vector3CrossProduct(cameraRight, Vector3RotateByAxisAngle(cameraDir, cameraRight, DEG2RAD * camera.fovy * -0.5f)) };
 
-        nextIndirectdrawCommandIndexBufferValue = 0;
-        rlUpdateShaderBuffer(renderQuad.commandsLengthBOID, &nextIndirectdrawCommandIndexBufferValue, 1 * sizeof(int), 0);
+            nextIndirectdrawCommandIndexBufferValue = 0;
+            rlUpdateShaderBuffer(renderQuad.commandsLengthBOID, &nextIndirectdrawCommandIndexBufferValue, 1 * sizeof(int), 0);
 
-        rlEnableShader(testComputeProgram);
-        rlBindShaderBuffer(chunkVisibilitySSBO, 4);
+            rlEnableShader(testComputeProgram);
+            rlBindShaderBuffer(chunkVisibilitySSBO, 4);
 
-        rlBindShaderBuffer(renderQuad.commandsLengthBOID, 5);
-        rlBindShaderBuffer(renderQuad.commandsBufferVBOID, 6);
+            rlBindShaderBuffer(renderQuad.commandsLengthBOID, 5);
+            rlBindShaderBuffer(renderQuad.commandsBufferVBOID, 6);
 
-        rlBindShaderBuffer(renderQuad.upFacesMetadaBufferID, 7);
-        rlBindShaderBuffer(renderQuad.downFacesMetadaBufferID, 8);
-        rlBindShaderBuffer(renderQuad.frontFacesMetadaBufferID, 9);
-        rlBindShaderBuffer(renderQuad.backFacesMetadaBufferID, 10);
-        rlBindShaderBuffer(renderQuad.rightFacesMetadaBufferID, 11);
-        rlBindShaderBuffer(renderQuad.leftFacesMetadaBufferID, 12);
+            rlBindShaderBuffer(renderQuad.upFacesMetadaBufferID, 7);
+            rlBindShaderBuffer(renderQuad.downFacesMetadaBufferID, 8);
+            rlBindShaderBuffer(renderQuad.frontFacesMetadaBufferID, 9);
+            rlBindShaderBuffer(renderQuad.backFacesMetadaBufferID, 10);
+            rlBindShaderBuffer(renderQuad.rightFacesMetadaBufferID, 11);
+            rlBindShaderBuffer(renderQuad.leftFacesMetadaBufferID, 12);
 
-        rlBindShaderBuffer(renderQuad.chunkPositionsVBOID, 13);
+            rlBindShaderBuffer(renderQuad.chunkPositionsVBOID, 13);
 
-        float3 nearPlaneNormal = { nearPlane.normal.x,  nearPlane.normal.y,  nearPlane.normal.z };
-        float3 farPlaneNormal = { farPlane.normal.x,  farPlane.normal.y,  farPlane.normal.z };
-        float3 rightPlaneNormal = { rightPlane.normal.x,  rightPlane.normal.y,  rightPlane.normal.z };
-        float3 leftPlaneNormal = { leftPlane.normal.x,  leftPlane.normal.y,  leftPlane.normal.z };
-        float3 topPlaneNormal = { topPlane.normal.x,  topPlane.normal.y,  topPlane.normal.z };
-        float3 bottomPlaneNormal = { bottomPlane.normal.x,  bottomPlane.normal.y,  bottomPlane.normal.z };
-        rlSetUniform(rlGetLocationUniform(testComputeProgram, "nearPlaneNormal"), &nearPlaneNormal, SHADER_UNIFORM_VEC3, 1);
-        rlSetUniform(rlGetLocationUniform(testComputeProgram, "farPlaneNormal"), &farPlaneNormal, SHADER_UNIFORM_VEC3, 1);
-        rlSetUniform(rlGetLocationUniform(testComputeProgram, "rightPlaneNormal"), &rightPlaneNormal, SHADER_UNIFORM_VEC3, 1);
-        rlSetUniform(rlGetLocationUniform(testComputeProgram, "leftPlaneNormal"), &leftPlaneNormal, SHADER_UNIFORM_VEC3, 1);
-        rlSetUniform(rlGetLocationUniform(testComputeProgram, "topPlaneNormal"), &topPlaneNormal, SHADER_UNIFORM_VEC3, 1);
-        rlSetUniform(rlGetLocationUniform(testComputeProgram, "bottomPlaneNormal"), &bottomPlaneNormal, SHADER_UNIFORM_VEC3, 1);
+            float3 nearPlaneNormal = { nearPlane.normal.x,  nearPlane.normal.y,  nearPlane.normal.z };
+            float3 farPlaneNormal = { farPlane.normal.x,  farPlane.normal.y,  farPlane.normal.z };
+            float3 rightPlaneNormal = { rightPlane.normal.x,  rightPlane.normal.y,  rightPlane.normal.z };
+            float3 leftPlaneNormal = { leftPlane.normal.x,  leftPlane.normal.y,  leftPlane.normal.z };
+            float3 topPlaneNormal = { topPlane.normal.x,  topPlane.normal.y,  topPlane.normal.z };
+            float3 bottomPlaneNormal = { bottomPlane.normal.x,  bottomPlane.normal.y,  bottomPlane.normal.z };
+            rlSetUniform(rlGetLocationUniform(testComputeProgram, "nearPlaneNormal"), &nearPlaneNormal, SHADER_UNIFORM_VEC3, 1);
+            rlSetUniform(rlGetLocationUniform(testComputeProgram, "farPlaneNormal"), &farPlaneNormal, SHADER_UNIFORM_VEC3, 1);
+            rlSetUniform(rlGetLocationUniform(testComputeProgram, "rightPlaneNormal"), &rightPlaneNormal, SHADER_UNIFORM_VEC3, 1);
+            rlSetUniform(rlGetLocationUniform(testComputeProgram, "leftPlaneNormal"), &leftPlaneNormal, SHADER_UNIFORM_VEC3, 1);
+            rlSetUniform(rlGetLocationUniform(testComputeProgram, "topPlaneNormal"), &topPlaneNormal, SHADER_UNIFORM_VEC3, 1);
+            rlSetUniform(rlGetLocationUniform(testComputeProgram, "bottomPlaneNormal"), &bottomPlaneNormal, SHADER_UNIFORM_VEC3, 1);
 
-        //float3 positionToSend = { camera.position.x, camera.position.y, camera.position.z };
-        //rlSetUniform(rlGetLocationUniform(testComputeProgram, "positionOnFrustum"), &positionToSend, SHADER_UNIFORM_VEC3, 1);
+            Vector3 cameraDirection = Vector3Subtract(camera.target, camera.position);
+            cameraDirection = Vector3Normalize(cameraDirection);
+            float3 cameraDirectionToSend = { cameraDirection.x, cameraDirection.y, cameraDirection.z };
+            int cameraDirLoc = rlGetLocationUniform(testComputeProgram, "cameraDir");
+            rlSetUniform(cameraDirLoc, &cameraDirectionToSend, SHADER_UNIFORM_VEC3, 1);
 
-        Vector3 cameraDirection = Vector3Subtract(camera.target, camera.position);
-        cameraDirection = Vector3Normalize(cameraDirection);
-        float3 cameraDirectionToSend = { cameraDirection.x, cameraDirection.y, cameraDirection.z };
-        int cameraDirLoc = rlGetLocationUniform(testComputeProgram, "cameraDir");
-        rlSetUniform(cameraDirLoc, &cameraDirectionToSend, SHADER_UNIFORM_VEC3, 1);
+            float3 cameraPositionToSend = { camera.position.x, camera.position.y, camera.position.z };
+            int cameraPositionLoc = rlGetLocationUniform(testComputeProgram, "cameraPosition");
+            rlSetUniform(cameraPositionLoc, &cameraPositionToSend, SHADER_UNIFORM_VEC3, 1);
 
-        float3 cameraPositionToSend = { camera.position.x, camera.position.y, camera.position.z };
-        int cameraPositionLoc = rlGetLocationUniform(testComputeProgram, "cameraPosition");
-        rlSetUniform(cameraPositionLoc, &cameraPositionToSend, SHADER_UNIFORM_VEC3, 1);
+            rlSetUniform(rlGetLocationUniform(testComputeProgram, "diagonalDist"), &diagonalDist, SHADER_UNIFORM_FLOAT, 1);
 
-        rlSetUniform(rlGetLocationUniform(testComputeProgram, "diagonalDist"), &diagonalDist, SHADER_UNIFORM_FLOAT, 1);
+            rlComputeShaderDispatch(1, 3, 1);
 
-        rlComputeShaderDispatch(6, 3, 6);
-
-        rlMemoryBarrierShaderStorage();
-        rlDisableShader();
+            rlMemoryBarrierShaderStorage();
+            rlDisableShader();
+        }
 
 
         BeginTextureMode(target);
         {
-            //BeginDrawing();
             ClearBackground(RAYWHITE);
 
             BeginMode3D(camera);
             {
                 PROFILE_SCOPE("Drawing Chunks");
-
-                //rlReadShaderBuffer(chunkVisibilitySSBO, chunkVisibility.data(), chunkVisibility.size() * sizeof(int), 0);
-                ////rlUnloadShaderBuffer(chunkVisibilitySSBO);
-
-                //for (int i = 0; i < renderTraversalOrder.size(); i++)
-                //{
-                //    int flattenedRenderTraversalIndex = megaVertPositions.ChunkFlatIndexWithoutVoxels(renderTraversalOrder[i]);
-                //    if (chunkVisibility[flattenedRenderTraversalIndex] == 1) {
-                //        int wireCubeSize = 32;
-                //        DrawCubeWires(renderTraversalOrder[i] * chunkSize, wireCubeSize, wireCubeSize, wireCubeSize, BLUE);
-                //    }
-                //}
 
                 {
                     for (int i = 0; i < renderTraversalOrder.size(); i++)
@@ -1026,44 +968,44 @@ int main()
                             innerIndexWhereNewMeshNeedsToBeCalculated[renderTraversalIndexFlattened] = false;
                         }
 
-                        {
-                            int curPosInChunkStatusMegaArray = megaVertPositions.ImaginaryChunkFlatIndexWithoutVoxels(curChunkTraversalIndex);
-                            int renderChunk = false;
+                        //{
+                        //    int curPosInChunkStatusMegaArray = megaVertPositions.ImaginaryChunkFlatIndexWithoutVoxels(curChunkTraversalIndex);
+                        //    int renderChunk = false;
 
-                            {
-                                std::lock_guard<std::mutex> lock(chunkGeneratedMutex);
-                                renderChunk = chunkGenerated.contains(curPosInChunkStatusMegaArray) && chunkGenerated[curPosInChunkStatusMegaArray];
-                            }
+                        //    {
+                        //        std::lock_guard<std::mutex> lock(chunkGeneratedMutex);
+                        //        renderChunk = chunkGenerated.contains(curPosInChunkStatusMegaArray) && chunkGenerated[curPosInChunkStatusMegaArray];
+                        //    }
 
 
-                            if (renderChunk) {
+                        //    if (renderChunk) {
 
-                                if (renderAllValue == 1 || chunkVisibility[renderTraversalIndexFlattened] == 1/*true*/) {
+                        //        if (renderAllValue == 1 || chunkVisibility[renderTraversalIndexFlattened] == 1/*true*/) {
 
-                                    if (/*Vector3DotProduct(Vector3{ 0, 0, 1 }, renderTraversalOrder[i]) > 0*/false) {
+                        //            if (/*Vector3DotProduct(Vector3{ 0, 0, 1 }, renderTraversalOrder[i]) > 0*/false) {
 
-                                        ReadyIndirectDrawListOfDrawableChunksAndFaces(/*renderTraversalOrder[i]*/
-                                            offsetRenderTraversalOrder, curChunkTraversalIndex
-                                            , camera, cameraChunkIndex
-                                            , instanceShader, instancedMaterial
-                                            , megaVertPositions, chunkPositions
-                                            , renderQuad
-                                            , nearPlane
-                                            , farPlane
-                                            , rightPlane
-                                            , leftPlane
-                                            , topPlane
-                                            , bottomPlane
-                                            , numChunksDrawn
-                                            , numChunksDrawnWithoutFrustum);
+                        //                //ReadyIndirectDrawListOfDrawableChunksAndFaces(/*renderTraversalOrder[i]*/
+                        //                //    offsetRenderTraversalOrder, curChunkTraversalIndex
+                        //                //    , camera, cameraChunkIndex
+                        //                //    , instanceShader, instancedMaterial
+                        //                //    , megaVertPositions, chunkPositions
+                        //                //    , renderQuad
+                        //                //    , nearPlane
+                        //                //    , farPlane
+                        //                //    , rightPlane
+                        //                //    , leftPlane
+                        //                //    , topPlane
+                        //                //    , bottomPlane
+                        //                //    , numChunksDrawn
+                        //                //    , numChunksDrawnWithoutFrustum);
 
-                                        //std::cout << curChunkTraversalIndex.x << ", " << curChunkTraversalIndex.y << ", " <<curChunkTraversalIndex.z << std::endl;
+                        //                //std::cout << curChunkTraversalIndex.x << ", " << curChunkTraversalIndex.y << ", " <<curChunkTraversalIndex.z << std::endl;
 
-                                    }
+                        //            }
 
-                                }
-                            }
-                        }
+                        //        }
+                        //    }
+                        //}
 
 
                     }
@@ -1119,48 +1061,15 @@ int main()
                         chunkUpdatedVoxelPositionInBigArrayMappedToChunkPositionInArray.clear();
                     }
 
-                    //unsigned int chunkPosSSBO = rlLoadShaderBuffer(chunkPositions.size() * sizeof(float3), chunkPositions.data(), RL_DYNAMIC_DRAW);
-                    //rlBindShaderBuffer(chunkPosSSBO, 13);
-
-                    //rlBindShaderBuffer(chunkVisibilitySSBO, 4);
-
-                    //DrawMeshMultiInstancedDrawIndirect(renderQuad, instancedMaterial
-                    //    , megaVertPositions.megaArrayOfAllPositions.data(), megaVertPositions.megaArrayOfAllPositions.size()
-                    //    , drawArraysIndirectCommands, drawArraysIndirectCommands.size());
-
                     rlBindShaderBuffer(renderQuad.chunkPositionsVBOID, 13);
                     rlBindShaderBuffer(chunkVisibilitySSBO, 4);
 
-                    //rlReadShaderBuffer(renderQuad.commandsLengthBOID, &nextIndirectdrawCommandIndexBufferValue, sizeof(int), 0);
-                    //std::cout << "CPU : " << drawArraysIndirectCommands.size() << ", GPU : " << nextIndirectdrawCommandIndexBufferValue << std::endl;
-                    //rlReadShaderBuffer(renderQuad.commandsLengthBOID, &nextIndirectdrawCommandIndexBufferValue, sizeof(int), 0);
-                    //std::cout << "GPU : " << nextIndirectdrawCommandIndexBufferValue << std::endl;
-
-                    // WORKS FINE! VVVV!!!
-                    //DrawMeshMultiInstancedDrawIndirectGPU(renderQuad, instancedMaterial
-                    //    , megaVertPositions.megaArrayOfAllPositions.data(), megaVertPositions.megaArrayOfAllPositions.size()
-                    //    , drawArraysIndirectCommands, nextIndirectdrawCommandIndexBufferValue);
- 
-                    ///WORKS FINE!!!! VVVVV !!!!
-                    //DrawMeshMultiInstancedDrawIndirectGPU2(renderQuad, instancedMaterial
-                    //    , megaVertPositions.megaArrayOfAllPositions.data(), megaVertPositions.megaArrayOfAllPositions.size()
-                    //    , nextIndirectdrawCommandIndexBufferValue);
-
-                    //VVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVV DOESN'T WORK!!! VVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVV
                     DrawMeshMultiInstancedDrawIndirectGPU2(renderQuad, instancedMaterial
                         , megaVertPositions.megaArrayOfAllPositions.data(), megaVertPositions.megaArrayOfAllPositions.size()
                         , totalNumChunks * NUM_FACES);
 
-                    //rlUnloadShaderBuffer(chunkPosSSBO);
                 }
             }
-            //std::cout << totalNumChunks << ", Chunks Drawn: " << numChunksDrawn << ", Chunks Drawn Without Frustum Culling: " << numChunksDrawnWithoutFrustum << std::endl;
-            //numChunksDrawn = 0;
-            //numChunksDrawnWithoutFrustum = 0;
-
-            //rlReadShaderBuffer(nextIndirectdrawCommandIndexBufferID, &nextIndirectdrawCommandIndexBufferValue, sizeof(int), 0);
-            //std::cout << "CPU : " << drawArraysIndirectCommands.size() << ", GPU : " << nextIndirectdrawCommandIndexBufferValue << std::endl;
-
             DrawGrid(10, 1.0);
 
             EndMode3D();
@@ -1180,7 +1089,6 @@ int main()
             //std::string curNoiseValue = std::to_string(perlin.noise3D_01((double)x * scale, (double)z * scale, (double)(y) * scale));
             //DrawText(curNoiseValue.c_str(), 0, 140, 20, BLACK);
 
-            //EndDrawing();
             oldCameraChunkPosition = cameraChunkIndex;
             oldCameraPos = camera.position;
         }
@@ -1196,11 +1104,17 @@ int main()
 
         if(true)
         {
+            PROFILE_SCOPE("GPU OCCLUSION CULLING.");
+
             BeginTextureMode(rd2D);
             {
                 ClearBackground(RAYWHITE);
 
                 rlEnableShader(screenRenderMaterial.shader.id);
+
+                int cameraPosLocInCullingShader = GetShaderLocation(cullingShader, "cameraPos");
+                float cameraPos[3] = { camera.position.x, camera.position.y, camera.position.z };
+                SetShaderValue(cullingShader, cameraPosLocInCullingShader, cameraPos, SHADER_UNIFORM_VEC3);
 
                 BeginMode3D(camera);
 
@@ -1224,26 +1138,8 @@ int main()
                         , drawArraysIndirectCommands2, drawArraysIndirectCommands2.size()
                         , false);
                     rlDisableWireMode();
-
-                    //rlReadShaderBuffer(chunkVisibilitySSBO, chunkVisibility.data(), chunkVisibility.size() * sizeof(int), 0);
-                    ////rlUnloadShaderBuffer(chunkVisibilitySSBO);
-
-                    //for (int i = 0; i < renderTraversalOrder.size(); i++)
-                    //{
-                    //    int flattenedRenderTraversalIndex = megaVertPositions.ChunkFlatIndexWithoutVoxels(renderTraversalOrder[i]);
-                    //    if (chunkVisibility[flattenedRenderTraversalIndex] == 1) {
-                    //        int wireCubeSize = 32;
-                    //        DrawCubeWires(renderTraversalOrder[i] * chunkSize, wireCubeSize, wireCubeSize, wireCubeSize, BLUE);
-                    //    }
-                    //}
                 }
 
-                //for (int i = 0; i < chunksGridCoordinates.size(); i++)
-                //{
-                //    Vector3 chunkPos = Vector3{ chunksGridCoordinates[i].v[0], chunksGridCoordinates[i].v[1], chunksGridCoordinates[i].v[2] };
-                //    chunkPos *= chunkSize;
-                //    DrawCubeWires(chunkPos, 32, 32, 32, BLUE);
-                //}
                 rlMemoryBarrierShaderStorage();
 
                 EndMode3D();
@@ -1252,65 +1148,6 @@ int main()
             }
             EndTextureMode();
         }
-
-        //BeginTextureMode(rd2D);
-        //    ClearBackground(RAYWHITE);
-        //    BeginShaderMode(cullingShader);
-        //        SetShaderValueTexture(cullingShader, GetShaderLocation(cullingShader, "depthValueTexture"), target.depthColourTexture);
-        //        DrawTexture(target.depthColourTexture, 100, 100, WHITE);
-        //    EndShaderMode();
-        //EndTextureMode();
-
-        //nextIndirectdrawCommandIndexBufferValue = -1;
-        //rlUpdateShaderBuffer(renderQuad.commandsLengthBOID, &nextIndirectdrawCommandIndexBufferValue, 1 * sizeof(int), 0);
-
-        //rlEnableShader(testComputeProgram);
-        //rlBindShaderBuffer(chunkVisibilitySSBO, 4);
-
-        //rlBindShaderBuffer(renderQuad.commandsLengthBOID, 5);
-        //rlBindShaderBuffer(renderQuad.commandsBufferVBOID, 6);
-
-        //rlBindShaderBuffer(renderQuad.upFacesMetadaBufferID, 7);
-        //rlBindShaderBuffer(renderQuad.downFacesMetadaBufferID, 8);
-        //rlBindShaderBuffer(renderQuad.frontFacesMetadaBufferID, 9);
-        //rlBindShaderBuffer(renderQuad.backFacesMetadaBufferID, 10);
-        //rlBindShaderBuffer(renderQuad.rightFacesMetadaBufferID, 11);
-        //rlBindShaderBuffer(renderQuad.leftFacesMetadaBufferID, 12);
-
-        //rlBindShaderBuffer(renderQuad.chunkPositionsVBOID, 13);
-        // 
-        //float3 nearPlaneNormal = { nearPlane.normal.x,  nearPlane.normal.y,  nearPlane.normal.z };
-        //float3 farPlaneNormal = { farPlane.normal.x,  farPlane.normal.y,  farPlane.normal.z };
-        //float3 rightPlaneNormal = { rightPlane.normal.x,  rightPlane.normal.y,  rightPlane.normal.z };
-        //float3 leftPlaneNormal = { leftPlane.normal.x,  leftPlane.normal.y,  leftPlane.normal.z };
-        //float3 topPlaneNormal = { topPlane.normal.x,  topPlane.normal.y,  topPlane.normal.z };
-        //float3 bottomPlaneNormal = { bottomPlane.normal.x,  bottomPlane.normal.y,  bottomPlane.normal.z };
-        //rlSetUniform(rlGetLocationUniform(testComputeProgram, "nearPlaneNormal"), &nearPlaneNormal, SHADER_UNIFORM_VEC3, 1);
-        //rlSetUniform(rlGetLocationUniform(testComputeProgram, "farPlaneNormal"), &farPlaneNormal, SHADER_UNIFORM_VEC3, 1);
-        //rlSetUniform(rlGetLocationUniform(testComputeProgram, "rightPlaneNormal"), &rightPlaneNormal, SHADER_UNIFORM_VEC3, 1);
-        //rlSetUniform(rlGetLocationUniform(testComputeProgram, "leftPlaneNormal"), &leftPlaneNormal, SHADER_UNIFORM_VEC3, 1);
-        //rlSetUniform(rlGetLocationUniform(testComputeProgram, "topPlaneNormal"), &topPlaneNormal, SHADER_UNIFORM_VEC3, 1);
-        //rlSetUniform(rlGetLocationUniform(testComputeProgram, "bottomPlaneNormal"), &bottomPlaneNormal, SHADER_UNIFORM_VEC3, 1);
-
-        ////float3 positionToSend = { camera.position.x, camera.position.y, camera.position.z };
-        ////rlSetUniform(rlGetLocationUniform(testComputeProgram, "positionOnFrustum"), &positionToSend, SHADER_UNIFORM_VEC3, 1);
-
-        //Vector3 cameraDirection = Vector3Subtract(camera.target, camera.position);
-        //cameraDirection = Vector3Normalize(cameraDirection);
-        //float3 cameraDirectionToSend = { cameraDirection.x, cameraDirection.y, cameraDirection.z };
-        //int cameraDirLoc = rlGetLocationUniform(testComputeProgram, "cameraDir");
-        //rlSetUniform(cameraDirLoc, &cameraDirectionToSend, SHADER_UNIFORM_VEC3, 1);
-
-        //float3 cameraPositionToSend = { camera.position.x, camera.position.y, camera.position.z };
-        //int cameraPositionLoc = rlGetLocationUniform(testComputeProgram, "cameraPosition");
-        //rlSetUniform(cameraPositionLoc, &cameraPositionToSend, SHADER_UNIFORM_VEC3, 1);
-
-        //rlSetUniform(rlGetLocationUniform(testComputeProgram, "diagonalDist"), &diagonalDist, SHADER_UNIFORM_FLOAT, 1);
-
-        //rlComputeShaderDispatch(6, 3, 6);
-
-        //rlMemoryBarrierShaderStorage();
-        //rlDisableShader();
 
         BeginDrawing();
             ClearBackground(RAYWHITE);
@@ -1564,7 +1401,6 @@ static void ConvoluteNoise(std::vector<std::vector<std::vector<float>>>& noiseSt
     }
 }
 
-static std::mutex sameYXZMutex;
 static void MakeNoiseForChunk(std::vector<std::vector<std::vector<float>>> &noiseStorage, int chunksX, int chunksY, int chunksZ, int numChunks, int numChunksY, int chunksSize, float scale) {
 
     PROFILE_FUNCTION();

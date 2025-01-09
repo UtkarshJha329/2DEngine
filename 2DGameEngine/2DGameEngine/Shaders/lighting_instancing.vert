@@ -38,7 +38,9 @@ out vec3 fragNormal;
 out int faceDir;
 out vec3 chunkPos;
 out vec3 relChunkPos;
-out vec3 innerVoxelPos;
+flat out vec3 innerVoxelPos;
+flat out float _halfNumChunksWidth;
+flat out int _chunkSize;
 //out vec3 meshVertexPos;
 
 // NOTE: Add here your custom variables
@@ -110,6 +112,9 @@ vec3 verticesLEFT[4] = vec3[4]( vec3(-0.5, -0.5, -0.5),
 uniform float lodScale;
 uniform float renderAll;
 
+uniform int chunkSize;
+uniform int halfNumChunksWidth;
+
 float curScale;
 
 int xPosInPackedInt = 10;
@@ -121,8 +126,9 @@ int curScalePosInPackedInt = 19;
 
 void main()
 {
-    int chunkSize = 32;
-    int halfNumChunksWidth = 80;
+    _halfNumChunksWidth = float(halfNumChunksWidth);
+    _chunkSize = chunkSize;
+
     int totalNumChunksWidth = (2 * halfNumChunksWidth) + 1;
     chunkPos = vec3(chunkPosition[gl_DrawIDARB].x, chunkPosition[gl_DrawIDARB].y, chunkPosition[gl_DrawIDARB].z);
     relChunkPos = vec3(chunkPos.x - cameraPos.x, chunkPos.y, chunkPos.z - cameraPos.z);
