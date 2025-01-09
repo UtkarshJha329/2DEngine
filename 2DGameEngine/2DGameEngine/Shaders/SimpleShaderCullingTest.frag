@@ -35,7 +35,7 @@ void main()
     float testDepth = 0.0;
 
     testDepth = zPos;
-    float depthTestOffset = 32 * 1.732;
+    float depthTestOffset = 16.0 * 1.732;
     float testDepthAgainst = length(vec2(remappedDepth.x, remappedDepth.z));
 
     if(testDepth < testDepthAgainst + depthTestOffset){

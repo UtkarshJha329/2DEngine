@@ -84,7 +84,7 @@ void main()
     vec3 remappedRelChunkCoords = vec3((relChunkPos.x / _chunkSize) + _halfNumChunksWidth, relChunkPos.y / _chunkSize, (relChunkPos.z / _chunkSize) + _halfNumChunksWidth);
     //float totalNumChunksPerLOD = numChunksPerLOD * 2;
 
-    bool all = true;
+    bool drawAll = true;
 
     if(switchColours == 1){
         //vec3 mappedChunkPos = vec3(mod(chunkPos.x, numChunks), mod(chunkPos.y, numChunksY), mod(chunkPos.z, numChunks));
@@ -128,7 +128,7 @@ void main()
     }
 
 
-    if(switchColours == 3 || switchColours == 4 || all)
+    if(switchColours == 3 || switchColours == 4 || drawAll)
     {
         //float depth = LinearizeDepth(gl_FragCoord.z) / far; // divide by far for demonstration
         //depthTarget = vec4(vec3(depth), 1.0);
@@ -136,6 +136,9 @@ void main()
         vec3 mappedCoords = vec3((remappedChunkCoordsPos.x + innerVoxelPos.x) / (totalNumChunksWidth * _chunkSize)
                                 , (remappedChunkCoordsPos.y + innerVoxelPos.y) / (totalNumChunksWidth_Y * _chunkSize)
                                 , (remappedChunkCoordsPos.z + innerVoxelPos.z) / (totalNumChunksWidth * _chunkSize));
+//        vec3 mappedCoords = vec3((remappedChunkCoordsPos.x) / (totalNumChunksWidth * _chunkSize)
+//                                , (remappedChunkCoordsPos.y) / (totalNumChunksWidth_Y * _chunkSize)
+//                                , (remappedChunkCoordsPos.z) / (totalNumChunksWidth * _chunkSize));
         depthTarget = vec4(mappedCoords, 1.0);
     }
 }
