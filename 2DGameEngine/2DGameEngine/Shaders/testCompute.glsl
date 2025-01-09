@@ -132,8 +132,45 @@ int ChunkFlatIndexWithoutVoxels(vec3 innerChunkIndex, int numChunksWidthFull){
 
 void CreateIndirectDrawOrderBasedOnFaceVisibility(vec3 innerChunkIndex, vec3 cameraPos, int numChunksWidthFull, int chunkSize)
 {
+        int numChunksHalfWidth = (numChunksWidthFull - 1) / 2;
+
         ivec3 cameraChunkIndex = ivec3(int(cameraPosition.x) / chunkSize, int(cameraPosition.y) / chunkSize, int(cameraPosition.z) / chunkSize);
         vec3 curChunkIndex = { ((innerChunkIndex.x + cameraChunkIndex.x)), (innerChunkIndex.y), (innerChunkIndex.z + cameraChunkIndex.z) };
+
+        vec3 offsetInnerIndex = curChunkIndex;
+        if (offsetInnerIndex.x > numChunksHalfWidth) {
+            float diff = offsetInnerIndex.x - numChunksHalfWidth;
+            if(diff > numChunksHalfWidth){
+                diff = mod(diff, numChunksHalfWidth);
+            }
+            offsetInnerIndex.x = -numChunksHalfWidth + diff - 1;
+        }
+
+        if (offsetInnerIndex.x < -numChunksHalfWidth) {
+            float diff = abs(offsetInnerIndex.x) - numChunksHalfWidth;
+            if(diff > numChunksHalfWidth){
+                diff = mod(diff, numChunksHalfWidth);
+            }
+            offsetInnerIndex.x = numChunksHalfWidth - diff + 1;
+        }
+
+        if (offsetInnerIndex.z > numChunksHalfWidth) {
+            float diff = offsetInnerIndex.z - numChunksHalfWidth;
+            if(diff > numChunksHalfWidth){
+                diff = mod(diff, numChunksHalfWidth);
+            }
+            offsetInnerIndex.z = -numChunksHalfWidth + diff - 1;
+        }
+
+        if (offsetInnerIndex.z < -numChunksHalfWidth) {
+            float diff = abs(offsetInnerIndex.z) - numChunksHalfWidth;
+            if(diff > numChunksHalfWidth){
+                diff = mod(diff, numChunksHalfWidth);
+            }
+            offsetInnerIndex.z = numChunksHalfWidth - diff + 1;
+        }
+
+
         Position drawChunkPos = { (curChunkIndex.x * chunkSize), (curChunkIndex.y * chunkSize), (curChunkIndex.z * chunkSize)};
 
         vec3 dirToChunkFromCamera = vec3(drawChunkPos.x, drawChunkPos.y, drawChunkPos.z) - (cameraChunkIndex * chunkSize);
@@ -145,7 +182,7 @@ void CreateIndirectDrawOrderBasedOnFaceVisibility(vec3 innerChunkIndex, vec3 cam
         float dotRight = dot(dirToChunkFromCamera, right);
         float dotLeft = dot(dirToChunkFromCamera, left);
 
-        int curChunkIndexWithoutVoxels = ChunkFlatIndexWithoutVoxels(innerChunkIndex, numChunksWidthFull);
+        int curChunkIndexWithoutVoxels = ChunkFlatIndexWithoutVoxels(offsetInnerIndex, numChunksWidthFull);
         //Position drawChunkPos = { ((innerChunkIndex.x) * chunkSize), (innerChunkIndex.y * chunkSize), ((innerChunkIndex.z)* chunkSize)};
 
         bool cameraInThisChunkWidthAndBreadth = (drawChunkPos.x <= cameraChunkIndex.x || drawChunkPos.z <= cameraChunkIndex.z);

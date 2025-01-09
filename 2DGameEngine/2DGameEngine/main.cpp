@@ -758,9 +758,9 @@ int main()
             //Mark All Chunks That Are New To Be Reaclculated
             for (int i = 0; i < renderTraversalOrder.size(); i++)
             {
-                //if ((offset.x != 0 && renderTraversalOrder[i].x == offset.x * numChunksHalfWidth) || (offset.z != 0 && renderTraversalOrder[i].z == offset.z * numChunksHalfWidth)) {
-                //    innerIndexWhereNewMeshNeedsToBeCalculated[megaVertPositions.InnerIndexFlattened(renderTraversalOrder[i])] = true;
-                //}
+                if ((offset.x != 0 && renderTraversalOrder[i].x == offset.x * numChunksHalfWidth) || (offset.z != 0 && renderTraversalOrder[i].z == offset.z * numChunksHalfWidth)) {
+                    innerIndexWhereNewMeshNeedsToBeCalculated[megaVertPositions.InnerIndexFlattened(renderTraversalOrder[i])] = true;
+                }
 
                 if (LODBorderMesh(renderTraversalOrder[i]))
                 {
