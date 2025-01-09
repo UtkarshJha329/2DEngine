@@ -524,16 +524,6 @@ int main()
     ImageFormat(&randImage, PIXELFORMAT_UNCOMPRESSED_R32G32B32A32);
     Texture2D textureTestingCompute = LoadTextureFromImage(randImage);
 
-    /*
-    * TODO:
-    *       Bind a large command buffer for rendering all things currently.
-    *               Should be x * y * z * 6 commands long because of total number of chunks and 6 faces per chunk
-    *       Bind the 6 faces metadata arrays to gpu buffers. (Preferably SSBO's.)
-    *               These are needed to send to the compute shader so that draw commands can be filled appropriately with appropriate start and number of instances values.
-    *       Send Commands buffer to GPU to fill in with required commands based on occlusion tests.
-    *       Bind Commands Buffer to appropriate binding and proceed to render using glMultiDrawArraysIndirect.
-    */
-
     // Load lighting instanceShader
     Shader instanceShader = LoadShader(TextFormat("Shaders/lighting_instancing.vert", GLSL_VERSION),
         TextFormat("Shaders/lighting.frag", GLSL_VERSION));
@@ -619,6 +609,10 @@ int main()
     rlDisableShader();
 
     unsigned int chunksGridPosSSBO = rlLoadShaderBuffer(chunksGridCoordinates.size() * sizeof(float3), chunksGridCoordinates.data(), RL_DYNAMIC_DRAW);
+
+    Image initialCullingImage = GenImageColor(screenWidth, screenHeight, WHITE);
+    ImageFormat(&initialCullingImage, target.depthColourTexture.format);
+    UpdateTexture(target.depthColourTexture, initialCullingImage.data);
 
     std::vector<int> megaArrayOfAllPositions2;
     std::vector<int> startPositions2;
@@ -771,7 +765,77 @@ int main()
         }
 
         {
-            PROFILE_SCOPE("GPU FRUSTUM CULLING.");
+            if (true)
+            {
+                PROFILE_SCOPE("GPU OCCLUSION CULLING.");
+
+                BeginTextureMode(rd2D);
+                {
+                    ClearBackground(RAYWHITE);
+
+                    rlEnableShader(screenRenderMaterial.shader.id);
+
+                    int cameraPosLocInCullingShader = GetShaderLocation(cullingShader, "cameraPos");
+                    float cameraPos[3] = { camera.position.x, camera.position.y, camera.position.z };
+                    SetShaderValue(cullingShader, cameraPosLocInCullingShader, cameraPos, SHADER_UNIFORM_VEC3);
+
+                    BeginMode3D(camera);
+
+                    rlActiveTextureSlot(bindDepthTextureAtPosition);
+                    rlEnableTexture(target.depthColourTexture.id);
+
+                    rlBindShaderBuffer(chunksGridPosSSBO, 3);
+
+                    if (shouldPerformOcclusionCulling) {
+                        for (int i = 0; i < chunkVisibility.size(); i++)
+                        {
+                            chunkVisibility[i] = 0;
+                        }
+
+                        rlUpdateShaderBuffer(chunkVisibilitySSBO, chunkVisibility.data(), chunkVisibility.size() * sizeof(int), 0);
+                        //for (int i = 0; i < chunkVisibility.size(); i++)
+                        //{
+                        //    chunkVisibility[i] = 1;
+                        //}
+                        //rlUpdateShaderBuffer(chunkVisibilitySSBO, chunkVisibility.data(), chunkVisibility.size() * sizeof(int), 0);
+ 
+                        //rlMemoryBarrierShaderStorage();
+
+                        rlBindShaderBuffer(chunkVisibilitySSBO, 4);
+
+                        //rlMemoryBarrierShaderStorage();
+
+                        rlEnableWireMode();
+                        DrawMeshMultiInstancedDrawIndirect(cullingRenderQuad, screenRenderMaterial
+                            , megaArrayOfAllPositions2.data(), megaArrayOfAllPositions2.size()
+                            , drawArraysIndirectCommands2, drawArraysIndirectCommands2.size()
+                            , false);
+                        rlDisableWireMode();
+                    }
+
+                    rlMemoryBarrierShaderStorage();
+
+                    EndMode3D();
+
+                    rlDisableShader();
+                }
+                EndTextureMode();
+            }
+            else {
+
+                for (int i = 0; i < chunkVisibility.size(); i++)
+                {
+                    chunkVisibility[i] = 1;
+                }
+                rlUpdateShaderBuffer(chunkVisibilitySSBO, chunkVisibility.data(), chunkVisibility.size() * sizeof(int), 0);
+                rlMemoryBarrierShaderStorage();
+            }
+
+        }
+
+
+        {
+            PROFILE_SCOPE("GPU FRUSTUM AND BACK FACE CULLING.");
 
             Vector3 cameraDir = Vector3Subtract(camera.target, camera.position);
             cameraDir = Vector3Normalize(cameraDir);
@@ -829,7 +893,7 @@ int main()
 
             rlSetUniform(rlGetLocationUniform(testComputeProgram, "diagonalDist"), &diagonalDist, SHADER_UNIFORM_FLOAT, 1);
 
-            rlComputeShaderDispatch(1, 3, 1);
+            rlComputeShaderDispatch(3, 3, 3);
 
             rlMemoryBarrierShaderStorage();
             rlDisableShader();
@@ -1099,54 +1163,6 @@ int main()
             //std::cout << "DON'T RENDER ALL ANYMORE!" << std::endl;
             renderAllValue = 0;
             SetShaderValue(instanceShader, renderAllLoc, &renderAllValue, SHADER_UNIFORM_FLOAT);
-        }
-
-
-        if(true)
-        {
-            PROFILE_SCOPE("GPU OCCLUSION CULLING.");
-
-            BeginTextureMode(rd2D);
-            {
-                ClearBackground(RAYWHITE);
-
-                rlEnableShader(screenRenderMaterial.shader.id);
-
-                int cameraPosLocInCullingShader = GetShaderLocation(cullingShader, "cameraPos");
-                float cameraPos[3] = { camera.position.x, camera.position.y, camera.position.z };
-                SetShaderValue(cullingShader, cameraPosLocInCullingShader, cameraPos, SHADER_UNIFORM_VEC3);
-
-                BeginMode3D(camera);
-
-                rlActiveTextureSlot(bindDepthTextureAtPosition);
-                rlEnableTexture(target.depthColourTexture.id);
-
-                rlBindShaderBuffer(chunksGridPosSSBO, 3);
-
-                if (shouldPerformOcclusionCulling) {
-                    //for (int i = 0; i < chunkVisibility.size(); i++)
-                    //{
-                    //    chunkVisibility[i] = 0;
-                    //}
-
-                    //rlUpdateShaderBuffer(chunkVisibilitySSBO, chunkVisibility.data(), chunkVisibility.size() * sizeof(int), 0);
-                    rlBindShaderBuffer(chunkVisibilitySSBO, 4);
-
-                    //rlEnableWireMode();
-                    DrawMeshMultiInstancedDrawIndirect(cullingRenderQuad, screenRenderMaterial
-                        , megaArrayOfAllPositions2.data(), megaArrayOfAllPositions2.size()
-                        , drawArraysIndirectCommands2, drawArraysIndirectCommands2.size()
-                        , false);
-                    //rlDisableWireMode();
-                }
-
-                rlMemoryBarrierShaderStorage();
-
-                EndMode3D();
-
-                rlDisableShader();
-            }
-            EndTextureMode();
         }
 
         BeginDrawing();

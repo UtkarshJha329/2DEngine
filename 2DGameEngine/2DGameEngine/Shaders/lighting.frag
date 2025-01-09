@@ -121,13 +121,16 @@ void main()
     }
     else if(switchColours == 2)
     {
-        renderTarget2 = vec4(1 - (vec3(remappedRelChunkCoords.x / totalNumChunksWidth, remappedRelChunkCoords.y / totalNumChunksWidth_Y, remappedRelChunkCoords.z / totalNumChunksWidth)), 1.0);
+        //renderTarget2 = vec4(1 - (vec3(remappedRelChunkCoords.x / totalNumChunksWidth, remappedRelChunkCoords.y / totalNumChunksWidth_Y, remappedRelChunkCoords.z / totalNumChunksWidth)), 1.0);
         //renderTarget2 = vec4(vec3(abs(curVoxelPos.x / (halfNumChunksWidth * chunkSize)), curVoxelPos.y, abs(curVoxelPos.z / (halfNumChunksWidth * chunkSize))), 1.0);
         //renderTarget2 = vec4(1 - (vec3(length(relChunkCoords) * (1 / numChunks))), 1.0);
+        renderTarget2 += vec4(0.25, 0.25, 0.25, 0.25);
     }
+
+
     if(switchColours == 3 || switchColours == 4 || all)
     {
-        float depth = LinearizeDepth(gl_FragCoord.z) / far; // divide by far for demonstration
+        //float depth = LinearizeDepth(gl_FragCoord.z) / far; // divide by far for demonstration
         //depthTarget = vec4(vec3(depth), 1.0);
         vec3 remappedChunkCoordsPos = remappedRelChunkCoords * _chunkSize;
         vec3 mappedCoords = vec3((remappedChunkCoordsPos.x + innerVoxelPos.x) / (totalNumChunksWidth * _chunkSize)

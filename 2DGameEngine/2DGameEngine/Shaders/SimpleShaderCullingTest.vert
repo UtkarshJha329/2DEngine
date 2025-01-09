@@ -26,19 +26,12 @@ uniform mat4 mvp;
 uniform mat4 matNormal;
 
 // Output vertex attributes (to fragment shader)
-out vec3 fragPosition;
-out vec2 fragTexCoord;
-out vec4 fragColor;
-out vec3 fragNormal;
-out int faceDir;
-out vec3 chunkPos;
-out vec3 relChunkPos;
-out vec3 innerVoxelPos;
-flat out float zPos;
 out vec2 texCoord;
+flat out float zPos;
 flat out int flattenedChunkIndex;
 flat out int _chunkSize;
 flat out int _halfNumChunksWidth;
+out vec3 relChunkPos;
 //out vec3 meshVertexPos;
 
 // NOTE: Add here your custom variables
@@ -90,6 +83,8 @@ int curScalePosInPackedInt = 25;
 
 int scale = 32;
 
+int faceDir = 0;
+
 void main()
 {
     vec3 cameraChunkPos = cameraPos / chunkSize;
@@ -109,6 +104,7 @@ void main()
     drawingCurPos *= chunkSize;
 
     zPos = length(vec2(abs(curPos.x), abs(curPos.z)));
+    relChunkPos = curPos;
 
     faceDir = (instancePosition >> faceDirPosInPackedInt) & 7;
     //float scale = (instancePosition >> 22) & 31;
@@ -142,13 +138,7 @@ void main()
     curVertex += 0.5;
     curVertex *= scale;
 
-    fragPosition = vec3(translationMatrix * vec4(curVertex, 1.0));
-    fragTexCoord = vertexTexCoord;
     texCoord = vertexTexCoord;
-    //fragColor = vertexColor;
-    fragNormal = normalize(vec3(matNormal * vec4(curVertex, 1.0)));
 
     gl_Position = mvp * translationMatrix  * vec4(curVertex, 1.0);
-
-    //using current position X Y and Z coordinates scale appropriately?
 }
