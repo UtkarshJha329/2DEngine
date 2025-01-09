@@ -140,32 +140,32 @@ void CreateIndirectDrawOrderBasedOnFaceVisibility(vec3 innerChunkIndex, vec3 cam
         vec3 offsetInnerIndex = curChunkIndex;
         if (offsetInnerIndex.x > numChunksHalfWidth) {
             float diff = offsetInnerIndex.x - numChunksHalfWidth;
-            if(diff > numChunksHalfWidth){
-                diff = mod(diff, numChunksHalfWidth);
+            if(diff > numChunksWidthFull){
+                diff = mod(diff, numChunksWidthFull);
             }
             offsetInnerIndex.x = -numChunksHalfWidth + diff - 1;
         }
 
         if (offsetInnerIndex.x < -numChunksHalfWidth) {
             float diff = abs(offsetInnerIndex.x) - numChunksHalfWidth;
-            if(diff > numChunksHalfWidth){
-                diff = mod(diff, numChunksHalfWidth);
+            if(diff > numChunksWidthFull){
+                diff = mod(diff, numChunksWidthFull);
             }
             offsetInnerIndex.x = numChunksHalfWidth - diff + 1;
         }
 
         if (offsetInnerIndex.z > numChunksHalfWidth) {
             float diff = offsetInnerIndex.z - numChunksHalfWidth;
-            if(diff > numChunksHalfWidth){
-                diff = mod(diff, numChunksHalfWidth);
+            if(diff > numChunksWidthFull){
+                diff = mod(diff, numChunksWidthFull);
             }
             offsetInnerIndex.z = -numChunksHalfWidth + diff - 1;
         }
 
         if (offsetInnerIndex.z < -numChunksHalfWidth) {
             float diff = abs(offsetInnerIndex.z) - numChunksHalfWidth;
-            if(diff > numChunksHalfWidth){
-                diff = mod(diff, numChunksHalfWidth);
+            if(diff > numChunksWidthFull){
+                diff = mod(diff, numChunksWidthFull);
             }
             offsetInnerIndex.z = numChunksHalfWidth - diff + 1;
         }
