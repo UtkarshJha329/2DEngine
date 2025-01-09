@@ -1124,20 +1124,20 @@ int main()
                 rlBindShaderBuffer(chunksGridPosSSBO, 3);
 
                 if (shouldPerformOcclusionCulling) {
-                    for (int i = 0; i < chunkVisibility.size(); i++)
-                    {
-                        chunkVisibility[i] = 0;
-                    }
+                    //for (int i = 0; i < chunkVisibility.size(); i++)
+                    //{
+                    //    chunkVisibility[i] = 0;
+                    //}
 
-                    rlUpdateShaderBuffer(chunkVisibilitySSBO, chunkVisibility.data(), chunkVisibility.size() * sizeof(int), 0);
+                    //rlUpdateShaderBuffer(chunkVisibilitySSBO, chunkVisibility.data(), chunkVisibility.size() * sizeof(int), 0);
                     rlBindShaderBuffer(chunkVisibilitySSBO, 4);
 
-                    rlEnableWireMode();
+                    //rlEnableWireMode();
                     DrawMeshMultiInstancedDrawIndirect(cullingRenderQuad, screenRenderMaterial
                         , megaArrayOfAllPositions2.data(), megaArrayOfAllPositions2.size()
                         , drawArraysIndirectCommands2, drawArraysIndirectCommands2.size()
                         , false);
-                    rlDisableWireMode();
+                    //rlDisableWireMode();
                 }
 
                 rlMemoryBarrierShaderStorage();
