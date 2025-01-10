@@ -50,5 +50,6 @@ void main()
         FragColor = vec4(vec3(depth), 1.0);
         // VVVVVVVVVVVVVVVVVVVVVVVVVVV Doesn't work.
         //chunksVisibility[flattenedChunkIndex] = 0;
+        //FragColor = vec4(1.0, 0.0, 0.0, 0.25);
     }
 }

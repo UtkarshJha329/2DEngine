@@ -73,6 +73,7 @@ static void GenMeshCustom2D(std::vector<std::vector<std::vector<float>>>& noiseF
     , int curLodLevel);
 
 void PlaneFacingDir(Vector3 dir, GenerativeMesh & curMesh);
+void PlaneFacingDirTriangle(Vector3 dir, GenerativeMesh& curMesh);
 
 bool ShouldDrawChunk(Vector3 curChunkPos, Camera camera
     , Plane& nearPlane
@@ -289,6 +290,8 @@ static void ReloadChunkDataFromFile(std::string curChunkFileName
 
 bool LODBorderMesh(Vector3 relativePosition) {
 
+    PROFILE_FUNCTION();
+
     int dist = (int)(Vector3Length(relativePosition));
 
     return dist == lodDistance1.y
@@ -305,6 +308,8 @@ struct SecondRenderTexture : public RenderTexture {
 
 SecondRenderTexture LoadRenderTextureDepthTex(int width, int height)
 {
+    PROFILE_FUNCTION();
+
     SecondRenderTexture target = { 0 };
 
     target.id = rlLoadFramebuffer(); // Load an empty framebuffer
@@ -362,6 +367,8 @@ SecondRenderTexture LoadRenderTextureDepthTex(int width, int height)
 // Unload render texture from GPU memory (VRAM)
 void UnloadRenderTextureDepthTex(SecondRenderTexture target)
 {
+    PROFILE_FUNCTION();
+
     if (target.id > 0)
     {
         // Color texture attached to FBO is deleted
@@ -388,6 +395,8 @@ const int screenHeight = 720;
 
 int main()
 {
+    PROFILE_FUNCTION();
+
     Instrumentor::Instance().BeginSession("Profile");
 
     flecs::world world;
@@ -431,6 +440,7 @@ int main()
 
     GenerativeMesh renderQuad = { 0 };
     PlaneFacingDir(up, renderQuad);
+    //PlaneFacingDirTriangle(up, renderQuad);
     renderQuad.instanceVBOID = 0;
 
     GenerativeMesh cullingRenderQuad = { 0 };
@@ -506,16 +516,15 @@ int main()
         curLayerNum++;
     }
 
-    //char* drawIndirectBufferSetterCode = LoadFileText("drawIndirectBufferSetter.glsl");
-    //unsigned int drawIndirectBufferSetterShader = rlCompileShader(drawIndirectBufferSetterCode, RL_COMPUTE_SHADER);
-    //unsigned int golLogicProgram = rlLoadComputeShaderProgram(drawIndirectBufferSetterShader);
-    //UnloadFileText(drawIndirectBufferSetterCode);
-
     char* testComputeCode = LoadFileText("Shaders/testCompute.glsl");
     unsigned int testComputeShader = rlCompileShader(testComputeCode, RL_COMPUTE_SHADER);
     unsigned int testComputeProgram = rlLoadComputeShaderProgram(testComputeShader);
     UnloadFileText(testComputeCode);
-    Shader testComputeShaderClass = { testComputeShader, NULL };
+
+    char* resetChunkVisibilityComputeCode = LoadFileText("Shaders/ResetChunkVisibility.glsl");
+    unsigned int resetChunkVisibilityComputeShader = rlCompileShader(resetChunkVisibilityComputeCode, RL_COMPUTE_SHADER);
+    unsigned int resetChunkVisibilityComputeProgram = rlLoadComputeShaderProgram(resetChunkVisibilityComputeShader);
+    UnloadFileText(resetChunkVisibilityComputeCode);
 
     const unsigned int computeTextureWidth = 512;
     const unsigned int computeTextureHeight = 512;
@@ -765,9 +774,21 @@ int main()
         }
 
         {
-            if (true)
+            if (false)
             {
                 PROFILE_SCOPE("GPU OCCLUSION CULLING.");
+
+                rlEnableShader(testComputeProgram);
+                rlBindShaderBuffer(chunkVisibilitySSBO, 4);
+
+                int numDispatchXZ = (numChunksFullWidth % chunkSize != 0) ? (numChunksFullWidth / chunkSize) + 1 : (numChunksFullWidth / chunkSize);
+                if (chunkSize > numChunksFullWidth) {
+                    numDispatchXZ = 1;
+                }
+                rlComputeShaderDispatch(numDispatchXZ, numChunksFullWidth_Y, numDispatchXZ);
+
+                rlMemoryBarrierShaderStorage();
+                rlDisableShader();
 
                 BeginTextureMode(rd2D);
                 {
@@ -787,23 +808,8 @@ int main()
                     rlBindShaderBuffer(chunksGridPosSSBO, 3);
 
                     if (shouldPerformOcclusionCulling) {
-                        for (int i = 0; i < chunkVisibility.size(); i++)
-                        {
-                            chunkVisibility[i] = 0;
-                        }
-
-                        rlUpdateShaderBuffer(chunkVisibilitySSBO, chunkVisibility.data(), chunkVisibility.size() * sizeof(int), 0);
-                        //for (int i = 0; i < chunkVisibility.size(); i++)
-                        //{
-                        //    chunkVisibility[i] = 1;
-                        //}
-                        //rlUpdateShaderBuffer(chunkVisibilitySSBO, chunkVisibility.data(), chunkVisibility.size() * sizeof(int), 0);
- 
-                        //rlMemoryBarrierShaderStorage();
 
                         rlBindShaderBuffer(chunkVisibilitySSBO, 4);
-
-                        //rlMemoryBarrierShaderStorage();
 
                         rlEnableWireMode();
                         DrawMeshMultiInstancedDrawIndirect(cullingRenderQuad, screenRenderMaterial
@@ -900,6 +906,11 @@ int main()
             rlComputeShaderDispatch(numDispatchXZ, numChunksFullWidth_Y, numDispatchXZ);
 
             rlMemoryBarrierShaderStorage();
+
+            //int numDrawCounts = 0;
+            //rlReadShaderBuffer(renderQuad.commandsLengthBOID, &numDrawCounts, 1, 0);
+            //std::cout << numDrawCounts << std::endl;
+
             rlDisableShader();
         }
 
@@ -1036,46 +1047,6 @@ int main()
                             innerIndexWhereNewMeshNeedsToBeCalculated[renderTraversalIndexFlattened] = false;
                         }
 
-                        //{
-                        //    int curPosInChunkStatusMegaArray = megaVertPositions.ImaginaryChunkFlatIndexWithoutVoxels(curChunkTraversalIndex);
-                        //    int renderChunk = false;
-
-                        //    {
-                        //        std::lock_guard<std::mutex> lock(chunkGeneratedMutex);
-                        //        renderChunk = chunkGenerated.contains(curPosInChunkStatusMegaArray) && chunkGenerated[curPosInChunkStatusMegaArray];
-                        //    }
-
-
-                        //    if (renderChunk) {
-
-                        //        if (renderAllValue == 1 || chunkVisibility[renderTraversalIndexFlattened] == 1/*true*/) {
-
-                        //            if (/*Vector3DotProduct(Vector3{ 0, 0, 1 }, renderTraversalOrder[i]) > 0*/false) {
-
-                        //                //ReadyIndirectDrawListOfDrawableChunksAndFaces(/*renderTraversalOrder[i]*/
-                        //                //    offsetRenderTraversalOrder, curChunkTraversalIndex
-                        //                //    , camera, cameraChunkIndex
-                        //                //    , instanceShader, instancedMaterial
-                        //                //    , megaVertPositions, chunkPositions
-                        //                //    , renderQuad
-                        //                //    , nearPlane
-                        //                //    , farPlane
-                        //                //    , rightPlane
-                        //                //    , leftPlane
-                        //                //    , topPlane
-                        //                //    , bottomPlane
-                        //                //    , numChunksDrawn
-                        //                //    , numChunksDrawnWithoutFrustum);
-
-                        //                //std::cout << curChunkTraversalIndex.x << ", " << curChunkTraversalIndex.y << ", " <<curChunkTraversalIndex.z << std::endl;
-
-                        //            }
-
-                        //        }
-                        //    }
-                        //}
-
-
                     }
 
                     //OPTIMISE!!!!
@@ -1169,26 +1140,30 @@ int main()
             SetShaderValue(instanceShader, renderAllLoc, &renderAllValue, SHADER_UNIFORM_FLOAT);
         }
 
-        BeginDrawing();
+        {
+            PROFILE_SCOPE("Drawing To Screen");
+
+            BeginDrawing();
             ClearBackground(RAYWHITE);
             if (randValue == 0) {
-                DrawTextureRec(target.texture, Rectangle { 0, 0, (float)screenWidth, (float)-screenHeight }, Vector2 { 0, 0 }, WHITE);
+                DrawTextureRec(target.texture, Rectangle{ 0, 0, (float)screenWidth, (float)-screenHeight }, Vector2{ 0, 0 }, WHITE);
             }
-            else if(randValue == 1) {
-                DrawTextureRec(target.texture, Rectangle { 0, 0, (float)screenWidth, (float)-screenHeight }, Vector2 { 0, 0 }, WHITE);
+            else if (randValue == 1) {
+                DrawTextureRec(target.texture, Rectangle{ 0, 0, (float)screenWidth, (float)-screenHeight }, Vector2{ 0, 0 }, WHITE);
             }
-            else if(randValue == 2) {
-                DrawTextureRec(target.secondColourTexture, Rectangle { 0, 0, (float)screenWidth, (float)-screenHeight }, Vector2 { 0, 0 }, WHITE);
+            else if (randValue == 2) {
+                DrawTextureRec(target.secondColourTexture, Rectangle{ 0, 0, (float)screenWidth, (float)-screenHeight }, Vector2{ 0, 0 }, WHITE);
             }
-            else if(randValue == 3) {
-                DrawTextureRec(target.depthColourTexture, Rectangle { 0, 0, (float)screenWidth, (float)-screenHeight }, Vector2 { 0, 0 }, WHITE);
+            else if (randValue == 3) {
+                DrawTextureRec(target.depthColourTexture, Rectangle{ 0, 0, (float)screenWidth, (float)-screenHeight }, Vector2{ 0, 0 }, WHITE);
             }
-            else if(randValue == 4) {
-                DrawTextureRec(rd2D.texture, Rectangle { 0, 0, (float)screenWidth, (float)-screenHeight}, Vector2 { 0, 0 }, WHITE);
+            else if (randValue == 4) {
+                DrawTextureRec(rd2D.texture, Rectangle{ 0, 0, (float)screenWidth, (float)-screenHeight }, Vector2{ 0, 0 }, WHITE);
             }
             DrawCircle(screenWidth / 2, screenHeight / 2, 1.0f, RED);
             DrawFPS(40, 40);
-        EndDrawing();
+            EndDrawing();
+        }
     }
 
     //rlUnloadShaderBuffer(chunkPosSSBO);
@@ -1362,6 +1337,8 @@ static void MakeNoise3D(std::vector<std::vector<std::vector<std::vector<std::vec
 
 static void ConvolutionSum(std::vector<std::vector<std::vector<float>>>& noiseStorage, int convolutionSize, int convolutionPositionX, int convolutionPositionY, int convolutionPositionZ, int lodLevel) {
 
+    //PROFILE_FUNCTION();
+
     int adjustedConvolutionSize = convolutionSize - 1;
     int convolutionStartX = convolutionPositionX - adjustedConvolutionSize;
     int convolutionEndX = convolutionPositionX;
@@ -1396,6 +1373,8 @@ static void ConvolutionSum(std::vector<std::vector<std::vector<float>>>& noiseSt
 //Combine chunks into one large LOD?
 static void ConvoluteNoise(std::vector<std::vector<std::vector<float>>>& noiseStorage, int lodLevel)
 {
+    PROFILE_FUNCTION();
+
     int powerOfTwo = pow(2, lodLevel);
     int startX = powerOfTwo;
     int endX = chunkSize + powerOfTwo;
@@ -1439,7 +1418,8 @@ static void MakeNoiseForChunk(std::vector<std::vector<std::vector<float>>> &nois
         {
             _z = z + (chunksZ * chunksSize);
 
-            float noise = perlin.noise2D_01((double)_x * scale, (double)_z * scale);
+            //float noise = perlin.noise2D_01((double)_x * scale, (double)_z * scale);
+            float noise = perlin.normalizedOctave2D_01((double)_x * scale, (double)_z * scale, 4);
 
             int scaledNoise = (int)(noise * chunksSize * numChunksFullWidth_Y);
 
@@ -1726,6 +1706,24 @@ void PlaneFacingDir(Vector3 dir, GenerativeMesh &curMesh) {
     TexCoords(curMesh.mesh.texcoords);
 
     curMesh.mesh.triangleCount = 2;
+    curMesh.mesh.vertexCount = numVertices;
+
+    UploadMesh(&curMesh.mesh, false);
+}
+
+void PlaneFacingDirTriangle(Vector3 dir, GenerativeMesh &curMesh) {
+
+    PROFILE_FUNCTION();
+
+    int numVertices = 3;
+    curMesh.mesh.vertices = (float*)MemAlloc(numVertices * 3 * sizeof(float));
+    curMesh.mesh.texcoords = (float*)MemAlloc(numVertices * 2 * sizeof(float));
+
+    FaceVerticesTopTriangle(curMesh.mesh.vertices, 0, 0, 0);
+
+    TexCoordsTriangle(curMesh.mesh.texcoords);
+
+    curMesh.mesh.triangleCount = 1;
     curMesh.mesh.vertexCount = numVertices;
 
     UploadMesh(&curMesh.mesh, false);

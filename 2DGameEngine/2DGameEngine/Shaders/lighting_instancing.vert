@@ -78,16 +78,17 @@ vec3 verticesLEFT[4] = vec3[4]( vec3(-0.5, -0.5, -0.5),
                                 vec3(-0.5, 0.5, -0.5),
                                 vec3(-0.5, 0.5, 0.5));
 
+//Triangle Points.
 //vec3 verticesUP[4] = vec3[4]( vec3(-0.5, 0.5, -0.5), 
 //                              vec3(-0.5, 0.5, 2.0),
 //                              vec3(2.0, 0.5, -0.5),
 //                              vec3(-0.5, 0.5, -0.5));
 //
-//vec3 verticesDOWN[4] = vec3[4]( vec3(0.5, -0.5, -0.5),
-//                                vec3(0.5, -0.5, 0.5), 
-//                                vec3(-0.5, -0.5, -0.5),
-//                                vec3(-0.5, -0.5, 0.5));
-//
+////vec3 verticesDOWN[4] = vec3[4]( vec3(0.5, -0.5, -0.5),
+////                                vec3(0.5, -0.5, 0.5), 
+////                                vec3(-0.5, -0.5, -0.5),
+////                                vec3(-0.5, -0.5, 0.5));
+////
 //
 //vec3 verticesFRONT[4] = vec3[4]( vec3(0.5, -0.5, 0.5),
 //                                vec3(0.5, 2.0, 0.5),  
@@ -175,6 +176,8 @@ void main()
         else if(faceDir == 5){
             curVertex = verticesLEFT[gl_VertexID];
         }
+
+        //meshVertexPos = curVertex;
 
         curVertex += 0.5;
         curVertex *= curScale;

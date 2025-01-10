@@ -38,7 +38,7 @@ constexpr int totalNumFaces = totalNumChunks * NUM_FACES * totalNumVoxelsPerChun
 
 const int farPlaneDistance = RL_CULL_DISTANCE_FAR;
 
-const int lodLevelOffset = 16;
+const int lodLevelOffset = 32;
 
 constexpr Vector2 lodDistance1 = { 0, lodLevelOffset - 1 };
 constexpr Vector2 lodDistance2 = { lodDistance1.y + 1, lodDistance1.y + lodLevelOffset };
