@@ -659,11 +659,11 @@ int main()
             {
                 for (int z = 0; z < numChunksFullWidth; z++)
                 {
-                    int largeChunkCentrePos = x << 14;
-                    largeChunkCentrePos = largeChunkCentrePos | y << 7;
+                    int largeChunkCentrePos = x << 16;
+                    largeChunkCentrePos = largeChunkCentrePos | y << 8;
                     largeChunkCentrePos = largeChunkCentrePos | z;
-                    largeChunkCentrePos = largeChunkCentrePos | (i << 22);
-                    largeChunkCentrePos = largeChunkCentrePos | (1 << 25);
+                    largeChunkCentrePos = largeChunkCentrePos | (i << 24);
+                    largeChunkCentrePos = largeChunkCentrePos | (1 << 27);
 
                     //std::cout << largeChunkCentrePos << std::endl;
 
@@ -848,9 +848,9 @@ int main()
 
                     rlEnableShader(cullingRenderMaterial.shader.id);
 
-                    int cameraPosLocInCullingShader = GetShaderLocation(cullingShader, "cameraPos");
+                    int cameraPosLocInCullingShader = GetShaderLocation(cullingRenderMaterial.shader, "cameraPos");
                     float cameraPos[3] = { camera.position.x, camera.position.y, camera.position.z };
-                    SetShaderValue(cullingShader, cameraPosLocInCullingShader, cameraPos, SHADER_UNIFORM_VEC3);
+                    SetShaderValue(cullingRenderMaterial.shader, cameraPosLocInCullingShader, cameraPos, SHADER_UNIFORM_VEC3);
 
                     BeginMode3D(camera);
 
@@ -858,7 +858,6 @@ int main()
                     rlEnableTexture(target.depthColourTexture.id);
 
                     rlBindShaderBuffer(chunksGridPosSSBO, 3);
-
                     rlBindShaderBuffer(chunkVisibilitySSBO, 4);
 
                     //rlEnableWireMode();
@@ -873,6 +872,14 @@ int main()
                     EndMode3D();
 
                     rlDisableShader();
+
+                    //for (int i = 0; i < chunkVisibility.size(); i++)
+                    //{
+                    //    chunkVisibility[i] = 1;
+                    //}
+                    //rlUpdateShaderBuffer(chunkVisibilitySSBO, chunkVisibility.data(), chunkVisibility.size() * sizeof(int), 0);
+                    //rlMemoryBarrierShaderStorage();
+
                 }
                 EndTextureMode();
             }

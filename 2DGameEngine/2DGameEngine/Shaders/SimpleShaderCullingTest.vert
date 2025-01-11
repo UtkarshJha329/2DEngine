@@ -26,12 +26,10 @@ uniform mat4 mvp;
 uniform mat4 matNormal;
 
 // Output vertex attributes (to fragment shader)
-out vec2 texCoord;
 flat out float zPos;
 flat out int flattenedChunkIndex;
 flat out int _chunkSize;
 flat out int _halfNumChunksWidth;
-out vec3 relChunkPos;
 //out vec3 meshVertexPos;
 
 // NOTE: Add here your custom variables
@@ -72,14 +70,14 @@ vec3 verticesLEFT[4] = vec3[4]( vec3(-0.5, -0.5, -0.5),
                                 vec3(-0.5, 0.5, 0.5));
 
 
-int xPosInPackedInt = 14;
-int yPosInPackedInt = 7;
+int xPosInPackedInt = 16;
+int yPosInPackedInt = 8;
 int zPosInPackedInt = 0;
 
-int unpackMask = 127;
+int unpackMask = 255;
 
-int faceDirPosInPackedInt = 22;
-int curScalePosInPackedInt = 25;
+int faceDirPosInPackedInt = 24;
+int curScalePosInPackedInt = 27;
 
 int scale = 1;
 
@@ -93,6 +91,8 @@ void main()
     int totalNumChunksWidth = (2 * numChunksHalfWidth) + 1;
     
     vec3 curPos = vec3((instancePosition >> xPosInPackedInt) & unpackMask, (instancePosition >> yPosInPackedInt) & unpackMask, (instancePosition >> zPosInPackedInt) & unpackMask);
+    //vec3 curPos = vec3(chunkPosition[gl_DrawIDARB].x, chunkPosition[gl_DrawIDARB].y, chunkPosition[gl_DrawIDARB].z);
+    //curPos = curPos + vec3(numChunksHalfWidth, 0, numChunksHalfWidth);
     
     flattenedChunkIndex = int(curPos.y * totalNumChunksWidth * totalNumChunksWidth + curPos.z * totalNumChunksWidth + curPos.x);
     
@@ -103,8 +103,7 @@ void main()
     curPos *= chunkSize;
     drawingCurPos *= chunkSize;
 
-    zPos = length(vec2(abs(curPos.x), abs(curPos.z)));
-    relChunkPos = curPos;
+    zPos = length(vec2(curPos.x, curPos.z));
 
     faceDir = (instancePosition >> faceDirPosInPackedInt) & 7;
     //float scale = (instancePosition >> 22) & 31;
@@ -141,8 +140,6 @@ void main()
 //    zPos = length(vec2(abs(curPos.x), abs(curPos.z)));
 //    //zPos = length(vec2(abs(drawingCurPos.x), abs(drawingCurPos.z)));
 //    relChunkPos = curPos;
-
-    texCoord = vertexTexCoord;
 
     gl_Position = mvp * translationMatrix  * vec4(curVertex, 1.0);
 }

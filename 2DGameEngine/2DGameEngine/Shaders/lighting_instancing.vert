@@ -129,7 +129,11 @@ void main()
 
     int totalNumChunksWidth = (2 * halfNumChunksWidth) + 1;
     chunkPos = vec3(chunkPosition[gl_DrawIDARB].x, chunkPosition[gl_DrawIDARB].y, chunkPosition[gl_DrawIDARB].z);
-    relChunkPos = vec3(chunkPos.x - cameraPos.x, chunkPos.y, chunkPos.z - cameraPos.z);
+
+    ivec3 cameraChunkIndex = ivec3(cameraPos) / chunkSize;
+    ivec3 cameraChunkIndexPos = cameraChunkIndex * chunkSize;
+
+    relChunkPos = vec3(chunkPos.x - cameraChunkIndexPos.x, chunkPos.y, chunkPos.z - cameraChunkIndexPos.z);
 
     vec3 relChunkCoords = vec3((relChunkPos.x / chunkSize) + halfNumChunksWidth, relChunkPos.y / chunkSize, (relChunkPos.z / chunkSize) + halfNumChunksWidth);
     int flattenedChunkCoords = int(relChunkCoords.y * totalNumChunksWidth * totalNumChunksWidth + relChunkCoords.z * totalNumChunksWidth + relChunkCoords.x);
