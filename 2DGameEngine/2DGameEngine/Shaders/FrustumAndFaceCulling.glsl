@@ -189,7 +189,9 @@ void CreateIndirectDrawOrderBasedOnFaceVisibility(vec3 innerChunkIndex, vec3 cam
         //bool cameraInThisChunkWidthAndBreadth = ((curChunkIndex.x) == (cameraChunkIndex.x) || (curChunkIndex.z) == (cameraChunkIndex.z));
         //bool cameraInThisChunkWidthAndBreadth = (abs(innerChunkIndex.x) == (0) || abs(innerChunkIndex.z) == (0));
         //bool cameraInThisChunkWidthAndBreadth = ((innerChunkIndex.x) == (0) || (innerChunkIndex.z) == (0));
-        bool cameraInThisChunkWidthAndBreadth = (abs(innerChunkIndex.x) == (1) || abs(innerChunkIndex.z) == (1));
+        //bool cameraInThisChunkWidthAndBreadth = (abs(innerChunkIndex.x) <= (1) || abs(innerChunkIndex.z) <= (1));
+        bool cameraInThisChunkWidthAndBreadth = (((innerChunkIndex.x) >= (-1) && innerChunkIndex.x <= 0) || ((innerChunkIndex.z) >= (-1) && innerChunkIndex.z <= 0));
+        //bool cameraInThisChunkWidthAndBreadth = (abs(innerChunkIndex.x) <= (0) || abs(innerChunkIndex.z) <= (0));
         bool drawAll = false;
 
         if (dotUp < 0 || cameraInThisChunkWidthAndBreadth || drawAll) {
