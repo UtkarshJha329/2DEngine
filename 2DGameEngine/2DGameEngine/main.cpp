@@ -16,6 +16,8 @@
 #include "Plane.h"
 #include "PerlinNoise.hpp"
 
+#include "FastNoise/FastNoise.h"
+
 #include "nlohmann/json.hpp"
 
 #include <vector>
@@ -56,7 +58,7 @@ int PackThreeNumbers(int num1, int num2, int num3) {
 }
 
 static void MakeNoise3D(std::vector<std::vector<std::vector<std::vector<std::vector<std::vector<float>>>>>>& noiseStorage, int numChunks, int numChunksY, int chunksSize, float scale);
-static void MakeNoiseForChunk(std::vector<std::vector<std::vector<float>>>& noiseStorage, int chunksX, int chunksY, int chunksZ, int numChunks, int numChunksY, int chunksSize, int sideVoxelsToConsider, float scale);
+static void MakeNoiseForChunk(std::vector<std::vector<std::vector<float>>>& noiseStorage, FastNoise::SmartNode<FastNoise::FractalFBm>& fnFractal, int chunksX, int chunksY, int chunksZ, int numChunks, int numChunksY, int chunksSize, int sideVoxelsToConsider, float scale);
 static void MakeNoise2D(std::vector<std::vector<std::vector<std::vector<std::vector<std::vector<float>>>>>>& noiseStorage, int numChunks, int numChunksY, int chunksSize, float scale);
 
 static void ConvolutionSum(std::vector<std::vector<std::vector<float>>>& noiseStorage, int convolutionSize, int convolutionPositionX, int convolutionPositionY, int convolutionPositionZ, int lodLevel);
@@ -114,11 +116,17 @@ static void GenChunkMeshWithNoise(VertexPositions &megaVertPositions
 {
     PROFILE_FUNCTION();
 
+    auto fnSimplex = FastNoise::New<FastNoise::Simplex>();
+    auto fnFractal = FastNoise::New<FastNoise::FractalFBm>();
+
+    fnFractal->SetSource(fnSimplex);
+    fnFractal->SetOctaveCount(5);
+
     int extraVoxelsToCompute = 2 * (pow(2, curLodLevel) + 1);
     //int extraVoxelsToCompute = 2 + 1;
 
     std::vector<std::vector<std::vector<float>>> _noiseForCurChunk(chunkSize + extraVoxelsToCompute, std::vector<std::vector<float>>(chunkSize + extraVoxelsToCompute, std::vector<float>(chunkSize + extraVoxelsToCompute)));
-    MakeNoiseForChunk(_noiseForCurChunk, chunkIndex.x, chunkIndex.y, chunkIndex.z, numChunksFullWidth, numChunksFullWidth_Y, chunkSize, extraVoxelsToCompute, scale);
+    MakeNoiseForChunk(_noiseForCurChunk, fnFractal, chunkIndex.x, chunkIndex.y, chunkIndex.z, numChunksFullWidth, numChunksFullWidth_Y, chunkSize, extraVoxelsToCompute, scale);
 
     ConvoluteNoise(_noiseForCurChunk, curLodLevel);
 
@@ -399,6 +407,12 @@ int main()
 
     Instrumentor::Instance().BeginSession("Profile");
 
+    auto fnSimplex = FastNoise::New<FastNoise::Simplex>();
+    auto fnFractal = FastNoise::New<FastNoise::FractalFBm>();
+
+    fnFractal->SetSource(fnSimplex);
+    fnFractal->SetOctaveCount(5);
+
     flecs::world world;
 
     auto e = world.entity();
@@ -516,10 +530,10 @@ int main()
         curLayerNum++;
     }
 
-    char* testComputeCode = LoadFileText("Shaders/testCompute.glsl");
-    unsigned int testComputeShader = rlCompileShader(testComputeCode, RL_COMPUTE_SHADER);
-    unsigned int testComputeProgram = rlLoadComputeShaderProgram(testComputeShader);
-    UnloadFileText(testComputeCode);
+    char* frustumAndFaceCullingComputeCode = LoadFileText("Shaders/FrustumAndFaceCulling.glsl");
+    unsigned int frustumAndFaceCullingComputeShader = rlCompileShader(frustumAndFaceCullingComputeCode, RL_COMPUTE_SHADER);
+    unsigned int frustumAndFaceCullingComputeProgram = rlLoadComputeShaderProgram(frustumAndFaceCullingComputeShader);
+    UnloadFileText(frustumAndFaceCullingComputeCode);
 
     char* resetChunkVisibilityComputeCode = LoadFileText("Shaders/ResetChunkVisibility.glsl");
     unsigned int resetChunkVisibilityComputeShader = rlCompileShader(resetChunkVisibilityComputeCode, RL_COMPUTE_SHADER);
@@ -586,8 +600,8 @@ int main()
     //cullingShader.locs[SHADER_LOC_VECTOR_VIEW] = GetShaderLocation(cullingShader, "viewPosition");
 
     SecondRenderTexture rd2D = LoadRenderTextureDepthTex(screenWidth, screenHeight);
-    Material screenRenderMaterial = LoadMaterialDefault();
-    screenRenderMaterial.shader = cullingShader;
+    Material cullingRenderMaterial = LoadMaterialDefault();
+    cullingRenderMaterial.shader = cullingShader;
 
     const int bindDepthTextureAtPosition = 0;
     rlEnableShader(cullingShader.id);
@@ -609,12 +623,20 @@ int main()
     SetShaderValue(cullingShader, cameraPosLocInCullingShader, cameraPos, SHADER_UNIFORM_VEC3);
 
 
-    int numChunkSizeLocInComputeShader = rlGetLocationUniform(testComputeProgram, "chunkSize");
-    int numChunksHalfWidthLocInComputeShader = rlGetLocationUniform(testComputeProgram, "numChunksHalfWidth");
+    int numChunkSizeLocInComputeShader = rlGetLocationUniform(frustumAndFaceCullingComputeProgram, "chunkSize");
+    int numChunksHalfWidthLocInComputeShader = rlGetLocationUniform(frustumAndFaceCullingComputeProgram, "numChunksHalfWidth");
 
-    rlEnableShader(testComputeProgram);
+    int numChunkSizeLocInChunkVisibilityResetComputeShader = rlGetLocationUniform(resetChunkVisibilityComputeProgram, "chunkSize");
+    int numChunksHalfWidthLocInChunkVisibilityResetComputeShader = rlGetLocationUniform(resetChunkVisibilityComputeProgram, "numChunksHalfWidth");
+
+    rlEnableShader(frustumAndFaceCullingComputeProgram);
     rlSetUniform(numChunkSizeLocInComputeShader, &chunkSize, SHADER_UNIFORM_INT, 1);
     rlSetUniform(numChunksHalfWidthLocInComputeShader, &numChunksHalfWidth, SHADER_UNIFORM_INT, 1);
+    rlDisableShader();
+
+    rlEnableShader(resetChunkVisibilityComputeProgram);
+    rlSetUniform(numChunkSizeLocInChunkVisibilityResetComputeShader, &chunkSize, SHADER_UNIFORM_INT, 1);
+    rlSetUniform(numChunksHalfWidthLocInChunkVisibilityResetComputeShader, &numChunksHalfWidth, SHADER_UNIFORM_INT, 1);
     rlDisableShader();
 
     unsigned int chunksGridPosSSBO = rlLoadShaderBuffer(chunksGridCoordinates.size() * sizeof(float3), chunksGridCoordinates.data(), RL_DYNAMIC_DRAW);
@@ -670,10 +692,18 @@ int main()
     renderQuad.commandsBufferVBOID = rlLoadShaderBuffer(drawArraysIndirectCommandsGPU.size() * sizeof(DrawArraysIndirectCommand), drawArraysIndirectCommandsGPU.data(), RL_DYNAMIC_DRAW);
     renderQuad.chunkPositionsVBOID = rlLoadShaderBuffer(drawArraysIndirectChunkPositions.size() * sizeof(float3), drawArraysIndirectChunkPositions.data(), RL_DYNAMIC_DRAW);
 
+    int chunkVisibilityValue = 0;
+    int chunkVisibilityValueBuffer = rlLoadShaderBuffer(1 * sizeof(int), &chunkVisibilityValue, RL_DYNAMIC_DRAW);
+
     unsigned int chunkVisibilitySSBO = rlLoadShaderBuffer(chunkVisibility.size() * sizeof(int), chunkVisibility.data(), RL_DYNAMIC_DRAW);
     int frameCounter = -1;
     int numChunksDrawn = 0;
     int numChunksDrawnWithoutFrustum = 0;
+
+    int cullingCommandsLengthValue = drawArraysIndirectCommands2.size();
+    cullingRenderQuad.commandsLengthBOID = rlLoadShaderBuffer(1 * sizeof(int), &cullingCommandsLengthValue, RL_STATIC_READ);
+    cullingRenderQuad.commandsBufferVBOID = rlLoadShaderBuffer(drawArraysIndirectCommands2.size() * sizeof(DrawArraysIndirectCommand), drawArraysIndirectCommands2.data(), RL_STATIC_READ);
+
     while (!WindowShouldClose())
     {
 
@@ -774,27 +804,49 @@ int main()
         }
 
         {
-            if (false)
+            if (shouldPerformOcclusionCulling)
             {
                 PROFILE_SCOPE("GPU OCCLUSION CULLING.");
 
-                rlEnableShader(testComputeProgram);
-                rlBindShaderBuffer(chunkVisibilitySSBO, 4);
+                //chunkVisibilityValue = 0;
+                //rlUpdateShaderBuffer(chunkVisibilityValueBuffer, &chunkVisibilityValue, 1 * sizeof(int), 0);
 
-                int numDispatchXZ = (numChunksFullWidth % chunkSize != 0) ? (numChunksFullWidth / chunkSize) + 1 : (numChunksFullWidth / chunkSize);
-                if (chunkSize > numChunksFullWidth) {
-                    numDispatchXZ = 1;
+                //rlEnableShader(resetChunkVisibilityComputeShader);
+                //rlBindShaderBuffer(chunkVisibilitySSBO, 4);
+                //rlBindShaderBuffer(chunkVisibilityValueBuffer, 5);
+
+                //int numDispatchXZ = (numChunksFullWidth % localSizeOfComputeXZ != 0) ? (numChunksFullWidth / localSizeOfComputeXZ) + 1 : (numChunksFullWidth / localSizeOfComputeXZ);
+                //if (localSizeOfComputeXZ > numChunksFullWidth) {
+                //    numDispatchXZ = 1;
+                //}
+                ////rlComputeShaderDispatch(numDispatchXZ, numChunksFullWidth_Y, numDispatchXZ);
+                //rlComputeShaderDispatch(6, 3, 6);
+
+                //rlMemoryBarrierShaderStorage();
+                //rlDisableShader();
+
+                //rlReadShaderBuffer(chunkVisibilitySSBO, chunkVisibility.data(), chunkVisibility.size() * sizeof(int), 0);
+
+                //for (int i = 0; i < chunkVisibility.size(); i++)
+                //{
+                //    if (chunkVisibility[i] != 0) {
+                //        std::cout << "NOT SET TO 0!!!!!!" << std::endl;
+                //        break;
+                //    }
+                //}
+
+                for (int i = 0; i < chunkVisibility.size(); i++)
+                {
+                    chunkVisibility[i] = 0;
                 }
-                rlComputeShaderDispatch(numDispatchXZ, numChunksFullWidth_Y, numDispatchXZ);
-
+                rlUpdateShaderBuffer(chunkVisibilitySSBO, chunkVisibility.data(), chunkVisibility.size() * sizeof(int), 0);
                 rlMemoryBarrierShaderStorage();
-                rlDisableShader();
 
                 BeginTextureMode(rd2D);
                 {
-                    ClearBackground(RAYWHITE);
+                    ClearBackground(WHITE);
 
-                    rlEnableShader(screenRenderMaterial.shader.id);
+                    rlEnableShader(cullingRenderMaterial.shader.id);
 
                     int cameraPosLocInCullingShader = GetShaderLocation(cullingShader, "cameraPos");
                     float cameraPos[3] = { camera.position.x, camera.position.y, camera.position.z };
@@ -807,17 +859,14 @@ int main()
 
                     rlBindShaderBuffer(chunksGridPosSSBO, 3);
 
-                    if (shouldPerformOcclusionCulling) {
+                    rlBindShaderBuffer(chunkVisibilitySSBO, 4);
 
-                        rlBindShaderBuffer(chunkVisibilitySSBO, 4);
-
-                        rlEnableWireMode();
-                        DrawMeshMultiInstancedDrawIndirect(cullingRenderQuad, screenRenderMaterial
-                            , megaArrayOfAllPositions2.data(), megaArrayOfAllPositions2.size()
-                            , drawArraysIndirectCommands2, drawArraysIndirectCommands2.size()
-                            , false);
-                        rlDisableWireMode();
-                    }
+                    //rlEnableWireMode();
+                    DrawMeshMultiInstancedDrawIndirectGPU2(cullingRenderQuad, cullingRenderMaterial
+                        , megaArrayOfAllPositions2.data(), megaArrayOfAllPositions2.size()
+                        , drawArraysIndirectCommands2.size()
+                        , false);
+                    //rlDisableWireMode();
 
                     rlMemoryBarrierShaderStorage();
 
@@ -859,7 +908,7 @@ int main()
             nextIndirectdrawCommandIndexBufferValue = 0;
             rlUpdateShaderBuffer(renderQuad.commandsLengthBOID, &nextIndirectdrawCommandIndexBufferValue, 1 * sizeof(int), 0);
 
-            rlEnableShader(testComputeProgram);
+            rlEnableShader(frustumAndFaceCullingComputeProgram);
             rlBindShaderBuffer(chunkVisibilitySSBO, 4);
 
             rlBindShaderBuffer(renderQuad.commandsLengthBOID, 5);
@@ -880,27 +929,27 @@ int main()
             float3 leftPlaneNormal = { leftPlane.normal.x,  leftPlane.normal.y,  leftPlane.normal.z };
             float3 topPlaneNormal = { topPlane.normal.x,  topPlane.normal.y,  topPlane.normal.z };
             float3 bottomPlaneNormal = { bottomPlane.normal.x,  bottomPlane.normal.y,  bottomPlane.normal.z };
-            rlSetUniform(rlGetLocationUniform(testComputeProgram, "nearPlaneNormal"), &nearPlaneNormal, SHADER_UNIFORM_VEC3, 1);
-            rlSetUniform(rlGetLocationUniform(testComputeProgram, "farPlaneNormal"), &farPlaneNormal, SHADER_UNIFORM_VEC3, 1);
-            rlSetUniform(rlGetLocationUniform(testComputeProgram, "rightPlaneNormal"), &rightPlaneNormal, SHADER_UNIFORM_VEC3, 1);
-            rlSetUniform(rlGetLocationUniform(testComputeProgram, "leftPlaneNormal"), &leftPlaneNormal, SHADER_UNIFORM_VEC3, 1);
-            rlSetUniform(rlGetLocationUniform(testComputeProgram, "topPlaneNormal"), &topPlaneNormal, SHADER_UNIFORM_VEC3, 1);
-            rlSetUniform(rlGetLocationUniform(testComputeProgram, "bottomPlaneNormal"), &bottomPlaneNormal, SHADER_UNIFORM_VEC3, 1);
+            rlSetUniform(rlGetLocationUniform(frustumAndFaceCullingComputeProgram, "nearPlaneNormal"), &nearPlaneNormal, SHADER_UNIFORM_VEC3, 1);
+            rlSetUniform(rlGetLocationUniform(frustumAndFaceCullingComputeProgram, "farPlaneNormal"), &farPlaneNormal, SHADER_UNIFORM_VEC3, 1);
+            rlSetUniform(rlGetLocationUniform(frustumAndFaceCullingComputeProgram, "rightPlaneNormal"), &rightPlaneNormal, SHADER_UNIFORM_VEC3, 1);
+            rlSetUniform(rlGetLocationUniform(frustumAndFaceCullingComputeProgram, "leftPlaneNormal"), &leftPlaneNormal, SHADER_UNIFORM_VEC3, 1);
+            rlSetUniform(rlGetLocationUniform(frustumAndFaceCullingComputeProgram, "topPlaneNormal"), &topPlaneNormal, SHADER_UNIFORM_VEC3, 1);
+            rlSetUniform(rlGetLocationUniform(frustumAndFaceCullingComputeProgram, "bottomPlaneNormal"), &bottomPlaneNormal, SHADER_UNIFORM_VEC3, 1);
 
             Vector3 cameraDirection = Vector3Subtract(camera.target, camera.position);
             cameraDirection = Vector3Normalize(cameraDirection);
             float3 cameraDirectionToSend = { cameraDirection.x, cameraDirection.y, cameraDirection.z };
-            int cameraDirLoc = rlGetLocationUniform(testComputeProgram, "cameraDir");
+            int cameraDirLoc = rlGetLocationUniform(frustumAndFaceCullingComputeProgram, "cameraDir");
             rlSetUniform(cameraDirLoc, &cameraDirectionToSend, SHADER_UNIFORM_VEC3, 1);
 
             float3 cameraPositionToSend = { camera.position.x, camera.position.y, camera.position.z };
-            int cameraPositionLoc = rlGetLocationUniform(testComputeProgram, "cameraPosition");
+            int cameraPositionLoc = rlGetLocationUniform(frustumAndFaceCullingComputeProgram, "cameraPosition");
             rlSetUniform(cameraPositionLoc, &cameraPositionToSend, SHADER_UNIFORM_VEC3, 1);
 
-            rlSetUniform(rlGetLocationUniform(testComputeProgram, "diagonalDist"), &diagonalDist, SHADER_UNIFORM_FLOAT, 1);
+            rlSetUniform(rlGetLocationUniform(frustumAndFaceCullingComputeProgram, "diagonalDist"), &diagonalDist, SHADER_UNIFORM_FLOAT, 1);
 
-            int numDispatchXZ = (numChunksFullWidth % chunkSize != 0) ? (numChunksFullWidth / chunkSize) + 1 : (numChunksFullWidth / chunkSize);
-            if (chunkSize > numChunksFullWidth) {
+            int numDispatchXZ = (numChunksFullWidth % chunkSize != 0) ? (numChunksFullWidth / localSizeOfComputeXZ) + 1 : (numChunksFullWidth / localSizeOfComputeXZ);
+            if (localSizeOfComputeXZ > numChunksFullWidth) {
                 numDispatchXZ = 1;
             }
             rlComputeShaderDispatch(numDispatchXZ, numChunksFullWidth_Y, numDispatchXZ);
@@ -1160,6 +1209,9 @@ int main()
             else if (randValue == 4) {
                 DrawTextureRec(rd2D.texture, Rectangle{ 0, 0, (float)screenWidth, (float)-screenHeight }, Vector2{ 0, 0 }, WHITE);
             }
+
+            DrawRectangle(screenWidth - 40, 10, 30, 30, shouldPerformOcclusionCulling ? GREEN : RED);
+
             DrawCircle(screenWidth / 2, screenHeight / 2, 1.0f, RED);
             DrawFPS(40, 40);
             EndDrawing();
@@ -1400,7 +1452,7 @@ static void ConvoluteNoise(std::vector<std::vector<std::vector<float>>>& noiseSt
     }
 }
 
-static void MakeNoiseForChunk(std::vector<std::vector<std::vector<float>>> &noiseStorage, int chunksX, int chunksY, int chunksZ, int numChunks, int numChunksY, int chunksSize, int sideVoxelsToConsider, float scale) {
+static void MakeNoiseForChunk(std::vector<std::vector<std::vector<float>>> &noiseStorage, FastNoise::SmartNode<FastNoise::FractalFBm>& fnFractal, int chunksX, int chunksY, int chunksZ, int numChunks, int numChunksY, int chunksSize, int sideVoxelsToConsider, float scale) {
 
     PROFILE_FUNCTION();
 
@@ -1419,7 +1471,9 @@ static void MakeNoiseForChunk(std::vector<std::vector<std::vector<float>>> &nois
             _z = z + (chunksZ * chunksSize);
 
             //float noise = perlin.noise2D_01((double)_x * scale, (double)_z * scale);
-            float noise = perlin.normalizedOctave2D_01((double)_x * scale, (double)_z * scale, 4);
+            //float noise = perlin.normalizedOctave2D_01((double)_x * scale, (double)_z * scale, 4);
+            float noise = 0;
+            fnFractal->GenUniformGrid2D(&noise, _x, _z, 1, 1, scale, 1337);
 
             int scaledNoise = (int)(noise * chunksSize * numChunksFullWidth_Y);
 
@@ -1444,13 +1498,19 @@ static void MakeNoise2D(std::vector<std::vector<std::vector<std::vector<std::vec
 
     PROFILE_FUNCTION();
 
+    auto fnSimplex = FastNoise::New<FastNoise::Simplex>();
+    auto fnFractal = FastNoise::New<FastNoise::FractalFBm>();
+
+    fnFractal->SetSource(fnSimplex);
+    fnFractal->SetOctaveCount(5);
+
     for (int chunksX = 0; chunksX < numChunks; chunksX++)
     {
         for (int chunksY = 0; chunksY < numChunksY; chunksY++)
         {
             for (int chunksZ = 0; chunksZ < numChunks; chunksZ++)
             {
-                MakeNoiseForChunk(noiseStorage[chunksX][chunksY][chunksZ], chunksX, chunksY, chunksZ, numChunks, numChunksY, chunkSize, 1, scale);
+                MakeNoiseForChunk(noiseStorage[chunksX][chunksY][chunksZ], fnFractal, chunksX, chunksY, chunksZ, numChunks, numChunksY, chunkSize, 1, scale);
             }
         }
     }

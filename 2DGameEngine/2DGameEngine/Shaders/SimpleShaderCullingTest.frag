@@ -35,19 +35,22 @@ void main()
     float testDepth = 0.0;
 
     testDepth = zPos;
-    float depthTestOffset = 16.0 * 1.732;
-    float testDepthAgainst = length(vec2(remappedDepth.x, remappedDepth.z));
+    float depthTestOffset = 32.0 * 1.732;
+    float testDepthAgainst = 0.0;
+    //testDepthAgainst = length(vec2(remappedDepth.x, remappedDepth.z));
+    testDepthAgainst = 32 * 3;
 
     if(testDepth < testDepthAgainst + depthTestOffset){
         FragColor = vec4(0.0, 0.0, 1.0, 0.25);
         chunksVisibility[flattenedChunkIndex] = 1;
     }
     else if(testDepth == testDepthAgainst + depthTestOffset){
-        //FragColor = vec4(0.0, 0.0, 1.0, 0.25);
+        FragColor = vec4(0.0, 1.0, 0.0, 0.25);
         chunksVisibility[flattenedChunkIndex] = 1;
     }
     else if(testDepth > testDepthAgainst + depthTestOffset){
-        FragColor = vec4(vec3(depth), 1.0);
+        //FragColor = vec4(vec3(depth), 0.25);
+        FragColor = vec4(1.0, 0.0, 0.0, 0.25);
         // VVVVVVVVVVVVVVVVVVVVVVVVVVV Doesn't work.
         //chunksVisibility[flattenedChunkIndex] = 0;
         //FragColor = vec4(1.0, 0.0, 0.0, 0.25);

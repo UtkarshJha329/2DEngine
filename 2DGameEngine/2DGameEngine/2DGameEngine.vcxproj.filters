@@ -21,9 +21,6 @@
     <ClCompile Include="flecs\flecs.c">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="tracy\public\TracyClient.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="flecs\flecs.h">
@@ -63,10 +60,14 @@
   <ItemGroup>
     <None Include="Shaders\SimpleShader.vert" />
     <None Include="Shaders\SimpleShader.frag" />
+    <None Include="Shaders\FrustumAndFaceCulling.glsl" />
   </ItemGroup>
   <ItemGroup>
     <Image Include="tileset.png">
       <Filter>Resource Files</Filter>
     </Image>
+  </ItemGroup>
+  <ItemGroup>
+    <CopyFileToFolders Include="..\dlls\FastNoise.dll" />
   </ItemGroup>
 </Project>

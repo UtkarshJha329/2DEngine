@@ -31,10 +31,7 @@ uniform mat4 mvp;
 uniform mat4 matNormal;
 
 // Output vertex attributes (to fragment shader)
-out vec3 fragPosition;
 out vec2 fragTexCoord;
-out vec4 fragColor;
-out vec3 fragNormal;
 out int faceDir;
 out vec3 chunkPos;
 out vec3 relChunkPos;
@@ -182,10 +179,7 @@ void main()
         curVertex += 0.5;
         curVertex *= curScale;
 
-        fragPosition = vec3(translationMatrix * vec4(curVertex, 1.0));
         fragTexCoord = vertexTexCoord;
-        //fragColor = vertexColor;
-        fragNormal = normalize(vec3(matNormal * vec4(curVertex, 1.0)));
 
         gl_Position = mvp * translationMatrix  * vec4(curVertex, 1.0);
 

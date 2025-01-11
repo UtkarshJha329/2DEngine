@@ -1,10 +1,7 @@
 #version 430
 
 // Input vertex attributes (from vertex shader)
-in vec3 fragPosition;
 in vec2 fragTexCoord;
-in vec4 fragColor;
-in vec3 fragNormal;
 flat in int faceDir;
 in vec3 chunkPos;
 in vec3 relChunkPos;

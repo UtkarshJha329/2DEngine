@@ -81,7 +81,7 @@ int unpackMask = 127;
 int faceDirPosInPackedInt = 22;
 int curScalePosInPackedInt = 25;
 
-int scale = 32;
+int scale = 1;
 
 int faceDir = 0;
 
@@ -137,6 +137,10 @@ void main()
 
     curVertex += 0.5;
     curVertex *= scale;
+
+//    zPos = length(vec2(abs(curPos.x), abs(curPos.z)));
+//    //zPos = length(vec2(abs(drawingCurPos.x), abs(drawingCurPos.z)));
+//    relChunkPos = curPos;
 
     texCoord = vertexTexCoord;
 
