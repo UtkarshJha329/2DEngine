@@ -85,6 +85,11 @@ layout (location = 6) uniform vec3 cameraDir;
 layout (location = 7) uniform vec3 cameraPosition;
 layout (location = 8) uniform float diagonalDist;
 
+layout (location = 9) uniform sampler2D previousDepthInformationTex;
+layout (location = 10) uniform float shouldPerformOcclusionCulling;
+
+layout (location = 11) uniform mat4 mvp;
+
 vec3 up = { 0, 1, 0 };
 vec3 down = { 0, -1, 0 };
 vec3 front = { 0, 0, 1 };
@@ -176,88 +181,113 @@ void CreateIndirectDrawOrderBasedOnFaceVisibility(vec3 innerChunkIndex, vec3 cam
         vec3 dirToChunkFromCamera = vec3(drawChunkPos.x, drawChunkPos.y, drawChunkPos.z) - (cameraPos);
         //vec3 dirToChunkFromCamera = vec3(innerChunkIndex.x, innerChunkIndex.y, innerChunkIndex.z) * chunkSize - vec3(0.0, cameraPos.y, 0.0);
 
-        float dotUp = dot(dirToChunkFromCamera, up);
-        float dotDown = dot(dirToChunkFromCamera, down);
-        float dotFront = dot(dirToChunkFromCamera, front);
-        float dotBack = dot(dirToChunkFromCamera, back);
-        float dotRight = dot(dirToChunkFromCamera, right);
-        float dotLeft = dot(dirToChunkFromCamera, left);
+        vec3 curChunkRelPosFromCentre = vec3(dirToChunkFromCamera.x, 0.0, dirToChunkFromCamera.z);
+        float distToChunk = abs(length(curChunkRelPosFromCentre));
 
-        int curChunkIndexWithoutVoxels = ChunkFlatIndexWithoutVoxels(offsetInnerIndex, numChunksWidthFull);
-        //Position drawChunkPos = { ((innerChunkIndex.x) * chunkSize), (innerChunkIndex.y * chunkSize), ((innerChunkIndex.z)* chunkSize)};
+        //vec2 screenResolution = vec2(1280, 720);
 
-        //bool cameraInThisChunkWidthAndBreadth = ((curChunkIndex.x) == (cameraChunkIndex.x) || (curChunkIndex.z) == (cameraChunkIndex.z));
-        //bool cameraInThisChunkWidthAndBreadth = (abs(innerChunkIndex.x) == (0) || abs(innerChunkIndex.z) == (0));
-        //bool cameraInThisChunkWidthAndBreadth = ((innerChunkIndex.x) == (0) || (innerChunkIndex.z) == (0));
-        //bool cameraInThisChunkWidthAndBreadth = (abs(innerChunkIndex.x) <= (1) || abs(innerChunkIndex.z) <= (1));
-        bool cameraInThisChunkWidthAndBreadth = (((innerChunkIndex.x) >= (-1) && innerChunkIndex.x <= 0) || ((innerChunkIndex.z) >= (-1) && innerChunkIndex.z <= 0));
-        //bool cameraInThisChunkWidthAndBreadth = (abs(innerChunkIndex.x) <= (0) || abs(innerChunkIndex.z) <= (0));
-        bool drawAll = false;
+        vec4 clipPositionOfChunk = mvp * vec4(vec3(drawChunkPos.x, drawChunkPos.y, drawChunkPos.z), 1.0);
+        vec3 ndcPosition = clipPositionOfChunk.xyz / clipPositionOfChunk.w;
+        //vec2 screenSpacePosition = (ndcPosition.xy * 0.5 + 0.5) * screenResolution;
+        vec2 uvPosition = (ndcPosition.xy * 0.5 + 0.5);
 
-        if (dotUp < 0 || cameraInThisChunkWidthAndBreadth || drawAll) {
-            int start = upFacesMetadata[curChunkIndexWithoutVoxels].startPositionInBigArray;
-            int numInstances = upFacesMetadata[curChunkIndexWithoutVoxels].size;
-            if (numInstances > 0) {
-                DrawArraysIndirectCommand curCommand = { 4, numInstances, 0, start };
-                int index = atomicAdd(currentIndirectdrawCommandIndex, 1);
-                indirectDrawCommands[index] = curCommand;
-                chunkDrawCommandPosiitons[index] = drawChunkPos;
+        vec4 previousDepthAtPixelPosition = texture(previousDepthInformationTex, uvPosition);
+
+        vec4 depth = previousDepthAtPixelPosition;
+        float numChunksWidthFull_Y = 3;
+        vec3 remappedDepth = vec3(depth.x * numChunksWidthFull, depth.y * numChunksWidthFull_Y, depth.z * numChunksWidthFull);
+        remappedDepth = vec3(remappedDepth.x - numChunksHalfWidth, remappedDepth.y, remappedDepth.z - numChunksHalfWidth);
+        remappedDepth = remappedDepth * chunkSize;
+
+        float depthTestOffset = 32.0 * 1.732;
+        float testDepthAgainst = length(vec2(remappedDepth.x, remappedDepth.z)) + depthTestOffset;
+
+        if ((distToChunk <= testDepthAgainst) || shouldPerformOcclusionCulling == 0.0)
+        {
+            float dotUp = dot(dirToChunkFromCamera, up);
+            float dotDown = dot(dirToChunkFromCamera, down);
+            float dotFront = dot(dirToChunkFromCamera, front);
+            float dotBack = dot(dirToChunkFromCamera, back);
+            float dotRight = dot(dirToChunkFromCamera, right);
+            float dotLeft = dot(dirToChunkFromCamera, left);
+
+            int curChunkIndexWithoutVoxels = ChunkFlatIndexWithoutVoxels(offsetInnerIndex, numChunksWidthFull);
+            //Position drawChunkPos = { ((innerChunkIndex.x) * chunkSize), (innerChunkIndex.y * chunkSize), ((innerChunkIndex.z)* chunkSize)};
+
+            //bool cameraInThisChunkWidthAndBreadth = ((curChunkIndex.x) == (cameraChunkIndex.x) || (curChunkIndex.z) == (cameraChunkIndex.z));
+            //bool cameraInThisChunkWidthAndBreadth = (abs(innerChunkIndex.x) == (0) || abs(innerChunkIndex.z) == (0));
+            //bool cameraInThisChunkWidthAndBreadth = ((innerChunkIndex.x) == (0) || (innerChunkIndex.z) == (0));
+            //bool cameraInThisChunkWidthAndBreadth = (abs(innerChunkIndex.x) <= (1) || abs(innerChunkIndex.z) <= (1));
+            bool cameraInThisChunkWidthAndBreadth = (((innerChunkIndex.x) >= (-1) && innerChunkIndex.x <= 0) || ((innerChunkIndex.z) >= (-1) && innerChunkIndex.z <= 0));
+            //bool cameraInThisChunkWidthAndBreadth = (abs(innerChunkIndex.x) <= (0) || abs(innerChunkIndex.z) <= (0));
+            bool drawAll = false;
+
+            if (dotUp < 0 || cameraInThisChunkWidthAndBreadth || drawAll) {
+                int start = upFacesMetadata[curChunkIndexWithoutVoxels].startPositionInBigArray;
+                int numInstances = upFacesMetadata[curChunkIndexWithoutVoxels].size;
+                if (numInstances > 0) {
+                    DrawArraysIndirectCommand curCommand = { 4, numInstances, 0, start };
+                    int index = atomicAdd(currentIndirectdrawCommandIndex, 1);
+                    indirectDrawCommands[index] = curCommand;
+                    chunkDrawCommandPosiitons[index] = drawChunkPos;
+                }
             }
-        }
 
-        if (dotDown < 0 || cameraInThisChunkWidthAndBreadth || drawAll) {
-            int start = downFacesMetadata[curChunkIndexWithoutVoxels].startPositionInBigArray;
-            int numInstances = downFacesMetadata[curChunkIndexWithoutVoxels].size;
-            if (numInstances > 0) {
-                DrawArraysIndirectCommand curCommand = { 4, numInstances, 0, start };
-                int index = atomicAdd(currentIndirectdrawCommandIndex, 1);
-                indirectDrawCommands[index] = curCommand;
-                chunkDrawCommandPosiitons[index] = drawChunkPos;
+            if (dotDown < 0 || cameraInThisChunkWidthAndBreadth || drawAll) {
+                int start = downFacesMetadata[curChunkIndexWithoutVoxels].startPositionInBigArray;
+                int numInstances = downFacesMetadata[curChunkIndexWithoutVoxels].size;
+                if (numInstances > 0) {
+                    DrawArraysIndirectCommand curCommand = { 4, numInstances, 0, start };
+                    int index = atomicAdd(currentIndirectdrawCommandIndex, 1);
+                    indirectDrawCommands[index] = curCommand;
+                    chunkDrawCommandPosiitons[index] = drawChunkPos;
+                }
             }
-        }
 
-        if (dotFront < 0 || cameraInThisChunkWidthAndBreadth || drawAll) {
-            int start = frontFacesMetadata[curChunkIndexWithoutVoxels].startPositionInBigArray;
-            int numInstances = frontFacesMetadata[curChunkIndexWithoutVoxels].size;
-            if (numInstances > 0) {
-                DrawArraysIndirectCommand curCommand = { 4, numInstances, 0, start };
-                int index = atomicAdd(currentIndirectdrawCommandIndex, 1);
-                indirectDrawCommands[index] = curCommand;
-                chunkDrawCommandPosiitons[index] = drawChunkPos;
+            if (dotFront < 0 || cameraInThisChunkWidthAndBreadth || drawAll) {
+                int start = frontFacesMetadata[curChunkIndexWithoutVoxels].startPositionInBigArray;
+                int numInstances = frontFacesMetadata[curChunkIndexWithoutVoxels].size;
+                if (numInstances > 0) {
+                    DrawArraysIndirectCommand curCommand = { 4, numInstances, 0, start };
+                    int index = atomicAdd(currentIndirectdrawCommandIndex, 1);
+                    indirectDrawCommands[index] = curCommand;
+                    chunkDrawCommandPosiitons[index] = drawChunkPos;
+                }
             }
-        }
 
-        if (dotBack < 0 || cameraInThisChunkWidthAndBreadth || drawAll) {
-            int start = backFacesMetadata[curChunkIndexWithoutVoxels].startPositionInBigArray;
-            int numInstances = backFacesMetadata[curChunkIndexWithoutVoxels].size;
-            if (numInstances > 0) {
-                DrawArraysIndirectCommand curCommand = { 4, numInstances, 0, start };
-                int index = atomicAdd(currentIndirectdrawCommandIndex, 1);
-                indirectDrawCommands[index] = curCommand;
-                chunkDrawCommandPosiitons[index] = drawChunkPos;
+            if (dotBack < 0 || cameraInThisChunkWidthAndBreadth || drawAll) {
+                int start = backFacesMetadata[curChunkIndexWithoutVoxels].startPositionInBigArray;
+                int numInstances = backFacesMetadata[curChunkIndexWithoutVoxels].size;
+                if (numInstances > 0) {
+                    DrawArraysIndirectCommand curCommand = { 4, numInstances, 0, start };
+                    int index = atomicAdd(currentIndirectdrawCommandIndex, 1);
+                    indirectDrawCommands[index] = curCommand;
+                    chunkDrawCommandPosiitons[index] = drawChunkPos;
+                }
             }
-        }
 
-        if (dotRight < 0 || cameraInThisChunkWidthAndBreadth || drawAll) {
-            int start = rightFacesMetadata[curChunkIndexWithoutVoxels].startPositionInBigArray;
-            int numInstances = rightFacesMetadata[curChunkIndexWithoutVoxels].size;
-            if (numInstances > 0) {
-                DrawArraysIndirectCommand curCommand = { 4, numInstances, 0, start };
-                int index = atomicAdd(currentIndirectdrawCommandIndex, 1);
-                indirectDrawCommands[index] = curCommand;
-                chunkDrawCommandPosiitons[index] = drawChunkPos;
+            if (dotRight < 0 || cameraInThisChunkWidthAndBreadth || drawAll) {
+                int start = rightFacesMetadata[curChunkIndexWithoutVoxels].startPositionInBigArray;
+                int numInstances = rightFacesMetadata[curChunkIndexWithoutVoxels].size;
+                if (numInstances > 0) {
+                    DrawArraysIndirectCommand curCommand = { 4, numInstances, 0, start };
+                    int index = atomicAdd(currentIndirectdrawCommandIndex, 1);
+                    indirectDrawCommands[index] = curCommand;
+                    chunkDrawCommandPosiitons[index] = drawChunkPos;
+                }
             }
-        }
 
-        if (dotLeft < 0 || cameraInThisChunkWidthAndBreadth || drawAll) {
-            int start = leftFacesMetadata[curChunkIndexWithoutVoxels].startPositionInBigArray;
-            int numInstances = leftFacesMetadata[curChunkIndexWithoutVoxels].size;
-            if (numInstances > 0) {
-                DrawArraysIndirectCommand curCommand = { 4, numInstances, 0, start };
-                int index = atomicAdd(currentIndirectdrawCommandIndex, 1);
-                indirectDrawCommands[index] = curCommand;
-                chunkDrawCommandPosiitons[index] = drawChunkPos;
+            if (dotLeft < 0 || cameraInThisChunkWidthAndBreadth || drawAll) {
+                int start = leftFacesMetadata[curChunkIndexWithoutVoxels].startPositionInBigArray;
+                int numInstances = leftFacesMetadata[curChunkIndexWithoutVoxels].size;
+                if (numInstances > 0) {
+                    DrawArraysIndirectCommand curCommand = { 4, numInstances, 0, start };
+                    int index = atomicAdd(currentIndirectdrawCommandIndex, 1);
+                    indirectDrawCommands[index] = curCommand;
+                    chunkDrawCommandPosiitons[index] = drawChunkPos;
+                }
             }
+
         }
 }
 

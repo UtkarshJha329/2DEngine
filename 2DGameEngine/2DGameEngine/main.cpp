@@ -715,6 +715,7 @@ int main()
 
         if (IsKeyPressed(KEY_ONE)) {
             shouldPerformOcclusionCulling = !shouldPerformOcclusionCulling;
+            occlusionCullingStateValue = (float)shouldPerformOcclusionCulling;
         }
 
         if (IsKeyPressed(KEY_FIVE)) {
@@ -804,7 +805,7 @@ int main()
         }
 
         {
-            if (shouldPerformOcclusionCulling)
+            if (shouldPerformOcclusionCulling && false)
             {
                 PROFILE_SCOPE("GPU OCCLUSION CULLING.");
 
@@ -952,6 +953,27 @@ int main()
             float3 cameraPositionToSend = { camera.position.x, camera.position.y, camera.position.z };
             int cameraPositionLoc = rlGetLocationUniform(frustumAndFaceCullingComputeProgram, "cameraPosition");
             rlSetUniform(cameraPositionLoc, &cameraPositionToSend, SHADER_UNIFORM_VEC3, 1);
+
+            //Set MVP matrix in compute shader.
+            Matrix modelMatrix = MatrixIdentity();
+            Matrix projectionMatrix = MatrixPerspective(camera.fovy, (float)GetScreenWidth() / (float)GetScreenHeight(), 0.1f, farPlaneDistance);
+            Matrix viewMatrix = MatrixLookAt(camera.position, camera.target, camera.up);
+
+            Matrix mvpMatrix = MatrixMultiply(projectionMatrix, viewMatrix);
+            mvpMatrix = MatrixMultiply(mvpMatrix, modelMatrix);
+
+            int mvpLoc = rlGetLocationUniform(frustumAndFaceCullingComputeProgram, "mvp");
+            rlSetUniformMatrix(mvpLoc, mvpMatrix);
+            //End.
+
+            int shouldPerformOcclusionCullingLoc = rlGetLocationUniform(frustumAndFaceCullingComputeProgram, "shouldPerformOcclusionCulling");
+            rlSetUniform(shouldPerformOcclusionCullingLoc, &occlusionCullingStateValue, SHADER_UNIFORM_FLOAT, 1);
+
+            int previousDepthInformationTexLoc = rlGetLocationUniform(frustumAndFaceCullingComputeProgram, "previousDepthInformationTex");
+            rlSetUniform(previousDepthInformationTexLoc, &bindDepthTextureAtPosition, SHADER_UNIFORM_SAMPLER2D, 1);
+
+            rlActiveTextureSlot(bindDepthTextureAtPosition);
+            rlEnableTexture(target.depthColourTexture.id);
 
             rlSetUniform(rlGetLocationUniform(frustumAndFaceCullingComputeProgram, "diagonalDist"), &diagonalDist, SHADER_UNIFORM_FLOAT, 1);
 

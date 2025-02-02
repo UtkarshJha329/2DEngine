@@ -91,8 +91,6 @@ void main()
     int totalNumChunksWidth = (2 * numChunksHalfWidth) + 1;
     
     vec3 curPos = vec3((instancePosition >> xPosInPackedInt) & unpackMask, (instancePosition >> yPosInPackedInt) & unpackMask, (instancePosition >> zPosInPackedInt) & unpackMask);
-    //vec3 curPos = vec3(chunkPosition[gl_DrawIDARB].x, chunkPosition[gl_DrawIDARB].y, chunkPosition[gl_DrawIDARB].z);
-    //curPos = curPos + vec3(numChunksHalfWidth, 0, numChunksHalfWidth);
     
     flattenedChunkIndex = int(curPos.y * totalNumChunksWidth * totalNumChunksWidth + curPos.z * totalNumChunksWidth + curPos.x);
     
@@ -103,12 +101,10 @@ void main()
     curPos *= chunkSize;
     drawingCurPos *= chunkSize;
 
-    zPos = length(vec2(curPos.x, curPos.z));
+    //zPos = length(vec2(curPos.x, curPos.z));
 
     faceDir = (instancePosition >> faceDirPosInPackedInt) & 7;
-    //float scale = (instancePosition >> 22) & 31;
 
-    //vec3 curPos = chunkPosition + curVoxelPos;
     mat4 translationMatrix = mat4(1.0);  // Identity matrix
     translationMatrix[3] = vec4(drawingCurPos, 1.0);
     
@@ -136,10 +132,6 @@ void main()
 
     curVertex += 0.5;
     curVertex *= scale;
-
-//    zPos = length(vec2(abs(curPos.x), abs(curPos.z)));
-//    //zPos = length(vec2(abs(drawingCurPos.x), abs(drawingCurPos.z)));
-//    relChunkPos = curPos;
 
     gl_Position = mvp * translationMatrix  * vec4(curVertex, 1.0);
 }

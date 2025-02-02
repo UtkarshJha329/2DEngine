@@ -52,7 +52,8 @@ const int maxLODLevel = 5;
 float LODLevel = 0.0f;
 const bool saveChunkToFile = false;
 
-bool shouldPerformOcclusionCulling = true;
+bool shouldPerformOcclusionCulling = false;
+float occlusionCullingStateValue = 0;
 
 constexpr float diagonalDist = 3 * chunkSize * 1.732f;
 
