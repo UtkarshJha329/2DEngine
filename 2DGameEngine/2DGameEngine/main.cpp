@@ -32,7 +32,7 @@
 
 #include "Instrumentor.h"
 
-#define FORCE_DEDICATED_GPU 1
+#define FORCE_DEDICATED_GPU 0
 #if FORCE_DEDICATED_GPU
 extern "C"
 {
@@ -73,6 +73,16 @@ static void GenMeshCustom2D(std::vector<std::vector<std::vector<float>>>& noiseF
     , Vector3 rescopedChunkIndex
     , Vector3 chunkIndex
     , int curLodLevel);
+
+static void GreedyMesh2D(std::vector<std::vector<std::vector<float>>>& noiseForCurrentChunk
+    , std::vector<std::vector<std::vector<float>>>& scaleForEachVoxelInChunk
+    , std::vector<int>& chunkMeshData
+    , ChunkFacesMetadata& chunkFacesMetadata
+    , VertexPositions& megaVertPositions
+    , Vector3 rescopedChunkIndex
+    , Vector3 chunkIndex
+    , int curLodLevel);
+
 
 void PlaneFacingDir(Vector3 dir, GenerativeMesh & curMesh);
 void PlaneFacingDirTriangle(Vector3 dir, GenerativeMesh& curMesh);
@@ -132,7 +142,10 @@ static void GenChunkMeshWithNoise(VertexPositions &megaVertPositions
 
     std::vector<int> chunkMeshData;
     ChunkFacesMetadata chunkFacesMetadata;
-    GenMeshCustom2D(_noiseForCurChunk, chunkMeshData, chunkFacesMetadata, megaVertPositions, innerChunkIndex, chunkIndex, curLodLevel);
+    //GenMeshCustom2D(_noiseForCurChunk, chunkMeshData, chunkFacesMetadata, megaVertPositions, innerChunkIndex, chunkIndex, curLodLevel);
+
+    std::vector<std::vector<std::vector<float>>> _scaleForEachVoxelInChunk(chunkSize + extraVoxelsToCompute, std::vector<std::vector<float>>(chunkSize + extraVoxelsToCompute, std::vector<float>(chunkSize + extraVoxelsToCompute)));
+    GreedyMesh2D(_noiseForCurChunk, _scaleForEachVoxelInChunk, chunkMeshData, chunkFacesMetadata, megaVertPositions, innerChunkIndex, chunkIndex, curLodLevel);
 
     {
         {
@@ -1680,7 +1693,9 @@ static void GenMeshCustom2D(std::vector<std::vector<std::vector<float>>> &noiseF
 
                     if (curNoiseTop == 2) {
                         int curPositionTemp = curPosition + (FACE_UP_INDEX << FACE_DIRECTION_POSITION);
-                        curPositionTemp = curPositionTemp | (scale << SCALE_POSITION_IN_PACKED_INT);
+                        curPositionTemp = curPositionTemp | (scale << SCALE_POSITION_IN_PACKED_INT_X);
+                        curPositionTemp = curPositionTemp | (scale << SCALE_POSITION_IN_PACKED_INT_Y);
+                        curPositionTemp = curPositionTemp | (scale << SCALE_POSITION_IN_PACKED_INT_Z);
                         //transformOfVerticesOfFaceInParticularDir[BlockFaceDirection::UP].push_back(curPositionTemp);
                         //megaVertPositions.AddUp(curPositionTemp, innerChunkIndex);
 
@@ -1694,7 +1709,9 @@ static void GenMeshCustom2D(std::vector<std::vector<std::vector<float>>> &noiseF
 
                     if (curNoiseBottom == 2) {
                         int curPositionTemp = curPosition + (FACE_DOWN_INDEX << FACE_DIRECTION_POSITION);
-                        curPositionTemp = curPositionTemp | (scale << SCALE_POSITION_IN_PACKED_INT);
+                        curPositionTemp = curPositionTemp | (scale << SCALE_POSITION_IN_PACKED_INT_X);
+                        curPositionTemp = curPositionTemp | (scale << SCALE_POSITION_IN_PACKED_INT_Y);
+                        curPositionTemp = curPositionTemp | (scale << SCALE_POSITION_IN_PACKED_INT_Z);
                         //transformOfVerticesOfFaceInParticularDir[BlockFaceDirection::DOWN].push_back(curPositionTemp);
                         //megaVertPositions.AddDown(curPositionTemp, innerChunkIndex);
 
@@ -1707,7 +1724,9 @@ static void GenMeshCustom2D(std::vector<std::vector<std::vector<float>>> &noiseF
 
                     if (curNoiseFront == 2) {
                         int curPositionTemp = curPosition + (FACE_FRONT_INDEX << FACE_DIRECTION_POSITION);
-                        curPositionTemp = curPositionTemp | (scale << SCALE_POSITION_IN_PACKED_INT);
+                        curPositionTemp = curPositionTemp | (scale << SCALE_POSITION_IN_PACKED_INT_X);
+                        curPositionTemp = curPositionTemp | (scale << SCALE_POSITION_IN_PACKED_INT_Y);
+                        curPositionTemp = curPositionTemp | (scale << SCALE_POSITION_IN_PACKED_INT_Z);
                         //transformOfVerticesOfFaceInParticularDir[BlockFaceDirection::FRONT].push_back(curPositionTemp);
                         //megaVertPositions.AddFront(curPositionTemp, innerChunkIndex);
 
@@ -1720,7 +1739,9 @@ static void GenMeshCustom2D(std::vector<std::vector<std::vector<float>>> &noiseF
 
                     if (curNoiseBack == 2) {
                         int curPositionTemp = curPosition + (FACE_BACK_INDEX << FACE_DIRECTION_POSITION);
-                        curPositionTemp = curPositionTemp | (scale << SCALE_POSITION_IN_PACKED_INT);
+                        curPositionTemp = curPositionTemp | (scale << SCALE_POSITION_IN_PACKED_INT_X);
+                        curPositionTemp = curPositionTemp | (scale << SCALE_POSITION_IN_PACKED_INT_Y);
+                        curPositionTemp = curPositionTemp | (scale << SCALE_POSITION_IN_PACKED_INT_Z);
                         //transformOfVerticesOfFaceInParticularDir[BlockFaceDirection::BACK].push_back(curPositionTemp);
                         //megaVertPositions.AddBack(curPositionTemp, innerChunkIndex);
 
@@ -1733,7 +1754,9 @@ static void GenMeshCustom2D(std::vector<std::vector<std::vector<float>>> &noiseF
 
                     if (curNoiseRight == 2) {
                         int curPositionTemp = curPosition + (FACE_RIGHT_INDEX << FACE_DIRECTION_POSITION);
-                        curPositionTemp = curPositionTemp | (scale << SCALE_POSITION_IN_PACKED_INT);
+                        curPositionTemp = curPositionTemp | (scale << SCALE_POSITION_IN_PACKED_INT_X);
+                        curPositionTemp = curPositionTemp | (scale << SCALE_POSITION_IN_PACKED_INT_Y);
+                        curPositionTemp = curPositionTemp | (scale << SCALE_POSITION_IN_PACKED_INT_Z);
                         //transformOfVerticesOfFaceInParticularDir[BlockFaceDirection::RIGHT].push_back(curPositionTemp);
                         //megaVertPositions.AddRight(curPositionTemp, innerChunkIndex);
 
@@ -1746,7 +1769,9 @@ static void GenMeshCustom2D(std::vector<std::vector<std::vector<float>>> &noiseF
 
                     if (curNoiseLeft == 2) {
                         int curPositionTemp = curPosition + (FACE_LEFT_INDEX << FACE_DIRECTION_POSITION);
-                        curPositionTemp = curPositionTemp | (scale << SCALE_POSITION_IN_PACKED_INT);
+                        curPositionTemp = curPositionTemp | (scale << SCALE_POSITION_IN_PACKED_INT_X);
+                        curPositionTemp = curPositionTemp | (scale << SCALE_POSITION_IN_PACKED_INT_Y);
+                        curPositionTemp = curPositionTemp | (scale << SCALE_POSITION_IN_PACKED_INT_Z);
                         //transformOfVerticesOfFaceInParticularDir[BlockFaceDirection::LEFT].push_back(curPositionTemp);
                         //megaVertPositions.AddLeft(curPositionTemp, innerChunkIndex);
 
@@ -1758,6 +1783,404 @@ static void GenMeshCustom2D(std::vector<std::vector<std::vector<float>>> &noiseF
         }
     }
 }
+
+
+class GreedyMeshCurShape {
+
+public:
+    Vector3 startPos = Vector3Zeros;
+    Vector3 endPos = Vector3Zeros;
+    Vector3 scale = Vector3Ones;
+};
+
+static void UpdateMeshFromGreedyShape(std::vector<GreedyMeshCurShape>& curGreedyMeshShapes
+                                    , std::vector<int>& chunkMeshData
+                                    , ChunkFacesMetadata& chunkFacesMetadata
+                                    , int faceDir
+                                    , int stepSizeForConvolution) {
+
+    //Optimize using data from large array, check if the number of faces is greater than 0 in that particular direction or something.
+
+    for (int i = 0; i < curGreedyMeshShapes.size(); i++)
+    {
+        int curPosition = PackThreeNumbers(curGreedyMeshShapes[i].startPos.x - stepSizeForConvolution, curGreedyMeshShapes[i].startPos.y - stepSizeForConvolution, curGreedyMeshShapes[i].startPos.z - stepSizeForConvolution);
+
+        int scaleX = curGreedyMeshShapes[i].scale.x;
+        int scaleY = curGreedyMeshShapes[i].scale.y;
+        int scaleZ = curGreedyMeshShapes[i].scale.z;
+
+        curPosition = curPosition | (scaleX << SCALE_POSITION_IN_PACKED_INT_X);
+        curPosition = curPosition | (scaleY << SCALE_POSITION_IN_PACKED_INT_Y);
+        curPosition = curPosition | (scaleZ << SCALE_POSITION_IN_PACKED_INT_Z);
+
+
+        if (faceDir == FACE_UP_INDEX) {
+            int curPositionTemp = curPosition + (FACE_UP_INDEX << FACE_DIRECTION_POSITION);
+
+            chunkMeshData[chunkFacesMetadata.upFacesStartIndex + chunkFacesMetadata.numUpFaces] = curPositionTemp;
+            chunkFacesMetadata.numUpFaces++;
+        }
+
+        if (faceDir == FACE_DOWN_INDEX) {
+            int curPositionTemp = curPosition + (FACE_DOWN_INDEX << FACE_DIRECTION_POSITION);
+
+            chunkMeshData[chunkFacesMetadata.downFacesStartIndex + chunkFacesMetadata.numDownFaces] = curPositionTemp;
+            chunkFacesMetadata.numDownFaces++;
+        }
+
+        if (faceDir == FACE_FRONT_INDEX) {
+            int curPositionTemp = curPosition + (FACE_FRONT_INDEX << FACE_DIRECTION_POSITION);
+
+            chunkMeshData[chunkFacesMetadata.frontFacesStartIndex + chunkFacesMetadata.numFrontFaces] = curPositionTemp;
+            chunkFacesMetadata.numFrontFaces++;
+        }
+
+        if (faceDir == FACE_BACK_INDEX) {
+            int curPositionTemp = curPosition + (FACE_BACK_INDEX << FACE_DIRECTION_POSITION);
+
+            chunkMeshData[chunkFacesMetadata.backFacesStartIndex + chunkFacesMetadata.numBackFaces] = curPositionTemp;
+            chunkFacesMetadata.numBackFaces++;
+        }
+
+        if (faceDir == FACE_RIGHT_INDEX) {
+            int curPositionTemp = curPosition + (FACE_RIGHT_INDEX << FACE_DIRECTION_POSITION);
+
+            chunkMeshData[chunkFacesMetadata.rightFacesStartIndex + chunkFacesMetadata.numRightFaces] = curPositionTemp;
+            chunkFacesMetadata.numRightFaces++;
+        }
+
+        if (faceDir == FACE_LEFT_INDEX) {
+            int curPositionTemp = curPosition + (FACE_LEFT_INDEX << FACE_DIRECTION_POSITION);
+
+            chunkMeshData[chunkFacesMetadata.leftFacesStartIndex + chunkFacesMetadata.numLeftFaces] = curPositionTemp;
+            chunkFacesMetadata.numLeftFaces++;
+        }
+    }
+}
+
+static void GreedyMeshCurFaceDir(std::vector<std::vector<std::vector<float>>>& noiseForCurrentChunkCurDirOnlyVisible, int curLodLevel, std::vector<GreedyMeshCurShape>& greedyMeshForCurFace) {
+
+    int scale = pow(2, curLodLevel);
+    //int curChunkIndexInBigArray = megaVertPositions.ChunkTotalFlatIndexWithVoxels(innerChunkIndex);
+
+    int powerOfTwo = pow(2, curLodLevel);
+    int startX = powerOfTwo;
+    int endX = chunkSize;
+
+    int startY = powerOfTwo;
+    int endY = chunkSize;
+
+    int startZ = powerOfTwo;
+    int endZ = chunkSize;
+
+    int stepSizeForConvolution = powerOfTwo;
+
+    for (int x = startX; x <= endX; x += stepSizeForConvolution)
+    {
+        for (int z = startZ; z <= endZ; z += stepSizeForConvolution)
+        {
+            for (int y = startY; y <= endY; y += stepSizeForConvolution)
+            {
+                float curNoise = noiseForCurrentChunkCurDirOnlyVisible[x][y][z];
+
+                if (curNoise == 1 || curNoise == 0)
+                {
+
+                    GreedyMeshCurShape curShape = { Vector3{(float)x, (float)y, (float)z},  Vector3{(float)x, (float)y, (float)z}, Vector3{ (float)scale, (float)scale, (float)scale }};
+
+                    if(false)
+                    {
+                        for (int iterateXToExpand = x; iterateXToExpand <= endX; iterateXToExpand += stepSizeForConvolution)
+                        {
+                            float noiseForCheckingVoxel = noiseForCurrentChunkCurDirOnlyVisible[iterateXToExpand][y][z];
+                            if (noiseForCheckingVoxel == 1 || noiseForCheckingVoxel == 0) {
+                                curShape.endPos = Vector3{ (float)iterateXToExpand, (float)y, (float)z };
+                                curShape.scale = Vector3{ (float)(iterateXToExpand - x + 1), curShape.scale.y, curShape.scale.z };
+                            }
+                            else {
+                                x = iterateXToExpand;
+                                break;
+                            }
+                        }
+
+                        for (int iterateZToExpand = z; iterateZToExpand <= endZ; iterateZToExpand += stepSizeForConvolution)
+                        {
+                            bool shapeCouldNotBeCompleted = false;
+                            for (int i = curShape.startPos.x; i < curShape.endPos.x; i += stepSizeForConvolution)
+                            {
+                                float noiseForCheckingVoxel = noiseForCurrentChunkCurDirOnlyVisible[i][y][iterateZToExpand];
+                                if (noiseForCheckingVoxel == 1 || noiseForCheckingVoxel == 0) {
+                                }
+                                else {
+                                    shapeCouldNotBeCompleted = true;
+                                    break;
+                                }
+
+                            }
+                            if (shapeCouldNotBeCompleted)
+                            {
+                                //z = iterateZToExpand;
+                                break;
+                            }
+                            else {
+                                curShape.endPos = Vector3{ (float)curShape.endPos.x, (float)y, (float)iterateZToExpand };
+                                curShape.scale = Vector3{ (float)curShape.scale.x, curShape.scale.y, (float)(iterateZToExpand - z + 1) };
+                            }
+                        }
+
+                        for (int iterateYToExpand = y; iterateYToExpand <= endY; iterateYToExpand += stepSizeForConvolution)
+                        {
+                            bool shapeCouldNotBeCompleted = false;
+                            for (int i = curShape.startPos.x; i < curShape.endPos.x; i += stepSizeForConvolution)
+                            {
+                                for (int j = curShape.startPos.z; j < curShape.endPos.z; j += stepSizeForConvolution)
+                                {
+                                    float noiseForCheckingVoxel = noiseForCurrentChunkCurDirOnlyVisible[i][y][j];
+                                    if (noiseForCheckingVoxel == 1 || noiseForCheckingVoxel == 0) {
+                                    }
+                                    else {
+                                        shapeCouldNotBeCompleted = true;
+                                        break;
+                                    }
+                                }
+                                if (shapeCouldNotBeCompleted)
+                                {
+                                    //z = iterateZToExpand;
+                                    break;
+                                }
+                            }
+                            if (shapeCouldNotBeCompleted)
+                            {
+                                //z = iterateZToExpand;
+                                break;
+                            }
+                            else {
+                                curShape.endPos = Vector3{ (float)curShape.endPos.x, (float)iterateYToExpand, (float)curShape.endPos.z };
+                                curShape.scale = Vector3{ (float)curShape.scale.x, (float)(iterateYToExpand - y + 1), (float)curShape.scale.z };
+                            }
+
+                        }
+                    }
+
+                    greedyMeshForCurFace.push_back(curShape);
+
+                }
+
+
+
+            }
+        }
+    }
+
+
+}
+
+//Can be multithreaded to increase performance by doing one thread per face direction.
+static void GreedyMesh2D(std::vector<std::vector<std::vector<float>>>& noiseForCurrentChunk
+    , std::vector<std::vector<std::vector<float>>>& scaleForEachVoxelInChunk
+    , std::vector<int>& chunkMeshData
+    , ChunkFacesMetadata& chunkFacesMetadata
+    , VertexPositions& megaVertPositions
+    , Vector3 innerChunkIndex
+    , Vector3 chunkIndex
+    , int curLodLevel)
+{
+    PROFILE_FUNCTION();
+
+    chunkMeshData = std::vector<int>(totalNumVoxelsPerChunkWorstCase * NUM_FACES);
+
+    chunkFacesMetadata.upFacesStartIndex = FACE_UP_INDEX * totalNumVoxelsPerChunkWorstCase;
+    chunkFacesMetadata.downFacesStartIndex = FACE_DOWN_INDEX * totalNumVoxelsPerChunkWorstCase;
+    chunkFacesMetadata.frontFacesStartIndex = FACE_FRONT_INDEX * totalNumVoxelsPerChunkWorstCase;
+    chunkFacesMetadata.backFacesStartIndex = FACE_BACK_INDEX * totalNumVoxelsPerChunkWorstCase;
+    chunkFacesMetadata.rightFacesStartIndex = FACE_RIGHT_INDEX * totalNumVoxelsPerChunkWorstCase;
+    chunkFacesMetadata.leftFacesStartIndex = FACE_LEFT_INDEX * totalNumVoxelsPerChunkWorstCase;
+
+    int extraVoxelsToCompute = 2 * (pow(2, curLodLevel) + 1);
+
+    std::vector<std::vector<std::vector<float>>> noiseForCurrentChunkUpFace(chunkSize + extraVoxelsToCompute, std::vector<std::vector<float>>(chunkSize + extraVoxelsToCompute, std::vector<float>(chunkSize + extraVoxelsToCompute)));
+    std::vector<std::vector<std::vector<float>>> noiseForCurrentChunkDownFace(chunkSize + extraVoxelsToCompute, std::vector<std::vector<float>>(chunkSize + extraVoxelsToCompute, std::vector<float>(chunkSize + extraVoxelsToCompute)));
+    std::vector<std::vector<std::vector<float>>> noiseForCurrentChunkFrontFace(chunkSize + extraVoxelsToCompute, std::vector<std::vector<float>>(chunkSize + extraVoxelsToCompute, std::vector<float>(chunkSize + extraVoxelsToCompute)));
+    std::vector<std::vector<std::vector<float>>> noiseForCurrentChunkBackFace(chunkSize + extraVoxelsToCompute, std::vector<std::vector<float>>(chunkSize + extraVoxelsToCompute, std::vector<float>(chunkSize + extraVoxelsToCompute)));
+    std::vector<std::vector<std::vector<float>>> noiseForCurrentChunkRightFace(chunkSize + extraVoxelsToCompute, std::vector<std::vector<float>>(chunkSize + extraVoxelsToCompute, std::vector<float>(chunkSize + extraVoxelsToCompute)));
+    std::vector<std::vector<std::vector<float>>> noiseForCurrentChunkLeftFace(chunkSize + extraVoxelsToCompute, std::vector<std::vector<float>>(chunkSize + extraVoxelsToCompute, std::vector<float>(chunkSize + extraVoxelsToCompute)));
+
+    //std::vector<std::vector<std::vector<float>>> noiseForCurrentChunkUpFace(totalNumVoxelsPerChunkWorstCase);
+    //std::vector<std::vector<std::vector<float>>> noiseForCurrentChunkDownFace(totalNumVoxelsPerChunkWorstCase);
+    //std::vector<std::vector<std::vector<float>>> noiseForCurrentChunkFrontFace(totalNumVoxelsPerChunkWorstCase);
+    //std::vector<std::vector<std::vector<float>>> noiseForCurrentChunkBackFace(totalNumVoxelsPerChunkWorstCase);
+    //std::vector<std::vector<std::vector<float>>> noiseForCurrentChunkRightFace(totalNumVoxelsPerChunkWorstCase);
+    //std::vector<std::vector<std::vector<float>>> noiseForCurrentChunkLeftFace(totalNumVoxelsPerChunkWorstCase);
+
+    std::vector<GreedyMeshCurShape> greedyMeshForUpFace;
+    std::vector<GreedyMeshCurShape> greedyMeshForDownFace;
+    std::vector<GreedyMeshCurShape> greedyMeshForFrontFace;
+    std::vector<GreedyMeshCurShape> greedyMeshForBackFace;
+    std::vector<GreedyMeshCurShape> greedyMeshForRightFace;
+    std::vector<GreedyMeshCurShape> greedyMeshForLeftFace;
+
+    int scale = pow(2, curLodLevel);
+
+    int powerOfTwo = pow(2, curLodLevel);
+    int startX = powerOfTwo;
+    int endX = chunkSize;
+
+    int startY = powerOfTwo;
+    int endY = chunkSize;
+
+    int startZ = powerOfTwo;
+    int endZ = chunkSize;
+
+    int stepSizeForConvolution = powerOfTwo;
+
+    for (int x = startX; x <= endX; x += stepSizeForConvolution)
+    {
+        for (int z = startZ; z <= endZ; z += stepSizeForConvolution)
+        {
+            for (int y = startY; y <= endY; y += stepSizeForConvolution)
+            {
+                float curNoise = noiseForCurrentChunk[x][y][z];
+
+                if (curNoise == 1 || curNoise == 0) {
+
+                    //GreedyMeshCurShape curShape = { Vector3{(float)x, (float)y, (float)z},  Vector3{(float)x, (float)y, (float)z}, Vector3{ (float)scale, (float)scale, (float)scale } };
+
+                    float curNoiseTop = noiseForCurrentChunk[x][y + stepSizeForConvolution][z];
+                    if (curNoiseTop == 2) {
+                        noiseForCurrentChunkUpFace[x][y][z] = curNoise;
+                        //greedyMeshForUpFace.push_back(curShape);
+                    }
+                    else
+                    {
+                        noiseForCurrentChunkUpFace[x][y][z] = 2;
+                    }
+
+                    float curNoiseBottom = noiseForCurrentChunk[x][y - stepSizeForConvolution][z];
+                    if (curNoiseBottom == 2) {
+                        noiseForCurrentChunkDownFace[x][y][z] = curNoise;
+                        //greedyMeshForDownFace.push_back(curShape);
+                    }
+                    else
+                    {
+                        noiseForCurrentChunkDownFace[x][y][z] = 2;
+                    }
+
+                    float curNoiseFront = noiseForCurrentChunk[x][y][z + stepSizeForConvolution];
+                    if (curNoiseFront == 2) {
+                        noiseForCurrentChunkFrontFace[x][y][z] = curNoise;
+                        //greedyMeshForFrontFace.push_back(curShape);
+                    }
+                    else
+                    {
+                        noiseForCurrentChunkFrontFace[x][y][z] = 2;
+                    }
+
+                    float curNoiseBack = noiseForCurrentChunk[x][y][z - stepSizeForConvolution];
+                    if (curNoiseBack == 2) {
+                        noiseForCurrentChunkBackFace[x][y][z] = curNoise;
+                        //greedyMeshForBackFace.push_back(curShape);
+                    }
+                    else
+                    {
+                        noiseForCurrentChunkBackFace[x][y][z] = 2;
+                    }
+
+                    float curNoiseRight = noiseForCurrentChunk[x + stepSizeForConvolution][y][z];
+                    if (curNoiseRight == 2) {
+                        noiseForCurrentChunkRightFace[x][y][z] = curNoise;
+                        //greedyMeshForRightFace.push_back(curShape);
+                    }
+                    else
+                    {
+                        noiseForCurrentChunkRightFace[x][y][z] = 2;
+                    }
+
+                    float curNoiseLeft = noiseForCurrentChunk[x - stepSizeForConvolution][y][z];
+                    if (curNoiseLeft == 2) {
+                        noiseForCurrentChunkLeftFace[x][y][z] = curNoise;
+                        //greedyMeshForLeftFace.push_back(curShape);
+                    }
+                    else
+                    {
+                        noiseForCurrentChunkLeftFace[x][y][z] = 2;
+                    }
+
+
+                }
+
+            }
+        }
+    }
+
+    for (int x = startX; x <= endX; x += stepSizeForConvolution)
+    {
+        for (int z = startZ; z <= endZ; z += stepSizeForConvolution)
+        {
+            for (int y = startY; y <= endY; y += stepSizeForConvolution)
+            {
+                GreedyMeshCurShape curShape = { Vector3{(float)x, (float)y, (float)z},  Vector3{(float)x, (float)y, (float)z}, Vector3{ (float)scale, (float)scale, (float)scale } };
+
+                float curNoiseUpFace = noiseForCurrentChunkUpFace[x][y][z];
+                float curNoiseDownFace = noiseForCurrentChunkDownFace[x][y][z];
+                float curNoiseFrontFace = noiseForCurrentChunkFrontFace[x][y][z];
+                float curNoiseBackFace = noiseForCurrentChunkBackFace[x][y][z];
+                float curNoiseRightFace = noiseForCurrentChunkRightFace[x][y][z];
+                float curNoiseLeftFace = noiseForCurrentChunkLeftFace[x][y][z];
+
+                if (curNoiseUpFace == 0 || curNoiseUpFace == 1) {
+                    greedyMeshForUpFace.push_back(curShape);
+                }
+
+                if (curNoiseDownFace == 0 || curNoiseDownFace == 1) {
+                    greedyMeshForDownFace.push_back(curShape);
+                }
+
+                if (curNoiseFrontFace == 0 || curNoiseFrontFace == 1) {
+                    greedyMeshForFrontFace.push_back(curShape);
+
+                }
+
+                if (curNoiseBackFace == 0 || curNoiseBackFace == 1) {
+                    greedyMeshForBackFace.push_back(curShape);
+
+                }
+
+                if (curNoiseRightFace == 0 || curNoiseRightFace == 1) {
+                    greedyMeshForRightFace.push_back(curShape);
+
+                }
+
+                if (curNoiseLeftFace == 0 || curNoiseLeftFace == 1) {
+                    greedyMeshForLeftFace.push_back(curShape);
+
+                }
+            }
+        }
+    }
+
+    
+    //GreedyMeshCurFaceDir(noiseForCurrentChunkUpFace, curLodLevel, greedyMeshForUpFace);
+    //GreedyMeshCurFaceDir(noiseForCurrentChunkDownFace, curLodLevel, greedyMeshForDownFace);
+    //GreedyMeshCurFaceDir(noiseForCurrentChunkFrontFace, curLodLevel, greedyMeshForFrontFace);
+    //GreedyMeshCurFaceDir(noiseForCurrentChunkBackFace, curLodLevel, greedyMeshForBackFace);
+    //GreedyMeshCurFaceDir(noiseForCurrentChunkRightFace, curLodLevel, greedyMeshForRightFace);
+    //GreedyMeshCurFaceDir(noiseForCurrentChunkLeftFace, curLodLevel, greedyMeshForLeftFace);
+
+    UpdateMeshFromGreedyShape(greedyMeshForUpFace, chunkMeshData, chunkFacesMetadata, FACE_UP_INDEX, stepSizeForConvolution);
+    UpdateMeshFromGreedyShape(greedyMeshForDownFace, chunkMeshData, chunkFacesMetadata, FACE_DOWN_INDEX, stepSizeForConvolution);
+    UpdateMeshFromGreedyShape(greedyMeshForFrontFace, chunkMeshData, chunkFacesMetadata, FACE_FRONT_INDEX, stepSizeForConvolution);
+    UpdateMeshFromGreedyShape(greedyMeshForBackFace, chunkMeshData, chunkFacesMetadata, FACE_BACK_INDEX, stepSizeForConvolution);
+    UpdateMeshFromGreedyShape(greedyMeshForRightFace, chunkMeshData, chunkFacesMetadata, FACE_RIGHT_INDEX, stepSizeForConvolution);
+    UpdateMeshFromGreedyShape(greedyMeshForLeftFace, chunkMeshData, chunkFacesMetadata, FACE_LEFT_INDEX, stepSizeForConvolution);
+
+    /*
+    CHECK IF THIS WORKS WITHOUT GREEDY MESHING!!!
+    IF IT DOES THEN CHECK GREEDY MESHING!!!!
+    GOOD LUCK!!!
+    */
+
+}
+
 
 void PlaneFacingDir(Vector3 dir, GenerativeMesh &curMesh) {
 

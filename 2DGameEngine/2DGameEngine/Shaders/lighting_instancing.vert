@@ -113,14 +113,19 @@ uniform float renderAll;
 uniform int chunkSize;
 uniform int halfNumChunksWidth;
 
-float curScale;
+float curScaleX;
+float curScaleY;
+float curScaleZ;
 
 int xPosInPackedInt = 10;
 int yPosInPackedInt = 5;
 int zPosInPackedInt = 0;
 
 int faceDirPosInPackedInt = 16;
-int curScalePosInPackedInt = 19;
+
+int curScalePosInPackedIntX = 19;
+int curScalePosInPackedIntY = 24;
+int curScalePosInPackedIntZ = 29;
 
 void main()
 {
@@ -146,7 +151,9 @@ void main()
         vec3 curVoxelPosUncompressed = vec3((instancePosition >> xPosInPackedInt) & 31, (instancePosition >> yPosInPackedInt) & 31, (instancePosition >> zPosInPackedInt) & 31);
         faceDir = (instancePosition >> faceDirPosInPackedInt) & 7;
 
-        curScale = (instancePosition >> curScalePosInPackedInt) & 31;
+        curScaleX = (instancePosition >> curScalePosInPackedIntX) & 31;
+        curScaleY = (instancePosition >> curScalePosInPackedIntY) & 31;
+        curScaleZ = (instancePosition >> curScalePosInPackedIntZ) & 31;
 
 
         vec3 curPos = vec3(chunkPosition[gl_DrawIDARB].x, chunkPosition[gl_DrawIDARB].y, chunkPosition[gl_DrawIDARB].z) + curVoxelPosUncompressed;
@@ -181,7 +188,7 @@ void main()
         //meshVertexPos = curVertex;
 
         curVertex += 0.5;
-        curVertex *= curScale;
+        curVertex = vec3(curVertex.x * curScaleX, curVertex.y * curScaleY, curVertex.z * curScaleZ);
 
         fragTexCoord = vertexTexCoord;
 
