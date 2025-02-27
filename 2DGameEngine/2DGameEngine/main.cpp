@@ -2043,7 +2043,7 @@ static void GreedyMesh2D(std::vector<std::vector<std::vector<float>>>& noiseForC
 
                 if (curNoise == 1 || curNoise == 0) {
 
-                    //GreedyMeshCurShape curShape = { Vector3{(float)x, (float)y, (float)z},  Vector3{(float)x, (float)y, (float)z}, Vector3{ (float)scale, (float)scale, (float)scale } };
+                    GreedyMeshCurShape curShape = { Vector3{(float)x, (float)y, (float)z},  Vector3{(float)x, (float)y, (float)z}, Vector3{ (float)scale, (float)scale, (float)scale } };
 
                     float curNoiseTop = noiseForCurrentChunk[x][y + stepSizeForConvolution][z];
                     if (curNoiseTop == 2) {
@@ -2058,7 +2058,7 @@ static void GreedyMesh2D(std::vector<std::vector<std::vector<float>>>& noiseForC
                     float curNoiseBottom = noiseForCurrentChunk[x][y - stepSizeForConvolution][z];
                     if (curNoiseBottom == 2) {
                         noiseForCurrentChunkDownFace[x][y][z] = curNoise;
-                        //greedyMeshForDownFace.push_back(curShape);
+                        greedyMeshForDownFace.push_back(curShape);
                     }
                     else
                     {
@@ -2068,7 +2068,7 @@ static void GreedyMesh2D(std::vector<std::vector<std::vector<float>>>& noiseForC
                     float curNoiseFront = noiseForCurrentChunk[x][y][z + stepSizeForConvolution];
                     if (curNoiseFront == 2) {
                         noiseForCurrentChunkFrontFace[x][y][z] = curNoise;
-                        //greedyMeshForFrontFace.push_back(curShape);
+                        greedyMeshForFrontFace.push_back(curShape);
                     }
                     else
                     {
@@ -2078,7 +2078,7 @@ static void GreedyMesh2D(std::vector<std::vector<std::vector<float>>>& noiseForC
                     float curNoiseBack = noiseForCurrentChunk[x][y][z - stepSizeForConvolution];
                     if (curNoiseBack == 2) {
                         noiseForCurrentChunkBackFace[x][y][z] = curNoise;
-                        //greedyMeshForBackFace.push_back(curShape);
+                        greedyMeshForBackFace.push_back(curShape);
                     }
                     else
                     {
@@ -2088,7 +2088,7 @@ static void GreedyMesh2D(std::vector<std::vector<std::vector<float>>>& noiseForC
                     float curNoiseRight = noiseForCurrentChunk[x + stepSizeForConvolution][y][z];
                     if (curNoiseRight == 2) {
                         noiseForCurrentChunkRightFace[x][y][z] = curNoise;
-                        //greedyMeshForRightFace.push_back(curShape);
+                        greedyMeshForRightFace.push_back(curShape);
                     }
                     else
                     {
@@ -2098,7 +2098,7 @@ static void GreedyMesh2D(std::vector<std::vector<std::vector<float>>>& noiseForC
                     float curNoiseLeft = noiseForCurrentChunk[x - stepSizeForConvolution][y][z];
                     if (curNoiseLeft == 2) {
                         noiseForCurrentChunkLeftFace[x][y][z] = curNoise;
-                        //greedyMeshForLeftFace.push_back(curShape);
+                        greedyMeshForLeftFace.push_back(curShape);
                     }
                     else
                     {
@@ -2106,6 +2106,14 @@ static void GreedyMesh2D(std::vector<std::vector<std::vector<float>>>& noiseForC
                     }
 
 
+                }
+                else {
+                    noiseForCurrentChunkUpFace[x][y][z] = 2;
+                    noiseForCurrentChunkDownFace[x][y][z] = 2;
+                    noiseForCurrentChunkFrontFace[x][y][z] = 2;
+                    noiseForCurrentChunkBackFace[x][y][z] = 2;
+                    noiseForCurrentChunkRightFace[x][y][z] = 2;
+                    noiseForCurrentChunkLeftFace[x][y][z] = 2;
                 }
 
             }
@@ -2132,26 +2140,26 @@ static void GreedyMesh2D(std::vector<std::vector<std::vector<float>>>& noiseForC
                 }
 
                 if (curNoiseDownFace == 0 || curNoiseDownFace == 1) {
-                    greedyMeshForDownFace.push_back(curShape);
+                    //greedyMeshForDownFace.push_back(curShape);
                 }
 
                 if (curNoiseFrontFace == 0 || curNoiseFrontFace == 1) {
-                    greedyMeshForFrontFace.push_back(curShape);
+                    //greedyMeshForFrontFace.push_back(curShape);
 
                 }
 
                 if (curNoiseBackFace == 0 || curNoiseBackFace == 1) {
-                    greedyMeshForBackFace.push_back(curShape);
+                    //greedyMeshForBackFace.push_back(curShape);
 
                 }
 
                 if (curNoiseRightFace == 0 || curNoiseRightFace == 1) {
-                    greedyMeshForRightFace.push_back(curShape);
+                    //greedyMeshForRightFace.push_back(curShape);
 
                 }
 
                 if (curNoiseLeftFace == 0 || curNoiseLeftFace == 1) {
-                    greedyMeshForLeftFace.push_back(curShape);
+                    //greedyMeshForLeftFace.push_back(curShape);
 
                 }
             }
