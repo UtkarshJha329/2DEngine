@@ -1858,7 +1858,7 @@ static void UpdateMeshFromGreedyShape(std::vector<GreedyMeshCurShape>& curGreedy
     }
 }
 
-static void GreedyMeshCurFaceDir(std::vector<std::vector<std::vector<float>>>& noiseForCurrentChunkCurDirOnlyVisible, int curLodLevel, std::vector<GreedyMeshCurShape>& greedyMeshForCurFace) {
+static void GreedyMeshCurFaceDir(std::vector<std::vector<std::vector<float>>>& noiseForCurrentChunkCurDirOnlyVisible, int curLodLevel, std::vector<GreedyMeshCurShape>& greedyMeshForCurFace, int faceDir) {
 
     int scale = pow(2, curLodLevel);
     //int curChunkIndexInBigArray = megaVertPositions.ChunkTotalFlatIndexWithVoxels(innerChunkIndex);
@@ -1875,102 +1875,158 @@ static void GreedyMeshCurFaceDir(std::vector<std::vector<std::vector<float>>>& n
 
     int stepSizeForConvolution = powerOfTwo;
 
-    for (int x = startX; x <= endX; x += stepSizeForConvolution)
+    for (int z = startZ; z <= endZ; z += stepSizeForConvolution)
     {
-        for (int z = startZ; z <= endZ; z += stepSizeForConvolution)
+        for (int y = startY; y <= endY; y += stepSizeForConvolution)
         {
-            for (int y = startY; y <= endY; y += stepSizeForConvolution)
+            for (int x = startX; x <= endX; x += stepSizeForConvolution)
             {
                 float curNoise = noiseForCurrentChunkCurDirOnlyVisible[x][y][z];
 
                 if (curNoise == 1 || curNoise == 0)
                 {
+                    GreedyMeshCurShape curShape = { Vector3{(float)x, (float)y, (float)z},  Vector3{(float)x, (float)y, (float)z}, Vector3{ (float)scale, (float)scale, (float)scale } };
 
-                    GreedyMeshCurShape curShape = { Vector3{(float)x, (float)y, (float)z},  Vector3{(float)x, (float)y, (float)z}, Vector3{ (float)scale, (float)scale, (float)scale }};
+                    if (faceDir == FACE_UP_INDEX) {
 
-                    if(false)
-                    {
                         for (int iterateXToExpand = x; iterateXToExpand <= endX; iterateXToExpand += stepSizeForConvolution)
                         {
                             float noiseForCheckingVoxel = noiseForCurrentChunkCurDirOnlyVisible[iterateXToExpand][y][z];
                             if (noiseForCheckingVoxel == 1 || noiseForCheckingVoxel == 0) {
                                 curShape.endPos = Vector3{ (float)iterateXToExpand, (float)y, (float)z };
-                                curShape.scale = Vector3{ (float)(iterateXToExpand - x + 1), curShape.scale.y, curShape.scale.z };
+                                curShape.scale = Vector3{ (float)(abs(abs(iterateXToExpand) - abs(x)) + 1), curShape.scale.y, curShape.scale.z };
+                                if (curShape.scale.x == 0) {
+                                    curShape.scale.x = scale;
+                                }
                             }
                             else {
                                 x = iterateXToExpand;
                                 break;
                             }
                         }
-
-                        for (int iterateZToExpand = z; iterateZToExpand <= endZ; iterateZToExpand += stepSizeForConvolution)
-                        {
-                            bool shapeCouldNotBeCompleted = false;
-                            for (int i = curShape.startPos.x; i < curShape.endPos.x; i += stepSizeForConvolution)
-                            {
-                                float noiseForCheckingVoxel = noiseForCurrentChunkCurDirOnlyVisible[i][y][iterateZToExpand];
-                                if (noiseForCheckingVoxel == 1 || noiseForCheckingVoxel == 0) {
-                                }
-                                else {
-                                    shapeCouldNotBeCompleted = true;
-                                    break;
-                                }
-
-                            }
-                            if (shapeCouldNotBeCompleted)
-                            {
-                                //z = iterateZToExpand;
-                                break;
-                            }
-                            else {
-                                curShape.endPos = Vector3{ (float)curShape.endPos.x, (float)y, (float)iterateZToExpand };
-                                curShape.scale = Vector3{ (float)curShape.scale.x, curShape.scale.y, (float)(iterateZToExpand - z + 1) };
-                            }
-                        }
-
-                        for (int iterateYToExpand = y; iterateYToExpand <= endY; iterateYToExpand += stepSizeForConvolution)
-                        {
-                            bool shapeCouldNotBeCompleted = false;
-                            for (int i = curShape.startPos.x; i < curShape.endPos.x; i += stepSizeForConvolution)
-                            {
-                                for (int j = curShape.startPos.z; j < curShape.endPos.z; j += stepSizeForConvolution)
-                                {
-                                    float noiseForCheckingVoxel = noiseForCurrentChunkCurDirOnlyVisible[i][y][j];
-                                    if (noiseForCheckingVoxel == 1 || noiseForCheckingVoxel == 0) {
-                                    }
-                                    else {
-                                        shapeCouldNotBeCompleted = true;
-                                        break;
-                                    }
-                                }
-                                if (shapeCouldNotBeCompleted)
-                                {
-                                    //z = iterateZToExpand;
-                                    break;
-                                }
-                            }
-                            if (shapeCouldNotBeCompleted)
-                            {
-                                //z = iterateZToExpand;
-                                break;
-                            }
-                            else {
-                                curShape.endPos = Vector3{ (float)curShape.endPos.x, (float)iterateYToExpand, (float)curShape.endPos.z };
-                                curShape.scale = Vector3{ (float)curShape.scale.x, (float)(iterateYToExpand - y + 1), (float)curShape.scale.z };
-                            }
-
-                        }
                     }
 
                     greedyMeshForCurFace.push_back(curShape);
-
                 }
-
-
-
             }
         }
     }
+
+
+    if (false) {
+
+        for (int x = startX; x <= endX; x += stepSizeForConvolution)
+        {
+            int curX = x;
+            for (int z = startZ; z <= endZ; z += stepSizeForConvolution)
+            {
+                for (int y = startY; y <= endY; y += stepSizeForConvolution)
+                {
+                    float curNoise = noiseForCurrentChunkCurDirOnlyVisible[x][y][z];
+
+                    if (curNoise == 1 || curNoise == 0)
+                    {
+
+                        GreedyMeshCurShape curShape = { Vector3{(float)x, (float)y, (float)z},  Vector3{(float)x, (float)y, (float)z}, Vector3{ (float)scale, (float)scale, (float)scale } };
+
+                        if (false)
+                        {
+                            if (faceDir == FACE_UP_INDEX || faceDir == FACE_DOWN_INDEX) {
+                                for (int iterateXToExpand = x; iterateXToExpand <= endX; iterateXToExpand += stepSizeForConvolution)
+                                {
+                                    float noiseForCheckingVoxel = noiseForCurrentChunkCurDirOnlyVisible[iterateXToExpand][y][z];
+                                    if (noiseForCheckingVoxel == 1 || noiseForCheckingVoxel == 0) {
+                                        curShape.endPos = Vector3{ (float)iterateXToExpand, (float)y, (float)z };
+                                        curShape.scale = Vector3{ (float)(abs(abs(iterateXToExpand) - abs(x)) + 1), curShape.scale.y, curShape.scale.z };
+                                        if (curShape.scale.x == 0) {
+                                            curShape.scale.x = scale;
+                                        }
+                                    }
+                                    else {
+                                        x = iterateXToExpand;
+                                        break;
+                                    }
+                                }
+                            }
+
+                            if (false)
+                            {
+                                for (int iterateZToExpand = z; iterateZToExpand <= endZ; iterateZToExpand += stepSizeForConvolution)
+                                {
+                                    bool shapeCouldNotBeCompleted = false;
+                                    for (int i = curShape.startPos.x; i < curShape.endPos.x; i += stepSizeForConvolution)
+                                    {
+                                        float noiseForCheckingVoxel = noiseForCurrentChunkCurDirOnlyVisible[i][y][iterateZToExpand];
+                                        if (noiseForCheckingVoxel == 1 || noiseForCheckingVoxel == 0) {
+                                        }
+                                        else {
+                                            shapeCouldNotBeCompleted = true;
+                                            break;
+                                        }
+
+                                    }
+                                    if (shapeCouldNotBeCompleted)
+                                    {
+                                        //z = iterateZToExpand;
+                                        break;
+                                    }
+                                    else {
+                                        curShape.endPos = Vector3{ (float)curShape.endPos.x, (float)y, (float)iterateZToExpand };
+                                        curShape.scale = Vector3{ (float)curShape.scale.x, curShape.scale.y, (float)(iterateZToExpand - z + 1) };
+                                    }
+                                }
+                            }
+
+                            if (false)
+                            {
+                                for (int iterateYToExpand = y; iterateYToExpand <= endY; iterateYToExpand += stepSizeForConvolution)
+                                {
+                                    bool shapeCouldNotBeCompleted = false;
+                                    for (int i = curShape.startPos.x; i < curShape.endPos.x; i += stepSizeForConvolution)
+                                    {
+                                        for (int j = curShape.startPos.z; j < curShape.endPos.z; j += stepSizeForConvolution)
+                                        {
+                                            float noiseForCheckingVoxel = noiseForCurrentChunkCurDirOnlyVisible[i][y][j];
+                                            if (noiseForCheckingVoxel == 1 || noiseForCheckingVoxel == 0) {
+                                            }
+                                            else {
+                                                shapeCouldNotBeCompleted = true;
+                                                break;
+                                            }
+                                        }
+                                        if (shapeCouldNotBeCompleted)
+                                        {
+                                            //z = iterateZToExpand;
+                                            break;
+                                        }
+                                    }
+                                    if (shapeCouldNotBeCompleted)
+                                    {
+                                        //z = iterateZToExpand;
+                                        break;
+                                    }
+                                    else {
+                                        curShape.endPos = Vector3{ (float)curShape.endPos.x, (float)iterateYToExpand, (float)curShape.endPos.z };
+                                        curShape.scale = Vector3{ (float)curShape.scale.x, (float)(iterateYToExpand - y + 1), (float)curShape.scale.z };
+                                    }
+
+                                }
+                            }
+                        }
+
+                        greedyMeshForCurFace.push_back(curShape);
+
+                    }
+
+
+
+                }
+            }
+
+            x = curX;
+        }
+    }
+
 
 
 }
@@ -2058,7 +2114,7 @@ static void GreedyMesh2D(std::vector<std::vector<std::vector<float>>>& noiseForC
                     float curNoiseBottom = noiseForCurrentChunk[x][y - stepSizeForConvolution][z];
                     if (curNoiseBottom == 2) {
                         noiseForCurrentChunkDownFace[x][y][z] = curNoise;
-                        greedyMeshForDownFace.push_back(curShape);
+                        //greedyMeshForDownFace.push_back(curShape);
                     }
                     else
                     {
@@ -2068,7 +2124,7 @@ static void GreedyMesh2D(std::vector<std::vector<std::vector<float>>>& noiseForC
                     float curNoiseFront = noiseForCurrentChunk[x][y][z + stepSizeForConvolution];
                     if (curNoiseFront == 2) {
                         noiseForCurrentChunkFrontFace[x][y][z] = curNoise;
-                        greedyMeshForFrontFace.push_back(curShape);
+                        //greedyMeshForFrontFace.push_back(curShape);
                     }
                     else
                     {
@@ -2078,7 +2134,7 @@ static void GreedyMesh2D(std::vector<std::vector<std::vector<float>>>& noiseForC
                     float curNoiseBack = noiseForCurrentChunk[x][y][z - stepSizeForConvolution];
                     if (curNoiseBack == 2) {
                         noiseForCurrentChunkBackFace[x][y][z] = curNoise;
-                        greedyMeshForBackFace.push_back(curShape);
+                        //greedyMeshForBackFace.push_back(curShape);
                     }
                     else
                     {
@@ -2088,7 +2144,7 @@ static void GreedyMesh2D(std::vector<std::vector<std::vector<float>>>& noiseForC
                     float curNoiseRight = noiseForCurrentChunk[x + stepSizeForConvolution][y][z];
                     if (curNoiseRight == 2) {
                         noiseForCurrentChunkRightFace[x][y][z] = curNoise;
-                        greedyMeshForRightFace.push_back(curShape);
+                        //greedyMeshForRightFace.push_back(curShape);
                     }
                     else
                     {
@@ -2098,7 +2154,7 @@ static void GreedyMesh2D(std::vector<std::vector<std::vector<float>>>& noiseForC
                     float curNoiseLeft = noiseForCurrentChunk[x - stepSizeForConvolution][y][z];
                     if (curNoiseLeft == 2) {
                         noiseForCurrentChunkLeftFace[x][y][z] = curNoise;
-                        greedyMeshForLeftFace.push_back(curShape);
+                        //greedyMeshForLeftFace.push_back(curShape);
                     }
                     else
                     {
@@ -2120,59 +2176,59 @@ static void GreedyMesh2D(std::vector<std::vector<std::vector<float>>>& noiseForC
         }
     }
 
-    for (int x = startX; x <= endX; x += stepSizeForConvolution)
-    {
-        for (int z = startZ; z <= endZ; z += stepSizeForConvolution)
-        {
-            for (int y = startY; y <= endY; y += stepSizeForConvolution)
-            {
-                GreedyMeshCurShape curShape = { Vector3{(float)x, (float)y, (float)z},  Vector3{(float)x, (float)y, (float)z}, Vector3{ (float)scale, (float)scale, (float)scale } };
+    //for (int x = startX; x <= endX; x += stepSizeForConvolution)
+    //{
+    //    for (int z = startZ; z <= endZ; z += stepSizeForConvolution)
+    //    {
+    //        for (int y = startY; y <= endY; y += stepSizeForConvolution)
+    //        {
+    //            GreedyMeshCurShape curShape = { Vector3{(float)x, (float)y, (float)z},  Vector3{(float)x, (float)y, (float)z}, Vector3{ (float)scale, (float)scale, (float)scale } };
 
-                float curNoiseUpFace = noiseForCurrentChunkUpFace[x][y][z];
-                float curNoiseDownFace = noiseForCurrentChunkDownFace[x][y][z];
-                float curNoiseFrontFace = noiseForCurrentChunkFrontFace[x][y][z];
-                float curNoiseBackFace = noiseForCurrentChunkBackFace[x][y][z];
-                float curNoiseRightFace = noiseForCurrentChunkRightFace[x][y][z];
-                float curNoiseLeftFace = noiseForCurrentChunkLeftFace[x][y][z];
+    //            float curNoiseUpFace = noiseForCurrentChunkUpFace[x][y][z];
+    //            float curNoiseDownFace = noiseForCurrentChunkDownFace[x][y][z];
+    //            float curNoiseFrontFace = noiseForCurrentChunkFrontFace[x][y][z];
+    //            float curNoiseBackFace = noiseForCurrentChunkBackFace[x][y][z];
+    //            float curNoiseRightFace = noiseForCurrentChunkRightFace[x][y][z];
+    //            float curNoiseLeftFace = noiseForCurrentChunkLeftFace[x][y][z];
 
-                if (curNoiseUpFace == 0 || curNoiseUpFace == 1) {
-                    greedyMeshForUpFace.push_back(curShape);
-                }
+    //            if (curNoiseUpFace == 0 || curNoiseUpFace == 1) {
+    //                greedyMeshForUpFace.push_back(curShape);
+    //            }
 
-                if (curNoiseDownFace == 0 || curNoiseDownFace == 1) {
-                    //greedyMeshForDownFace.push_back(curShape);
-                }
+    //            if (curNoiseDownFace == 0 || curNoiseDownFace == 1) {
+    //                greedyMeshForDownFace.push_back(curShape);
+    //            }
 
-                if (curNoiseFrontFace == 0 || curNoiseFrontFace == 1) {
-                    //greedyMeshForFrontFace.push_back(curShape);
+    //            if (curNoiseFrontFace == 0 || curNoiseFrontFace == 1) {
+    //                greedyMeshForFrontFace.push_back(curShape);
 
-                }
+    //            }
 
-                if (curNoiseBackFace == 0 || curNoiseBackFace == 1) {
-                    //greedyMeshForBackFace.push_back(curShape);
+    //            if (curNoiseBackFace == 0 || curNoiseBackFace == 1) {
+    //                greedyMeshForBackFace.push_back(curShape);
 
-                }
+    //            }
 
-                if (curNoiseRightFace == 0 || curNoiseRightFace == 1) {
-                    //greedyMeshForRightFace.push_back(curShape);
+    //            if (curNoiseRightFace == 0 || curNoiseRightFace == 1) {
+    //                greedyMeshForRightFace.push_back(curShape);
 
-                }
+    //            }
 
-                if (curNoiseLeftFace == 0 || curNoiseLeftFace == 1) {
-                    //greedyMeshForLeftFace.push_back(curShape);
+    //            if (curNoiseLeftFace == 0 || curNoiseLeftFace == 1) {
+    //                greedyMeshForLeftFace.push_back(curShape);
 
-                }
-            }
-        }
-    }
+    //            }
+    //        }
+    //    }
+    //}
 
     
-    //GreedyMeshCurFaceDir(noiseForCurrentChunkUpFace, curLodLevel, greedyMeshForUpFace);
-    //GreedyMeshCurFaceDir(noiseForCurrentChunkDownFace, curLodLevel, greedyMeshForDownFace);
-    //GreedyMeshCurFaceDir(noiseForCurrentChunkFrontFace, curLodLevel, greedyMeshForFrontFace);
-    //GreedyMeshCurFaceDir(noiseForCurrentChunkBackFace, curLodLevel, greedyMeshForBackFace);
-    //GreedyMeshCurFaceDir(noiseForCurrentChunkRightFace, curLodLevel, greedyMeshForRightFace);
-    //GreedyMeshCurFaceDir(noiseForCurrentChunkLeftFace, curLodLevel, greedyMeshForLeftFace);
+    GreedyMeshCurFaceDir(noiseForCurrentChunkUpFace, curLodLevel, greedyMeshForUpFace, FACE_UP_INDEX);
+    GreedyMeshCurFaceDir(noiseForCurrentChunkDownFace, curLodLevel, greedyMeshForDownFace, FACE_DOWN_INDEX);
+    GreedyMeshCurFaceDir(noiseForCurrentChunkFrontFace, curLodLevel, greedyMeshForFrontFace, FACE_FRONT_INDEX);
+    GreedyMeshCurFaceDir(noiseForCurrentChunkBackFace, curLodLevel, greedyMeshForBackFace, FACE_BACK_INDEX);
+    GreedyMeshCurFaceDir(noiseForCurrentChunkRightFace, curLodLevel, greedyMeshForRightFace, FACE_RIGHT_INDEX);
+    GreedyMeshCurFaceDir(noiseForCurrentChunkLeftFace, curLodLevel, greedyMeshForLeftFace, FACE_LEFT_INDEX);
 
     UpdateMeshFromGreedyShape(greedyMeshForUpFace, chunkMeshData, chunkFacesMetadata, FACE_UP_INDEX, stepSizeForConvolution);
     UpdateMeshFromGreedyShape(greedyMeshForDownFace, chunkMeshData, chunkFacesMetadata, FACE_DOWN_INDEX, stepSizeForConvolution);
