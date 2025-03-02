@@ -1889,23 +1889,69 @@ static void GreedyMeshCurFaceDir(std::vector<std::vector<std::vector<float>>>& n
 
                     if (faceDir == FACE_UP_INDEX) {
 
-                        for (int iterateXToExpand = x; iterateXToExpand <= endX; iterateXToExpand += stepSizeForConvolution)
-                        {
-                            float noiseForCheckingVoxel = noiseForCurrentChunkCurDirOnlyVisible[iterateXToExpand][y][z];
-                            if (noiseForCheckingVoxel == 1 || noiseForCheckingVoxel == 0) {
-                                curShape.endPos = Vector3{ (float)iterateXToExpand, (float)y, (float)z };
-                                curShape.scale = Vector3{ (float)(abs(abs(iterateXToExpand) - abs(x)) + 1), curShape.scale.y, curShape.scale.z };
-                                if (curShape.scale.x == 0) {
-                                    curShape.scale.x = scale;
+                        bool expandedX = false;
+                        if (true) {
+
+                            int length = 0;
+                            int lastValidX = x;
+
+                            for (int iterateXToExpand = x; iterateXToExpand <= endX; iterateXToExpand += stepSizeForConvolution)
+                            {
+                                float noiseForCheckingVoxel = noiseForCurrentChunkCurDirOnlyVisible[iterateXToExpand][y][z];
+                                if (noiseForCheckingVoxel != 2) {
+                                    length += scale;
+                                    expandedX = true;
+                                    lastValidX = iterateXToExpand;
+                                }
+                                else {
+                                    x = lastValidX;
+                                    break;
                                 }
                             }
-                            else {
-                                x = iterateXToExpand;
-                                break;
+
+                            if (expandedX) {
+                                curShape.endPos = Vector3{ (float)lastValidX, (float)y, (float)z };
+                                curShape.scale = Vector3{ (float)length, curShape.scale.y, curShape.scale.z };
                             }
                         }
-                    }
 
+                        if(true)
+                        {
+                            int breadth = 0;
+                            int lastValidZ = z;
+                            for (int iterateZToExpand = z; iterateZToExpand <= endZ; iterateZToExpand += stepSizeForConvolution)
+                            {
+                                bool expandedShape = true;
+                                for (int i = curShape.startPos.x; i <= curShape.endPos.x; i += stepSizeForConvolution)
+                                {
+                                    float noiseForCheckingVoxel = noiseForCurrentChunkCurDirOnlyVisible[i][y][iterateZToExpand];
+                                    if (noiseForCheckingVoxel == 2) {
+                                        expandedShape = false;
+                                        break;
+                                    }
+                                }
+
+                                if (expandedShape)
+                                {
+                                    breadth += scale;
+                                    lastValidZ = iterateZToExpand;
+
+                                    for (int i = curShape.startPos.x; i <= curShape.endPos.x; i += stepSizeForConvolution)
+                                    {
+                                        noiseForCurrentChunkCurDirOnlyVisible[i][y][iterateZToExpand] = 2.0f;
+                                    }
+
+                                }
+                                else
+                                {
+                                    break;
+                                }
+                            }
+
+                            curShape.endPos = Vector3{ (float)curShape.endPos.x, (float)y, (float)lastValidZ };
+                            curShape.scale = Vector3{ (float)curShape.scale.x, curShape.scale.y, (float)breadth };
+                        }
+                    }
                     greedyMeshForCurFace.push_back(curShape);
                 }
             }
