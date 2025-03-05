@@ -5,7 +5,7 @@
 
 ./2DGameEngine/2DGameEngine/tracy
 
-results.json
+./2DGameEngine/2DGameEngine/results.json
 
 # Ignore World Data Files.
 *.Data
