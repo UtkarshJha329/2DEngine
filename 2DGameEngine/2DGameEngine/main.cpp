@@ -409,7 +409,8 @@ const siv::PerlinNoise perlin{ seed };
 
 std::vector<DrawArraysIndirectCommand> drawArraysIndirectCommands;
 std::unordered_map<int, Vector3> mappedInnerIndexMap;
-std::unordered_map<int, bool> innerIndexWhereNewMeshNeedsToBeCalculated;
+//std::unordered_map<int, bool> innerIndexWhereNewMeshNeedsToBeCalculated;
+std::vector<Vector3> chunksWhereNewMeshNeedsToBeCalculated;
 
 const int screenWidth = 1280;
 const int screenHeight = 720;
@@ -484,7 +485,8 @@ int main()
         renderTraversalOrder.push_back(chunkIndex);
         //std::cout << chunkIndex.x << ", " << chunkIndex.y << ", " << chunkIndex.z << std::endl;
         mappedInnerIndexMap[megaVertPositions.InnerIndexFlattened(chunkIndex)] = chunkIndex;
-        innerIndexWhereNewMeshNeedsToBeCalculated[megaVertPositions.InnerIndexFlattened(chunkIndex)] = true;
+        //innerIndexWhereNewMeshNeedsToBeCalculated[megaVertPositions.InnerIndexFlattened(chunkIndex)] = true;
+        chunksWhereNewMeshNeedsToBeCalculated.push_back(chunkIndex);
         chunksGridCoordinates.push_back(float3{ 0, (float)y, 0 });
     }
 
@@ -498,7 +500,8 @@ int main()
                 renderTraversalOrder.push_back(chunkIndex);
                 //std::cout << chunkIndex.x << ", " << chunkIndex.y << ", " << chunkIndex.z << std::endl;
                 mappedInnerIndexMap[megaVertPositions.InnerIndexFlattened(chunkIndex)] = chunkIndex;
-                innerIndexWhereNewMeshNeedsToBeCalculated[megaVertPositions.InnerIndexFlattened(chunkIndex)] = true;
+                //innerIndexWhereNewMeshNeedsToBeCalculated[megaVertPositions.InnerIndexFlattened(chunkIndex)] = true;
+                chunksWhereNewMeshNeedsToBeCalculated.push_back(chunkIndex);
                 chunksGridCoordinates.push_back(float3{ (float)curLayerNum, (float)y, (float)z });
             }
 
@@ -511,7 +514,8 @@ int main()
                 renderTraversalOrder.push_back(chunkIndex);
                 //std::cout << chunkIndex.x << ", " << chunkIndex.y << ", " << chunkIndex.z << std::endl;
                 mappedInnerIndexMap[megaVertPositions.InnerIndexFlattened(chunkIndex)] = chunkIndex;
-                innerIndexWhereNewMeshNeedsToBeCalculated[megaVertPositions.InnerIndexFlattened(chunkIndex)] = true;
+                //innerIndexWhereNewMeshNeedsToBeCalculated[megaVertPositions.InnerIndexFlattened(chunkIndex)] = true;
+                chunksWhereNewMeshNeedsToBeCalculated.push_back(chunkIndex);
                 chunksGridCoordinates.push_back(float3{ (float)-curLayerNum, (float)y, (float)z });
             }
         }
@@ -523,7 +527,8 @@ int main()
                 renderTraversalOrder.push_back(chunkIndex);
                 //std::cout << chunkIndex.x << ", " << chunkIndex.y << ", " << chunkIndex.z << std::endl;
                 mappedInnerIndexMap[megaVertPositions.InnerIndexFlattened(chunkIndex)] = chunkIndex;
-                innerIndexWhereNewMeshNeedsToBeCalculated[megaVertPositions.InnerIndexFlattened(chunkIndex)] = true;
+                //innerIndexWhereNewMeshNeedsToBeCalculated[megaVertPositions.InnerIndexFlattened(chunkIndex)] = true;
+                chunksWhereNewMeshNeedsToBeCalculated.push_back(chunkIndex);
                 chunksGridCoordinates.push_back(float3{ (float)x, (float)y, (float)curLayerNum });
             }
         }
@@ -535,7 +540,8 @@ int main()
                 renderTraversalOrder.push_back(chunkIndex);
                 //std::cout << chunkIndex.x << ", " << chunkIndex.y << ", " << chunkIndex.z << std::endl;
                 mappedInnerIndexMap[megaVertPositions.InnerIndexFlattened(chunkIndex)] = chunkIndex;
-                innerIndexWhereNewMeshNeedsToBeCalculated[megaVertPositions.InnerIndexFlattened(chunkIndex)] = true;
+                //innerIndexWhereNewMeshNeedsToBeCalculated[megaVertPositions.InnerIndexFlattened(chunkIndex)] = true;
+                chunksWhereNewMeshNeedsToBeCalculated.push_back(chunkIndex);
                 chunksGridCoordinates.push_back(float3{ (float)x, (float)y, (float)-curLayerNum });
 
             }
@@ -806,13 +812,15 @@ int main()
             for (int i = 0; i < renderTraversalOrder.size(); i++)
             {
                 if ((offset.x != 0 && renderTraversalOrder[i].x == offset.x * numChunksHalfWidth) || (offset.z != 0 && renderTraversalOrder[i].z == offset.z * numChunksHalfWidth)) {
-                    innerIndexWhereNewMeshNeedsToBeCalculated[megaVertPositions.InnerIndexFlattened(renderTraversalOrder[i])] = true;
+                    //innerIndexWhereNewMeshNeedsToBeCalculated[megaVertPositions.InnerIndexFlattened(renderTraversalOrder[i])] = true;
+                    chunksWhereNewMeshNeedsToBeCalculated.push_back(renderTraversalOrder[i]);
                 }
 
                 if (LODBorderMesh(renderTraversalOrder[i]))
                 {
                     //std::cout << "NEED TO RECALCULATE" << std::endl;
-                    innerIndexWhereNewMeshNeedsToBeCalculated[megaVertPositions.InnerIndexFlattened(renderTraversalOrder[i])] = true;
+                    //innerIndexWhereNewMeshNeedsToBeCalculated[megaVertPositions.InnerIndexFlattened(renderTraversalOrder[i])] = true;
+                    chunksWhereNewMeshNeedsToBeCalculated.push_back(renderTraversalOrder[i]);
                 }
             }
         }
@@ -1018,23 +1026,29 @@ int main()
                     {
                         PROFILE_SCOPE("Checking and Sending Recalculations For Changed Chunks.");
 
-                        for (int i = 0; i < renderTraversalOrder.size(); i++)
+                        // VVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVV NEEDS TO BE OPTIMISED!!!!!!!!!! VVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVV
+                        //for (int i = 0; i < renderTraversalOrder.size(); i++)
+                        for (int i = 0; i < chunksWhereNewMeshNeedsToBeCalculated.size(); i++)
                         {
                             //PROFILE_SCOPE("Time for checking one chunk.");
 
 
-                            int renderTraversalIndexFlattened = megaVertPositions.InnerIndexFlattened(renderTraversalOrder[i]);
+                            //int renderTraversalIndexFlattened = megaVertPositions.InnerIndexFlattened(renderTraversalOrder[i]);
+                            int renderTraversalIndexFlattened = megaVertPositions.InnerIndexFlattened(chunksWhereNewMeshNeedsToBeCalculated[i]);
 
                             {
-                                if (innerIndexWhereNewMeshNeedsToBeCalculated.contains(renderTraversalIndexFlattened) && innerIndexWhereNewMeshNeedsToBeCalculated[renderTraversalIndexFlattened]) {
+                                if (/*innerIndexWhereNewMeshNeedsToBeCalculated.contains(renderTraversalIndexFlattened) && innerIndexWhereNewMeshNeedsToBeCalculated[renderTraversalIndexFlattened]*/ true) {
 
                                     PROFILE_SCOPE("Recalculating Data.");
 
-                                    Vector3 offsetRenderTraversalOrder = mappedInnerIndexMap[megaVertPositions.InnerIndexFlattened(renderTraversalOrder[i])];
+                                    //Vector3 offsetRenderTraversalOrder = mappedInnerIndexMap[megaVertPositions.InnerIndexFlattened(renderTraversalOrder[i])];
+                                    Vector3 offsetRenderTraversalOrder = mappedInnerIndexMap[megaVertPositions.InnerIndexFlattened(chunksWhereNewMeshNeedsToBeCalculated[i])];
                                     //std::cout << offsetRenderTraversalOrder.x << ", " << offsetRenderTraversalOrder.y << ", " << offsetRenderTraversalOrder.z << std::endl;
-                                    Vector3 curChunkTraversalIndex = Vector3{ renderTraversalOrder[i].x + cameraChunkIndex.x, renderTraversalOrder[i].y, renderTraversalOrder[i].z + cameraChunkIndex.z };
+                                    //Vector3 curChunkTraversalIndex = Vector3{ renderTraversalOrder[i].x + cameraChunkIndex.x, renderTraversalOrder[i].y, renderTraversalOrder[i].z + cameraChunkIndex.z };
+                                    Vector3 curChunkTraversalIndex = Vector3{ chunksWhereNewMeshNeedsToBeCalculated[i].x + cameraChunkIndex.x, chunksWhereNewMeshNeedsToBeCalculated[i].y, chunksWhereNewMeshNeedsToBeCalculated[i].z + cameraChunkIndex.z };
 
-                                    Vector3 oldChunkTraversalIndex = Vector3{ renderTraversalOrder[i].x + oldCameraChunkPosition.x, renderTraversalOrder[i].y, renderTraversalOrder[i].z + oldCameraChunkPosition.z };
+                                    //Vector3 oldChunkTraversalIndex = Vector3{ renderTraversalOrder[i].x + oldCameraChunkPosition.x, renderTraversalOrder[i].y, renderTraversalOrder[i].z + oldCameraChunkPosition.z };
+                                    Vector3 oldChunkTraversalIndex = Vector3{ chunksWhereNewMeshNeedsToBeCalculated[i].x + oldCameraChunkPosition.x, chunksWhereNewMeshNeedsToBeCalculated[i].y, chunksWhereNewMeshNeedsToBeCalculated[i].z + oldCameraChunkPosition.z };
                                     int offsetFlattenedIndex = megaVertPositions.InnerIndexFlattened(offsetRenderTraversalOrder);
 
                                     int curPosInChunkStatusMegaArray = megaVertPositions.ImaginaryChunkFlatIndexWithoutVoxels(curChunkTraversalIndex);
@@ -1085,7 +1099,8 @@ int main()
                                         //archive(cereal::binary_data(curChunkSlice.data(), sizeof(int) * curChunkSlice.size()));
 
                                         int curLodLevel = 0;
-                                        int curDistFromCamera = (int)(Vector3Length(Vector3{ renderTraversalOrder[i].x, 0, renderTraversalOrder[i].z }));
+                                        //int curDistFromCamera = (int)(Vector3Length(Vector3{ renderTraversalOrder[i].x, 0, renderTraversalOrder[i].z }));
+                                        int curDistFromCamera = (int)(Vector3Length(Vector3{ chunksWhereNewMeshNeedsToBeCalculated[i].x, 0, chunksWhereNewMeshNeedsToBeCalculated[i].z }));
                                         if (curDistFromCamera >= lodDistance1.x && curDistFromCamera <= lodDistance1.y) {
                                             curLodLevel = LODLevel + 0;
                                             //std::cout << "x < 4 : " << curLodLevel << std::endl;;
@@ -1144,7 +1159,7 @@ int main()
 
 
                                     chunksChanged = true;
-                                    innerIndexWhereNewMeshNeedsToBeCalculated[renderTraversalIndexFlattened] = false;
+                                    //innerIndexWhereNewMeshNeedsToBeCalculated[renderTraversalIndexFlattened] = false;
                                 }
                             }
 
@@ -1277,6 +1292,8 @@ int main()
             DrawFPS(40, 40);
             EndDrawing();
         }
+
+        chunksWhereNewMeshNeedsToBeCalculated.clear();
     }
 
     //rlUnloadShaderBuffer(chunkPosSSBO);
