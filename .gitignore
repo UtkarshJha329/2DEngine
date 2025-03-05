@@ -5,6 +5,8 @@
 
 ./2DGameEngine/2DGameEngine/tracy
 
+results.json
+
 # Ignore World Data Files.
 *.Data
 *.MetaData

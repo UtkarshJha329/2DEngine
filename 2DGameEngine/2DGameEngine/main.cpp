@@ -1015,192 +1015,207 @@ int main()
                 PROFILE_SCOPE("Drawing Chunks");
 
                 {
-                    for (int i = 0; i < renderTraversalOrder.size(); i++)
                     {
-                        Vector3 offsetRenderTraversalOrder = mappedInnerIndexMap[megaVertPositions.InnerIndexFlattened(renderTraversalOrder[i])];
-                        //std::cout << offsetRenderTraversalOrder.x << ", " << offsetRenderTraversalOrder.y << ", " << offsetRenderTraversalOrder.z << std::endl;
-                        Vector3 curChunkTraversalIndex = Vector3{ renderTraversalOrder[i].x + cameraChunkIndex.x, renderTraversalOrder[i].y, renderTraversalOrder[i].z + cameraChunkIndex.z };
+                        PROFILE_SCOPE("Checking and Sending Recalculations For Changed Chunks.");
 
-                        Vector3 oldChunkTraversalIndex = Vector3{ renderTraversalOrder[i].x + oldCameraChunkPosition.x, renderTraversalOrder[i].y, renderTraversalOrder[i].z + oldCameraChunkPosition.z };
+                        for (int i = 0; i < renderTraversalOrder.size(); i++)
+                        {
+                            //PROFILE_SCOPE("Time for checking one chunk.");
 
-                        int renderTraversalIndexFlattened = megaVertPositions.InnerIndexFlattened(renderTraversalOrder[i]);
-                        int offsetFlattenedIndex = megaVertPositions.InnerIndexFlattened(offsetRenderTraversalOrder);
 
-                        if (innerIndexWhereNewMeshNeedsToBeCalculated.contains(renderTraversalIndexFlattened) && innerIndexWhereNewMeshNeedsToBeCalculated[renderTraversalIndexFlattened]) {
-
-                            int curPosInChunkStatusMegaArray = megaVertPositions.ImaginaryChunkFlatIndexWithoutVoxels(curChunkTraversalIndex);
+                            int renderTraversalIndexFlattened = megaVertPositions.InnerIndexFlattened(renderTraversalOrder[i]);
 
                             {
-                                std::lock_guard<std::mutex> lock(chunkBeingGeneratedCountMutex);
-                                chunkBeingGeneratedCount++;
+                                if (innerIndexWhereNewMeshNeedsToBeCalculated.contains(renderTraversalIndexFlattened) && innerIndexWhereNewMeshNeedsToBeCalculated[renderTraversalIndexFlattened]) {
+
+                                    PROFILE_SCOPE("Recalculating Data.");
+
+                                    Vector3 offsetRenderTraversalOrder = mappedInnerIndexMap[megaVertPositions.InnerIndexFlattened(renderTraversalOrder[i])];
+                                    //std::cout << offsetRenderTraversalOrder.x << ", " << offsetRenderTraversalOrder.y << ", " << offsetRenderTraversalOrder.z << std::endl;
+                                    Vector3 curChunkTraversalIndex = Vector3{ renderTraversalOrder[i].x + cameraChunkIndex.x, renderTraversalOrder[i].y, renderTraversalOrder[i].z + cameraChunkIndex.z };
+
+                                    Vector3 oldChunkTraversalIndex = Vector3{ renderTraversalOrder[i].x + oldCameraChunkPosition.x, renderTraversalOrder[i].y, renderTraversalOrder[i].z + oldCameraChunkPosition.z };
+                                    int offsetFlattenedIndex = megaVertPositions.InnerIndexFlattened(offsetRenderTraversalOrder);
+
+                                    int curPosInChunkStatusMegaArray = megaVertPositions.ImaginaryChunkFlatIndexWithoutVoxels(curChunkTraversalIndex);
+
+                                    {
+                                        std::lock_guard<std::mutex> lock(chunkBeingGeneratedCountMutex);
+                                        chunkBeingGeneratedCount++;
+                                    }
+
+                                    {
+                                        std::lock_guard<std::mutex> lock(chunkGeneratedMutex);
+                                        chunkGenerated[curPosInChunkStatusMegaArray] = false;
+                                    }
+
+
+                                    //std::cout << "Generating New Chunk: \n\t CurChunkTraversalIndex (" << curChunkTraversalIndex.x << ", " << curChunkTraversalIndex.y << ", " << curChunkTraversalIndex.z
+                                    //                                        << ")\n\t OffsetRenderTraversalOrder (" 
+                                    //                                        << offsetRenderTraversalOrder.x << ", " << offsetRenderTraversalOrder.y << ", " << offsetRenderTraversalOrder.z
+                                    //                                        << ")\n\t CameraChunkIndex (" 
+                                    //                                        << cameraChunkIndex.x << ", " << cameraChunkIndex.y << ", " << cameraChunkIndex.z
+                                    //                                        << ")\n\t RenderTraversalOrder ("
+                                    //                                        << renderTraversalOrder[i].x << ", " << renderTraversalOrder[i].y << ", " << renderTraversalOrder[i].z << ")" << std::endl;
+
+                                    std::string curChunkFileName = worldDataDir + CHUNK_SAVE_STRING(curChunkTraversalIndex);
+                                    if (std::filesystem::exists(curChunkFileName)) {
+                                        //std::cout << "CHUNK FILE FOUND!!" << std::endl;
+
+                                        //std::cout << "LOADED : " << curChunkFileName << std::endl;
+                                        chunkMeshGenThreads.push_back(std::async(std::launch::async, ReloadChunkDataFromFile
+                                            , curChunkFileName
+                                            , std::ref(megaVertPositions)
+                                            , std::ref(chunkGenerated)
+                                            , std::ref(chunkUpdatedVoxelPositionInBigArrayMappedToChunkPositionInArray)
+                                            , std::ref(chunkBeingGeneratedCount)
+                                            , curChunkTraversalIndex
+                                            , offsetRenderTraversalOrder));
+
+
+                                    }
+                                    else {
+
+                                        //std::string curChunkSaveFileName = CHUNK_SAVE_STRING(oldChunkTraversalIndex);
+
+                                        //std::ofstream os(worldDataDir + curChunkSaveFileName, std::ios::binary);
+                                        //cereal::BinaryOutputArchive archive(os);
+                                        //int start = megaVertPositions.ChunkTotalFlatIndexWithVoxels(offsetRenderTraversalOrder);
+                                        //std::span<int> curChunkSlice(megaVertPositions.megaArrayOfAllPositions.begin() + start, totalNumVoxelsPerChunk * NUM_FACES);
+                                        //archive(cereal::binary_data(curChunkSlice.data(), sizeof(int) * curChunkSlice.size()));
+
+                                        int curLodLevel = 0;
+                                        int curDistFromCamera = (int)(Vector3Length(Vector3{ renderTraversalOrder[i].x, 0, renderTraversalOrder[i].z }));
+                                        if (curDistFromCamera >= lodDistance1.x && curDistFromCamera <= lodDistance1.y) {
+                                            curLodLevel = LODLevel + 0;
+                                            //std::cout << "x < 4 : " << curLodLevel << std::endl;;
+                                        }
+                                        else if (curDistFromCamera >= lodDistance2.x && curDistFromCamera <= lodDistance2.y) {
+                                            curLodLevel = LODLevel + 1;
+                                            //std::cout << "x >=4 && x <= 6 : " << curLodLevel << std::endl;;
+                                        }
+                                        else if (curDistFromCamera >= lodDistance3.x && curDistFromCamera <= lodDistance3.y) {
+                                            curLodLevel = LODLevel + 2;
+                                            //std::cout << "x >= 7 && x <= 9 : " << curLodLevel << std::endl;;
+                                        }
+                                        else if (curDistFromCamera >= lodDistance4.x && curDistFromCamera <= lodDistance4.y) {
+                                            curLodLevel = LODLevel + 3;
+                                            //std::cout << "x >= 10 : " << curLodLevel << std::endl;;
+                                        }
+                                        else if (curDistFromCamera >= lodDistance5.x) {
+                                            curLodLevel = LODLevel + 4;
+                                            //std::cout << "x >= 10 : " << curLodLevel << std::endl;;
+                                        }
+
+                                        if (curLodLevel > 5) {
+                                            curLodLevel = 5;
+                                        }
+
+                                        bool reclaimMemory = !megaVertPositions.IsFirstTimeAllocatingMemory(offsetRenderTraversalOrder);
+
+                                        //GenChunkMeshWithNoiseAndSaveToFile(
+                                        //    std::ref(megaVertPositions)
+                                        //    , std::ref(chunkGenerated)
+                                        //    , std::ref(chunkUpdatedVoxelPositionInBigArrayMappedToChunkPositionInArray)
+                                        //    , std::ref(chunkBeingGeneratedCount)
+                                        //    , curChunkTraversalIndex
+                                        //    , offsetRenderTraversalOrder
+                                        //    , (int)curLodLevel
+                                        //    , reclaimMemory
+                                        //    , saveChunkToFile);
+
+                                        chunkMeshGenThreads.push_back(std::async(std::launch::async, GenChunkMeshWithNoiseAndSaveToFile
+                                            , std::ref(megaVertPositions)
+                                            , std::ref(chunkGenerated)
+                                            , std::ref(chunkUpdatedVoxelPositionInBigArrayMappedToChunkPositionInArray)
+                                            , std::ref(chunkBeingGeneratedCount)
+                                            , curChunkTraversalIndex
+                                            , offsetRenderTraversalOrder
+                                            , (int)curLodLevel
+                                            , reclaimMemory
+                                            , saveChunkToFile));
+
+                                        //GenChunkMeshWithNoise(std::ref(megaVertPositions)
+                                        //    , std::ref(chunkGenerated)
+                                        //    , std::ref(chunkBeingGeneratedCount)
+                                        //    , curChunkTraversalIndex
+                                        //    , offsetRenderTraversalOrder);
+                                    }
+
+
+                                    chunksChanged = true;
+                                    innerIndexWhereNewMeshNeedsToBeCalculated[renderTraversalIndexFlattened] = false;
+                                }
                             }
 
-                            {
-                                std::lock_guard<std::mutex> lock(chunkGeneratedMutex);
-                                chunkGenerated[curPosInChunkStatusMegaArray] = false;
-                            }
-
-
-                            //std::cout << "Generating New Chunk: \n\t CurChunkTraversalIndex (" << curChunkTraversalIndex.x << ", " << curChunkTraversalIndex.y << ", " << curChunkTraversalIndex.z
-                            //                                        << ")\n\t OffsetRenderTraversalOrder (" 
-                            //                                        << offsetRenderTraversalOrder.x << ", " << offsetRenderTraversalOrder.y << ", " << offsetRenderTraversalOrder.z
-                            //                                        << ")\n\t CameraChunkIndex (" 
-                            //                                        << cameraChunkIndex.x << ", " << cameraChunkIndex.y << ", " << cameraChunkIndex.z
-                            //                                        << ")\n\t RenderTraversalOrder ("
-                            //                                        << renderTraversalOrder[i].x << ", " << renderTraversalOrder[i].y << ", " << renderTraversalOrder[i].z << ")" << std::endl;
-
-                            std::string curChunkFileName = worldDataDir + CHUNK_SAVE_STRING(curChunkTraversalIndex);
-                            if (std::filesystem::exists(curChunkFileName)) {
-                                //std::cout << "CHUNK FILE FOUND!!" << std::endl;
-
-                                //std::cout << "LOADED : " << curChunkFileName << std::endl;
-                                chunkMeshGenThreads.push_back(std::async(std::launch::async, ReloadChunkDataFromFile
-                                    , curChunkFileName
-                                    , std::ref(megaVertPositions)
-                                    , std::ref(chunkGenerated)
-                                    , std::ref(chunkUpdatedVoxelPositionInBigArrayMappedToChunkPositionInArray)
-                                    , std::ref(chunkBeingGeneratedCount)
-                                    , curChunkTraversalIndex
-                                    , offsetRenderTraversalOrder));
-
-
-                            }
-                            else {
-
-                                //std::string curChunkSaveFileName = CHUNK_SAVE_STRING(oldChunkTraversalIndex);
-
-                                //std::ofstream os(worldDataDir + curChunkSaveFileName, std::ios::binary);
-                                //cereal::BinaryOutputArchive archive(os);
-                                //int start = megaVertPositions.ChunkTotalFlatIndexWithVoxels(offsetRenderTraversalOrder);
-                                //std::span<int> curChunkSlice(megaVertPositions.megaArrayOfAllPositions.begin() + start, totalNumVoxelsPerChunk * NUM_FACES);
-                                //archive(cereal::binary_data(curChunkSlice.data(), sizeof(int) * curChunkSlice.size()));
-
-                                int curLodLevel = 0;
-                                int curDistFromCamera = (int)(Vector3Length(Vector3{ renderTraversalOrder[i].x, 0, renderTraversalOrder[i].z }));
-                                if (curDistFromCamera >= lodDistance1.x && curDistFromCamera <= lodDistance1.y) {
-                                    curLodLevel = LODLevel + 0;
-                                    //std::cout << "x < 4 : " << curLodLevel << std::endl;;
-                                }
-                                else if (curDistFromCamera >= lodDistance2.x && curDistFromCamera <= lodDistance2.y) {
-                                    curLodLevel = LODLevel + 1;
-                                    //std::cout << "x >=4 && x <= 6 : " << curLodLevel << std::endl;;
-                                }
-                                else if (curDistFromCamera >= lodDistance3.x && curDistFromCamera <= lodDistance3.y) {
-                                    curLodLevel = LODLevel + 2;
-                                    //std::cout << "x >= 7 && x <= 9 : " << curLodLevel << std::endl;;
-                                }
-                                else if (curDistFromCamera >= lodDistance4.x && curDistFromCamera <= lodDistance4.y) {
-                                    curLodLevel = LODLevel + 3;
-                                    //std::cout << "x >= 10 : " << curLodLevel << std::endl;;
-                                }
-                                else if (curDistFromCamera >= lodDistance5.x) {
-                                    curLodLevel = LODLevel + 4;
-                                    //std::cout << "x >= 10 : " << curLodLevel << std::endl;;
-                                }
-
-                                if (curLodLevel > 5) {
-                                    curLodLevel = 5;
-                                }
-
-                                bool reclaimMemory = !megaVertPositions.IsFirstTimeAllocatingMemory(offsetRenderTraversalOrder);
-
-                                //GenChunkMeshWithNoiseAndSaveToFile(
-                                //    std::ref(megaVertPositions)
-                                //    , std::ref(chunkGenerated)
-                                //    , std::ref(chunkUpdatedVoxelPositionInBigArrayMappedToChunkPositionInArray)
-                                //    , std::ref(chunkBeingGeneratedCount)
-                                //    , curChunkTraversalIndex
-                                //    , offsetRenderTraversalOrder
-                                //    , (int)curLodLevel
-                                //    , reclaimMemory
-                                //    , saveChunkToFile);
-
-                                chunkMeshGenThreads.push_back(std::async(std::launch::async, GenChunkMeshWithNoiseAndSaveToFile
-                                    , std::ref(megaVertPositions)
-                                    , std::ref(chunkGenerated)
-                                    , std::ref(chunkUpdatedVoxelPositionInBigArrayMappedToChunkPositionInArray)
-                                    , std::ref(chunkBeingGeneratedCount)
-                                    , curChunkTraversalIndex
-                                    , offsetRenderTraversalOrder
-                                    , (int)curLodLevel
-                                    , reclaimMemory
-                                    , saveChunkToFile));
-
-                                //GenChunkMeshWithNoise(std::ref(megaVertPositions)
-                                //    , std::ref(chunkGenerated)
-                                //    , std::ref(chunkBeingGeneratedCount)
-                                //    , curChunkTraversalIndex
-                                //    , offsetRenderTraversalOrder);
-                            }
-
-
-                            chunksChanged = true;
-                            innerIndexWhereNewMeshNeedsToBeCalculated[renderTraversalIndexFlattened] = false;
                         }
-
                     }
 
-                    //OPTIMISE!!!!
-                    if ((chunkBeingGeneratedCount == 0 && chunksChanged)) {
-                        rlEnableVertexArray(renderQuad.mesh.vaoId);
+                    {
+                        PROFILE_SCOPE("Updating GPU data and Rendering.");
 
-                        //renderQuad.instanceVBOID = rlLoadVertexBuffer(megaVertPositions.megaArrayOfAllPositions.data(), megaVertPositions.megaArrayOfAllPositions.size() * sizeof(int), true);
+                        //OPTIMISE!!!!
+                        if ((chunkBeingGeneratedCount == 0 && chunksChanged)) {
+                            rlEnableVertexArray(renderQuad.mesh.vaoId);
 
-                        for (const auto& it : chunkUpdatedVoxelPositionInBigArrayMappedToChunkPositionInArray) {
+                            //renderQuad.instanceVBOID = rlLoadVertexBuffer(megaVertPositions.megaArrayOfAllPositions.data(), megaVertPositions.megaArrayOfAllPositions.size() * sizeof(int), true);
 
-                            int startUp = megaVertPositions.upFacesMetadata[it].startPositionInBigArray;
-                            int sizeUp = megaVertPositions.upFacesMetadata[it].size;
-                            rlUpdateVertexBuffer(renderQuad.instanceVBOID, megaVertPositions.megaArrayOfAllPositions.data() + startUp, sizeUp * sizeof(int), startUp * sizeof(int));
-                            rlUpdateShaderBuffer(renderQuad.upFacesMetadaBufferID, megaVertPositions.upFacesMetadata.data() + it, 1 * sizeof(ChunkFacePositionMetaData), it * sizeof(ChunkFacePositionMetaData));
+                            for (const auto& it : chunkUpdatedVoxelPositionInBigArrayMappedToChunkPositionInArray) {
 
-                            int startDown = megaVertPositions.downFacesMetadata[it].startPositionInBigArray;
-                            int sizeDown = megaVertPositions.downFacesMetadata[it].size;
-                            rlUpdateVertexBuffer(renderQuad.instanceVBOID, megaVertPositions.megaArrayOfAllPositions.data() + startDown, sizeDown * sizeof(int), startDown * sizeof(int));
-                            rlUpdateShaderBuffer(renderQuad.downFacesMetadaBufferID, megaVertPositions.downFacesMetadata.data() + it, 1 * sizeof(ChunkFacePositionMetaData), it * sizeof(ChunkFacePositionMetaData));
+                                int startUp = megaVertPositions.upFacesMetadata[it].startPositionInBigArray;
+                                int sizeUp = megaVertPositions.upFacesMetadata[it].size;
+                                rlUpdateVertexBuffer(renderQuad.instanceVBOID, megaVertPositions.megaArrayOfAllPositions.data() + startUp, sizeUp * sizeof(int), startUp * sizeof(int));
+                                rlUpdateShaderBuffer(renderQuad.upFacesMetadaBufferID, megaVertPositions.upFacesMetadata.data() + it, 1 * sizeof(ChunkFacePositionMetaData), it * sizeof(ChunkFacePositionMetaData));
 
-                            int startFront = megaVertPositions.frontFacesMetadata[it].startPositionInBigArray;
-                            int sizeFront = megaVertPositions.frontFacesMetadata[it].size;
-                            rlUpdateVertexBuffer(renderQuad.instanceVBOID, megaVertPositions.megaArrayOfAllPositions.data() + startFront, sizeFront * sizeof(int), startFront * sizeof(int));
-                            rlUpdateShaderBuffer(renderQuad.frontFacesMetadaBufferID, megaVertPositions.frontFacesMetadata.data() + it, 1 * sizeof(ChunkFacePositionMetaData), it * sizeof(ChunkFacePositionMetaData));
+                                int startDown = megaVertPositions.downFacesMetadata[it].startPositionInBigArray;
+                                int sizeDown = megaVertPositions.downFacesMetadata[it].size;
+                                rlUpdateVertexBuffer(renderQuad.instanceVBOID, megaVertPositions.megaArrayOfAllPositions.data() + startDown, sizeDown * sizeof(int), startDown * sizeof(int));
+                                rlUpdateShaderBuffer(renderQuad.downFacesMetadaBufferID, megaVertPositions.downFacesMetadata.data() + it, 1 * sizeof(ChunkFacePositionMetaData), it * sizeof(ChunkFacePositionMetaData));
 
-                            int startBack = megaVertPositions.backFacesMetadata[it].startPositionInBigArray;
-                            int sizeBack = megaVertPositions.backFacesMetadata[it].size;
-                            rlUpdateVertexBuffer(renderQuad.instanceVBOID, megaVertPositions.megaArrayOfAllPositions.data() + startBack, sizeBack * sizeof(int), startBack * sizeof(int));
-                            rlUpdateShaderBuffer(renderQuad.backFacesMetadaBufferID, megaVertPositions.backFacesMetadata.data() + it, 1 * sizeof(ChunkFacePositionMetaData), it * sizeof(ChunkFacePositionMetaData));
+                                int startFront = megaVertPositions.frontFacesMetadata[it].startPositionInBigArray;
+                                int sizeFront = megaVertPositions.frontFacesMetadata[it].size;
+                                rlUpdateVertexBuffer(renderQuad.instanceVBOID, megaVertPositions.megaArrayOfAllPositions.data() + startFront, sizeFront * sizeof(int), startFront * sizeof(int));
+                                rlUpdateShaderBuffer(renderQuad.frontFacesMetadaBufferID, megaVertPositions.frontFacesMetadata.data() + it, 1 * sizeof(ChunkFacePositionMetaData), it * sizeof(ChunkFacePositionMetaData));
 
-                            int startRight = megaVertPositions.rightFacesMetadata[it].startPositionInBigArray;
-                            int sizeRight = megaVertPositions.rightFacesMetadata[it].size;
-                            rlUpdateVertexBuffer(renderQuad.instanceVBOID, megaVertPositions.megaArrayOfAllPositions.data() + startRight, sizeRight * sizeof(int), startRight * sizeof(int));
-                            rlUpdateShaderBuffer(renderQuad.rightFacesMetadaBufferID, megaVertPositions.rightFacesMetadata.data() + it, 1 * sizeof(ChunkFacePositionMetaData), it * sizeof(ChunkFacePositionMetaData));
+                                int startBack = megaVertPositions.backFacesMetadata[it].startPositionInBigArray;
+                                int sizeBack = megaVertPositions.backFacesMetadata[it].size;
+                                rlUpdateVertexBuffer(renderQuad.instanceVBOID, megaVertPositions.megaArrayOfAllPositions.data() + startBack, sizeBack * sizeof(int), startBack * sizeof(int));
+                                rlUpdateShaderBuffer(renderQuad.backFacesMetadaBufferID, megaVertPositions.backFacesMetadata.data() + it, 1 * sizeof(ChunkFacePositionMetaData), it * sizeof(ChunkFacePositionMetaData));
 
-                            int startLeft = megaVertPositions.leftFacesMetadata[it].startPositionInBigArray;
-                            int sizeLeft = megaVertPositions.leftFacesMetadata[it].size;
-                            rlUpdateVertexBuffer(renderQuad.instanceVBOID, megaVertPositions.megaArrayOfAllPositions.data() + startLeft, sizeLeft * sizeof(int), startLeft * sizeof(int));
-                            rlUpdateShaderBuffer(renderQuad.leftFacesMetadaBufferID, megaVertPositions.leftFacesMetadata.data() + it, 1 * sizeof(ChunkFacePositionMetaData), it * sizeof(ChunkFacePositionMetaData));
+                                int startRight = megaVertPositions.rightFacesMetadata[it].startPositionInBigArray;
+                                int sizeRight = megaVertPositions.rightFacesMetadata[it].size;
+                                rlUpdateVertexBuffer(renderQuad.instanceVBOID, megaVertPositions.megaArrayOfAllPositions.data() + startRight, sizeRight * sizeof(int), startRight * sizeof(int));
+                                rlUpdateShaderBuffer(renderQuad.rightFacesMetadaBufferID, megaVertPositions.rightFacesMetadata.data() + it, 1 * sizeof(ChunkFacePositionMetaData), it * sizeof(ChunkFacePositionMetaData));
+
+                                int startLeft = megaVertPositions.leftFacesMetadata[it].startPositionInBigArray;
+                                int sizeLeft = megaVertPositions.leftFacesMetadata[it].size;
+                                rlUpdateVertexBuffer(renderQuad.instanceVBOID, megaVertPositions.megaArrayOfAllPositions.data() + startLeft, sizeLeft * sizeof(int), startLeft * sizeof(int));
+                                rlUpdateShaderBuffer(renderQuad.leftFacesMetadaBufferID, megaVertPositions.leftFacesMetadata.data() + it, 1 * sizeof(ChunkFacePositionMetaData), it * sizeof(ChunkFacePositionMetaData));
+                            }
+
+                            //std::cout << megaVertPositions.totalFilled << std::endl;
+
+                            rlEnableVertexAttribute(3);
+                            rlSetVertexAttributeI(3, 1, RL_INT, 0, 0, 0);
+                            rlSetVertexAttributeDivisor(3, 1);
+
+                            rlDisableVertexBuffer();
+                            rlDisableVertexArray();
+                            chunksChanged = false;
+                            chunkUpdatedVoxelPositionInBigArrayMappedToChunkPositionInArray.clear();
                         }
 
-                        //std::cout << megaVertPositions.totalFilled << std::endl;
+                        rlBindShaderBuffer(renderQuad.chunkPositionsVBOID, 13);
+                        rlBindShaderBuffer(chunkVisibilitySSBO, 4);
 
-                        rlEnableVertexAttribute(3);
-                        rlSetVertexAttributeI(3, 1, RL_INT, 0, 0, 0);
-                        rlSetVertexAttributeDivisor(3, 1);
+                        //rlEnableWireMode();
 
-                        rlDisableVertexBuffer();
-                        rlDisableVertexArray();
-                        chunksChanged = false;
-                        chunkUpdatedVoxelPositionInBigArrayMappedToChunkPositionInArray.clear();
+                        DrawMeshMultiInstancedDrawIndirectGPU2(renderQuad, instancedMaterial
+                            , megaVertPositions.megaArrayOfAllPositions.data(), megaVertPositions.megaArrayOfAllPositions.size()
+                            , totalNumChunks * NUM_FACES);
+
+                        //rlDisableWireMode();
                     }
-
-                    rlBindShaderBuffer(renderQuad.chunkPositionsVBOID, 13);
-                    rlBindShaderBuffer(chunkVisibilitySSBO, 4);
-
-                    //rlEnableWireMode();
-
-                    DrawMeshMultiInstancedDrawIndirectGPU2(renderQuad, instancedMaterial
-                        , megaVertPositions.megaArrayOfAllPositions.data(), megaVertPositions.megaArrayOfAllPositions.size()
-                        , totalNumChunks * NUM_FACES);
-
-                    //rlDisableWireMode();
 
                 }
             }
@@ -1803,6 +1818,8 @@ static void UpdateMeshFromGreedyShape(std::vector<GreedyMeshCurShape>& curGreedy
                                     , int faceDir
                                     , int stepSizeForConvolution) {
 
+    PROFILE_FUNCTION();
+
     //Optimize using data from large array, check if the number of faces is greater than 0 in that particular direction or something.
 
     for (int i = 0; i < curGreedyMeshShapes.size(); i++)
@@ -1863,6 +1880,8 @@ static void UpdateMeshFromGreedyShape(std::vector<GreedyMeshCurShape>& curGreedy
 }
 
 static void GreedyMeshCurFaceDir(std::vector<std::vector<std::vector<float>>>& noiseForCurrentChunkCurDirOnlyVisible, int curLodLevel, std::vector<GreedyMeshCurShape>& greedyMeshForCurFace, int faceDir) {
+
+    PROFILE_FUNCTION();
 
     int scale = pow(2, curLodLevel);
     //int curChunkIndexInBigArray = megaVertPositions.ChunkTotalFlatIndexWithVoxels(innerChunkIndex);
@@ -2241,6 +2260,8 @@ static void GreedyMeshCurFaceDir(std::vector<std::vector<std::vector<float>>>& n
 
 static void BinaryGreedyMeshCurFaceDir(std::vector<std::vector<uint64_t>>& bitNoiseForCurrentChunkCurDirOnlyVisible, int curLodLevel, std::vector<GreedyMeshCurShape>& greedyMeshForCurFace, int faceDir) {
 
+    PROFILE_FUNCTION();
+
     int scale = pow(2, curLodLevel);
     //int curChunkIndexInBigArray = megaVertPositions.ChunkTotalFlatIndexWithVoxels(innerChunkIndex);
 
@@ -2385,6 +2406,70 @@ static void BinaryGreedyMeshCurFaceDir(std::vector<std::vector<uint64_t>>& bitNo
                 }
             }
         }
+        else if (faceDir == FACE_RIGHT_INDEX || faceDir == FACE_LEFT_INDEX)
+        {
+            for (int x = startX; x <= endX; x += stepSizeForConvolution)
+            {
+                for (int y = startY; y <= endY; y += stepSizeForConvolution)
+                {
+                    for (int z = startZ; z <= endZ; z += stepSizeForConvolution)
+                    {
+                        //uint64_t maskForCurFace = static_cast<uint64_t>(1) << x;
+                        uint64_t maskForCurFace = static_cast<uint64_t>(1) << z;
+                        uint64_t curNoise = bitNoiseForCurrentChunkCurDirOnlyVisible[x][y] & maskForCurFace;
+
+                        if (curNoise > 0)
+                        {
+                            GreedyMeshCurShape curShape = { Vector3{(float)x, (float)y, (float)z},  Vector3{(float)x, (float)y, (float)z}, Vector3{ (float)scale, (float)scale, (float)scale } };
+                            //GreedyMeshCurShape curShape = { Vector3{(float)x, (float)y, (float)z},  Vector3{(float)x, (float)y, (float)z}, Vector3{ 0.0f, 0.0f, 0.0f } };
+
+                            if (true)
+                            {
+                                uint64_t curCheckingMaskZ = 0;
+                                int curZHead = std::countr_zero(bitNoiseForCurrentChunkCurDirOnlyVisible[x][y]);
+
+                                int cumulativeScaleZ = 0;
+
+                                for (int i = curZHead; i < bitNoiseForCurrentChunkCurDirOnlyVisible.size(); i += stepSizeForConvolution)
+                                {
+                                    uint64_t bitPosition = i;
+                                    bool curXIsFilled = ((bitNoiseForCurrentChunkCurDirOnlyVisible[x][y] >> bitPosition) & 1) > 0;
+                                    if (curXIsFilled) {
+                                        cumulativeScaleZ += scale;
+                                        curCheckingMaskZ = curCheckingMaskZ | static_cast<uint64_t>(1) << bitPosition; // Update Mask
+                                        uint64_t maskToSetCurVoxelToEmpty = ~(static_cast<uint64_t>(1) << bitPosition);
+                                        bitNoiseForCurrentChunkCurDirOnlyVisible[x][y] = bitNoiseForCurrentChunkCurDirOnlyVisible[x][y] & maskToSetCurVoxelToEmpty; // Make noise value 0 so that it is ignored during the next loop.
+                                    }
+                                    else {
+                                        z = i;
+                                        curShape.scale.z = cumulativeScaleZ;
+                                        break;
+                                    }
+                                }
+
+                                int cumulativeScaleY = scale;
+                                for (int i = y + stepSizeForConvolution; i < bitNoiseForCurrentChunkCurDirOnlyVisible.size(); i += stepSizeForConvolution)
+                                {
+                                    uint64_t noisesForCurY = bitNoiseForCurrentChunkCurDirOnlyVisible[x][i];
+                                    bool noisesIncludesMask = (noisesForCurY & curCheckingMaskZ) == curCheckingMaskZ;
+
+                                    if (noisesIncludesMask) {
+                                        cumulativeScaleY += scale;
+                                        bitNoiseForCurrentChunkCurDirOnlyVisible[x][i] = bitNoiseForCurrentChunkCurDirOnlyVisible[x][i] & ~(curCheckingMaskZ); // remove noise from data since previous face was expanded here.
+                                    }
+                                    else {
+                                        curShape.scale.y = cumulativeScaleY;
+                                        break;
+                                    }
+                                }
+                            }
+                            greedyMeshForCurFace.push_back(curShape);
+                        }
+                    }
+                }
+            }
+        }
+
         else
         {
             for (int y = startY; y <= endY; y += stepSizeForConvolution)
@@ -2650,8 +2735,8 @@ static void GreedyMesh2D(std::vector<std::vector<std::vector<float>>>& noiseForC
 
                         float curNoiseRight = noiseForCurrentChunk[x + stepSizeForConvolution][y][z];
                         if (curNoiseRight == 2) {
-                            uint64_t curPlaneFacesData = bitNoiseForCurrentChunkRightFace[y][z];
-                            bitNoiseForCurrentChunkRightFace[y][z] = curPlaneFacesData | (static_cast<uint64_t>(1) << x);
+                            uint64_t curPlaneFacesData = bitNoiseForCurrentChunkRightFace[x][y];
+                            bitNoiseForCurrentChunkRightFace[x][y] = curPlaneFacesData | (static_cast<uint64_t>(1) << z);
                             //noiseForCurrentChunkUpFace[x][y][z] = curNoise;
                             //greedyMeshForUpFace.push_back(curShape);
                         }
@@ -2663,8 +2748,8 @@ static void GreedyMesh2D(std::vector<std::vector<std::vector<float>>>& noiseForC
 
                         float curNoiseLeft = noiseForCurrentChunk[x - stepSizeForConvolution][y][z];
                         if (curNoiseLeft == 2) {
-                            uint64_t curPlaneFacesData = bitNoiseForCurrentChunkLeftFace[y][z];
-                            bitNoiseForCurrentChunkLeftFace[y][z] = curPlaneFacesData | (static_cast<uint64_t>(1) << x);
+                            uint64_t curPlaneFacesData = bitNoiseForCurrentChunkLeftFace[x][y];
+                            bitNoiseForCurrentChunkLeftFace[x][y] = curPlaneFacesData | (static_cast<uint64_t>(1) << z);
                             //noiseForCurrentChunkUpFace[x][y][z] = curNoise;
                             //greedyMeshForUpFace.push_back(curShape);
                         }
