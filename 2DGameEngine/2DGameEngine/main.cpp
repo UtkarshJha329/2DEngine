@@ -2256,7 +2256,62 @@ static void BinaryGreedyMeshCurFaceDir(std::vector<std::vector<uint64_t>>& bitNo
 
     int stepSizeForConvolution = powerOfTwo;
 
-    bool doGreedyMeshing = false;
+    bool doGreedyMeshing = true;
+
+    if (doGreedyMeshing)
+    {
+        for (int y = startY; y <= endY; y += stepSizeForConvolution)
+        {
+            for (int z = startZ; z <= endZ; z += stepSizeForConvolution)
+            {
+                for (int x = startX; x <= endX; x += stepSizeForConvolution)
+                {
+                    //uint64_t maskForCurFace = static_cast<uint64_t>(1) << x;
+                    uint64_t maskForCurFace = static_cast<uint64_t>(1) << x;
+                    uint64_t curNoise = bitNoiseForCurrentChunkCurDirOnlyVisible[y][z] & maskForCurFace;
+
+                    if (curNoise > 0)
+                    {
+                        GreedyMeshCurShape curShape = { Vector3{(float)x, (float)y, (float)z},  Vector3{(float)x, (float)y, (float)z}, Vector3{ (float)scale, (float)scale, (float)scale } };
+                        //GreedyMeshCurShape curShape = { Vector3{(float)x, (float)y, (float)z},  Vector3{(float)x, (float)y, (float)z}, Vector3{ 0.0f, 0.0f, 0.0f } };
+
+                        if (true) {
+
+                            if (faceDir == FACE_UP_INDEX)
+                            {
+                                //uint64_t curCheckingMaskX = 0;
+                                int curXHead = std::countr_zero(bitNoiseForCurrentChunkCurDirOnlyVisible[y][z]);
+                                //curXHead = 64 - curXHead;
+
+                                int cumulativeScaleX = 0;
+
+                                for (int i = curXHead; i < bitNoiseForCurrentChunkCurDirOnlyVisible.size(); i += stepSizeForConvolution)
+                                {
+                                    uint64_t bitPosition = i;
+                                    bool curXIsFilled = ((bitNoiseForCurrentChunkCurDirOnlyVisible[y][z] >> bitPosition) & 1) > 0;
+                                    if (curXIsFilled) {
+                                        cumulativeScaleX += scale;
+                                        //curCheckingMaskX = curCheckingMaskX | static_cast<uint64_t>(1) << bitPosition; // Update Mask
+                                        uint64_t maskToSetCurVoxelToEmpty = ~(static_cast<uint64_t>(1) << bitPosition);
+                                        bitNoiseForCurrentChunkCurDirOnlyVisible[y][z] = bitNoiseForCurrentChunkCurDirOnlyVisible[y][z] & maskToSetCurVoxelToEmpty; // Make noise value 0 so that it is ignored during the next loop.
+                                    }
+                                    else {
+                                        x = i;
+                                        curShape.scale.x = cumulativeScaleX;
+                                        break;
+                                    }
+                                }
+                            }
+                        }
+
+
+                        greedyMeshForCurFace.push_back(curShape);
+
+                    }
+                }
+            }
+        }
+    }
 
 
     if (!doGreedyMeshing) {
@@ -2447,8 +2502,8 @@ static void GreedyMesh2D(std::vector<std::vector<std::vector<float>>>& noiseForC
 
                         float curNoiseTop = noiseForCurrentChunk[x][y + stepSizeForConvolution][z];
                         if (curNoiseTop == 2) {
-                            int curPlaneFacesData = bitNoiseForCurrentChunkUpFace[y][z];
-                            bitNoiseForCurrentChunkUpFace[y][z] = curPlaneFacesData | (1 << x);
+                            uint64_t curPlaneFacesData = bitNoiseForCurrentChunkUpFace[y][z];
+                            bitNoiseForCurrentChunkUpFace[y][z] = curPlaneFacesData | (static_cast<uint64_t>(1) << x);
                             //noiseForCurrentChunkUpFace[x][y][z] = curNoise;
                             //greedyMeshForUpFace.push_back(curShape);
                         }
@@ -2460,8 +2515,8 @@ static void GreedyMesh2D(std::vector<std::vector<std::vector<float>>>& noiseForC
 
                         float curNoiseBottom = noiseForCurrentChunk[x][y - stepSizeForConvolution][z];
                         if (curNoiseBottom == 2) {
-                            int curPlaneFacesData = bitNoiseForCurrentChunkDownFace[y][z];
-                            bitNoiseForCurrentChunkDownFace[y][z] = curPlaneFacesData | (1 << x);
+                            uint64_t curPlaneFacesData = bitNoiseForCurrentChunkDownFace[y][z];
+                            bitNoiseForCurrentChunkDownFace[y][z] = curPlaneFacesData | (static_cast<uint64_t>(1) << x);
                             //noiseForCurrentChunkUpFace[x][y][z] = curNoise;
                             //greedyMeshForUpFace.push_back(curShape);
                         }
@@ -2473,8 +2528,8 @@ static void GreedyMesh2D(std::vector<std::vector<std::vector<float>>>& noiseForC
 
                         float curNoiseFront = noiseForCurrentChunk[x][y][z + stepSizeForConvolution];
                         if (curNoiseFront == 2) {
-                            int curPlaneFacesData = bitNoiseForCurrentChunkFrontFace[y][z];
-                            bitNoiseForCurrentChunkFrontFace[y][z] = curPlaneFacesData | (1 << x);
+                            uint64_t curPlaneFacesData = bitNoiseForCurrentChunkFrontFace[y][z];
+                            bitNoiseForCurrentChunkFrontFace[y][z] = curPlaneFacesData | (static_cast<uint64_t>(1) << x);
                             //noiseForCurrentChunkUpFace[x][y][z] = curNoise;
                             //greedyMeshForUpFace.push_back(curShape);
                         }
@@ -2486,8 +2541,8 @@ static void GreedyMesh2D(std::vector<std::vector<std::vector<float>>>& noiseForC
 
                         float curNoiseBack = noiseForCurrentChunk[x][y][z - stepSizeForConvolution];
                         if (curNoiseBack == 2) {
-                            int curPlaneFacesData = bitNoiseForCurrentChunkBackFace[y][z];
-                            bitNoiseForCurrentChunkBackFace[y][z] = curPlaneFacesData | (1 << x);
+                            uint64_t curPlaneFacesData = bitNoiseForCurrentChunkBackFace[y][z];
+                            bitNoiseForCurrentChunkBackFace[y][z] = curPlaneFacesData | (static_cast<uint64_t>(1) << x);
                             //noiseForCurrentChunkUpFace[x][y][z] = curNoise;
                             //greedyMeshForUpFace.push_back(curShape);
                         }
@@ -2499,8 +2554,8 @@ static void GreedyMesh2D(std::vector<std::vector<std::vector<float>>>& noiseForC
 
                         float curNoiseRight = noiseForCurrentChunk[x + stepSizeForConvolution][y][z];
                         if (curNoiseRight == 2) {
-                            int curPlaneFacesData = bitNoiseForCurrentChunkRightFace[y][z];
-                            bitNoiseForCurrentChunkRightFace[y][z] = curPlaneFacesData | (1 << x);
+                            uint64_t curPlaneFacesData = bitNoiseForCurrentChunkRightFace[y][z];
+                            bitNoiseForCurrentChunkRightFace[y][z] = curPlaneFacesData | (static_cast<uint64_t>(1) << x);
                             //noiseForCurrentChunkUpFace[x][y][z] = curNoise;
                             //greedyMeshForUpFace.push_back(curShape);
                         }
@@ -2512,8 +2567,8 @@ static void GreedyMesh2D(std::vector<std::vector<std::vector<float>>>& noiseForC
 
                         float curNoiseLeft = noiseForCurrentChunk[x - stepSizeForConvolution][y][z];
                         if (curNoiseLeft == 2) {
-                            int curPlaneFacesData = bitNoiseForCurrentChunkLeftFace[y][z];
-                            bitNoiseForCurrentChunkLeftFace[y][z] = curPlaneFacesData | (1 << x);
+                            uint64_t curPlaneFacesData = bitNoiseForCurrentChunkLeftFace[y][z];
+                            bitNoiseForCurrentChunkLeftFace[y][z] = curPlaneFacesData | (static_cast<uint64_t>(1) << x);
                             //noiseForCurrentChunkUpFace[x][y][z] = curNoise;
                             //greedyMeshForUpFace.push_back(curShape);
                         }

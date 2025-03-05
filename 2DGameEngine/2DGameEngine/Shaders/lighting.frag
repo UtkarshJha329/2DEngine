@@ -136,6 +136,37 @@ void main()
 //        vec3 mappedCoords = vec3((remappedChunkCoordsPos.x) / (totalNumChunksWidth * _chunkSize)
 //                                , (remappedChunkCoordsPos.y) / (totalNumChunksWidth_Y * _chunkSize)
 //                                , (remappedChunkCoordsPos.z) / (totalNumChunksWidth * _chunkSize));
+
+        if(false){
+
+            if((innerVoxelPos.x == 0 || innerVoxelPos.x == (_chunkSize - 1))
+               || (innerVoxelPos.y == 0 || innerVoxelPos.y == (_chunkSize - 1))
+               || (innerVoxelPos.z == 0 || innerVoxelPos.z == (_chunkSize - 1)))
+            {
+                mappedCoords = vec3(0.0);
+            }
+        }
+
+        if(false)
+        {
+            if((innerVoxelPos.x == 0)
+               || (innerVoxelPos.y == 0)
+               || (innerVoxelPos.z == 0))
+            {
+                mappedCoords = vec3(0.0);
+            }
+        }
+
+        if(true)
+        {
+            if((innerVoxelPos.x ==  (_chunkSize - 1))
+               || (innerVoxelPos.y ==  (_chunkSize - 1))
+               || (innerVoxelPos.z ==  (_chunkSize - 1)))
+            {
+                mappedCoords = vec3(0.0);
+            }
+        }
+
         depthTarget = vec4(mappedCoords, 1.0);
     }
 }
