@@ -57,6 +57,8 @@ const bool saveChunkToFile = false;
 bool shouldPerformOcclusionCulling = false;
 float occlusionCullingStateValue = 0;
 
+int maxRandValue = 4;
+
 constexpr float diagonalDist = 3 * chunkSize * 1.732f;
 
 const int localSizeOfComputeXZ = 32;

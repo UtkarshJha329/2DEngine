@@ -475,6 +475,53 @@ int main()
     PlaneFacingDir(up, cullingRenderQuad);
     cullingRenderQuad.instanceVBOID = 0;
 
+    unsigned int quadVAO = 0;
+    unsigned int quadVBO = 0;
+    unsigned int quadEBO = 0;
+
+    //float vertices[] = {
+    //    // Positions         Texcoords
+    //   -1.0f,  1.0f, 0.0f,   0.0f, 1.0f,
+    //   -1.0f, -1.0f, 0.0f,   0.0f, 0.0f,
+    //    1.0f,  1.0f, 0.0f,   1.0f, 1.0f,
+    //    1.0f, -1.0f, 0.0f,   1.0f, 0.0f,
+    //};
+
+    //unsigned short indices[] = {
+    //    0, 1, 2,
+    //    1, 3, 2
+    //};
+
+    float vertices[] = {
+        // positions         // texture coords
+         1.0f,  1.0f, 0.0f,  1.0f, 1.0f, // top right
+         1.0f, -1.0f, 0.0f,  1.0f, 0.0f, // bottom right
+        -1.0f, -1.0f, 0.0f,  0.0f, 0.0f, // bottom left
+        -1.0f,  1.0f, 0.0f,  0.0f, 1.0f  // top left 
+    };
+    
+    unsigned short indices[] = {
+        3, 1, 0, // first triangle
+        3, 2, 1  // second triangle
+    };
+
+    // Gen VAO to contain VBO
+    quadVAO = rlLoadVertexArray();
+    rlEnableVertexArray(quadVAO);
+
+    // Gen and fill vertex buffer (VBO)
+    quadVBO = rlLoadVertexBuffer(&vertices, sizeof(vertices), false);
+    quadEBO = rlLoadVertexBufferElement(&indices, sizeof(indices), false);
+
+    // Bind vertex attributes (position, texcoords)
+    rlSetVertexAttribute(0, 3, RL_FLOAT, 0, 5 * sizeof(float), 0);
+    rlEnableVertexAttribute(0);
+    rlSetVertexAttribute(1, 2, RL_FLOAT, 0, 5 * sizeof(float), (3 * sizeof(float)));
+    rlEnableVertexAttribute(1);
+
+    rlEnableVertexArray(0);
+
+
     int indirectBufferVBO = 0;
 
     std::vector<Vector3> renderTraversalOrder;
@@ -573,6 +620,14 @@ int main()
     instanceShader.locs[SHADER_LOC_MATRIX_MVP] = GetShaderLocation(instanceShader, "mvp");
     instanceShader.locs[SHADER_LOC_VECTOR_VIEW] = GetShaderLocation(instanceShader, "viewPos");
     instanceShader.locs[SHADER_LOC_MATRIX_MODEL] = GetShaderLocationAttrib(instanceShader, "instanceTransform");
+
+    Shader simpleShader = LoadShader(TextFormat("Shaders/SimpleShader.vert", GLSL_VERSION),
+        TextFormat("Shaders/SimpleShader.frag", GLSL_VERSION));
+
+
+    int textureSlot = 0;
+    int textureLoc = GetShaderLocation(simpleShader, "ourTexture");
+    rlSetUniform(textureLoc, &textureSlot, SHADER_UNIFORM_INT, 1);
 
     // Set instanceShader value: ambient light level
     //int ambientLoc = GetShaderLocation(instanceShader, "ambient");
@@ -728,6 +783,8 @@ int main()
 
         PROFILE_SCOPE("Game Loop");
 
+        PollInputEvents();              // Poll input events (SUPPORT_CUSTOM_FRAME_CONTROL)
+
         frameCounter++;
 
         //std::cout << GetMousePosition().x << ", " << GetMousePosition().y << std::endl;
@@ -768,7 +825,7 @@ int main()
 
         if (IsKeyPressed(KEY_ZERO)) {
             randValue++;
-            randValue = randValue > 4 ? 0 : randValue;
+            randValue = randValue > maxRandValue ? 0 : randValue;
             SetShaderValue(instanceShader, randValueLoc, &randValue, SHADER_UNIFORM_FLOAT);
         }
 
@@ -1230,6 +1287,19 @@ int main()
                             , totalNumChunks * NUM_FACES);
 
                         //rlDisableWireMode();
+                        if (false) {
+                            // Draw quad(?)
+
+                            rlEnableShader(simpleShader.id);
+
+                            rlEnableVertexArray(quadVAO);
+                            //rlDrawVertexArray(0, 4);
+                            rlDrawVertexArrayElements(0, 6, 0);
+                            
+                            rlEnableVertexArray(0);
+                            rlDisableShader();
+                        }
+
                     }
 
                 }
@@ -1266,35 +1336,99 @@ int main()
         }
 
         {
-            PROFILE_SCOPE("Drawing To Screen");
+            //int defFB = 0;
+            if(false)
+            {
+                PROFILE_SCOPE("Drawing To Screen");
 
-            BeginDrawing();
-            ClearBackground(RAYWHITE);
-            if (randValue == 0) {
-                DrawTextureRec(target.texture, Rectangle{ 0, 0, (float)screenWidth, (float)-screenHeight }, Vector2{ 0, 0 }, WHITE);
-            }
-            else if (randValue == 1) {
-                DrawTextureRec(target.texture, Rectangle{ 0, 0, (float)screenWidth, (float)-screenHeight }, Vector2{ 0, 0 }, WHITE);
-            }
-            else if (randValue == 2) {
-                DrawTextureRec(target.secondColourTexture, Rectangle{ 0, 0, (float)screenWidth, (float)-screenHeight }, Vector2{ 0, 0 }, WHITE);
-            }
-            else if (randValue == 3) {
-                DrawTextureRec(target.depthColourTexture, Rectangle{ 0, 0, (float)screenWidth, (float)-screenHeight }, Vector2{ 0, 0 }, WHITE);
-            }
-            else if (randValue == 4) {
-                DrawTextureRec(rd2D.texture, Rectangle{ 0, 0, (float)screenWidth, (float)-screenHeight }, Vector2{ 0, 0 }, WHITE);
+
+                BeginDrawing();
+                {
+
+                    PROFILE_SCOPE("Draws");
+
+                    //defFB = rlGetActiveFramebuffer();
+                    //std::cout << defFB << std::endl;
+
+                    //std::cout << randValue << std::endl;
+
+                    ClearBackground(RAYWHITE);
+                    if (randValue == 0) {
+                        DrawTextureRec(target.texture, Rectangle{ 0, 0, (float)screenWidth, (float)-screenHeight }, Vector2{ 0, 0 }, WHITE);
+                    }
+                    else if (randValue == 1) {
+                        DrawTextureRec(target.texture, Rectangle{ 0, 0, (float)screenWidth, (float)-screenHeight }, Vector2{ 0, 0 }, WHITE);
+                    }
+                    else if (randValue == 2) {
+                        DrawTextureRec(target.secondColourTexture, Rectangle{ 0, 0, (float)screenWidth, (float)-screenHeight }, Vector2{ 0, 0 }, WHITE);
+                    }
+                    else if (randValue == 3) {
+                        DrawTextureRec(target.depthColourTexture, Rectangle{ 0, 0, (float)screenWidth, (float)-screenHeight }, Vector2{ 0, 0 }, WHITE);
+                    }
+                    else if (randValue == 4) {
+                        DrawTextureRec(rd2D.texture, Rectangle{ 0, 0, (float)screenWidth, (float)-screenHeight }, Vector2{ 0, 0 }, WHITE);
+                    }
+
+                    DrawRectangle(screenWidth - 40, 10, 30, 30, shouldPerformOcclusionCulling ? GREEN : RED);
+
+                    DrawCircle(screenWidth / 2, screenHeight / 2, 1.0f, RED);
+                    DrawFPS(40, 40);
+
+                    if (false) {
+                        rlEnableShader(simpleShader.id);
+
+                        rlEnableVertexArray(quadVAO);
+                        rlDrawVertexArray(0, 4);
+                        rlEnableVertexArray(0);
+
+                        rlDisableShader();
+                    }
+                }
+                EndDrawing();
             }
 
-            DrawRectangle(screenWidth - 40, 10, 30, 30, shouldPerformOcclusionCulling ? GREEN : RED);
+            if (true) {
+                // Draw quad(?)
 
-            DrawCircle(screenWidth / 2, screenHeight / 2, 1.0f, RED);
-            DrawFPS(40, 40);
-            EndDrawing();
+                //rlEnableFramebuffer(defFB);
+
+                PROFILE_SCOPE("Empty Draws");
+
+                //BeginDrawing();
+
+                    ClearBackground(RAYWHITE);
+
+                        rlEnableShader(simpleShader.id);
+
+                            rlActiveTextureSlot(0);
+                            rlEnableTexture(target.texture.id);
+                            //rlEnableTexture(textureLoad.id);
+
+                            rlEnableVertexArray(quadVAO);
+                            //rlDrawVertexArray(0, 4);
+                            rlDrawVertexArrayElements(0, 6, 0);
+
+                        rlEnableVertexArray(0);
+                        rlDisableShader();
+
+                    //DrawFPS(40, 40);
+
+                //EndDrawing();
+            }
         }
-
         chunksWhereNewMeshNeedsToBeCalculated.clear();
+
+        {
+            PROFILE_SCOPE("Swap Screen buffers");
+
+            SwapScreenBuffer();
+        }
     }
+
+    // Delete buffers (VBO and VAO)
+    rlUnloadVertexBuffer(quadVBO);
+    rlUnloadVertexArray(quadVAO);
+
 
     //rlUnloadShaderBuffer(chunkPosSSBO);
     UnloadRenderTextureDepthTex(target);
