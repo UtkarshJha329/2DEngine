@@ -123,9 +123,18 @@ int zPosInPackedInt = 0;
 
 int faceDirPosInPackedInt = 16;
 
-int curScalePosInPackedIntX = 19;
-int curScalePosInPackedIntY = 24;
-int curScalePosInPackedIntZ = 29;
+//int curScalePosInPackedIntX = 19;
+//int curScalePosInPackedIntY = 24;
+//int curScalePosInPackedIntZ = 29;
+
+int curScalePosInPackedIntA = 19;
+int curScalePosInPackedIntB = 24;
+//int curScalePosInPackedIntGen = 29;
+
+float curScaleA;
+float curScaleB;
+//float curScaleGen;
+
 
 void main()
 {
@@ -151,10 +160,13 @@ void main()
         vec3 curVoxelPosUncompressed = vec3((instancePosition >> xPosInPackedInt) & 31, (instancePosition >> yPosInPackedInt) & 31, (instancePosition >> zPosInPackedInt) & 31);
         faceDir = (instancePosition >> faceDirPosInPackedInt) & 7;
 
-        curScaleX = (instancePosition >> curScalePosInPackedIntX) & 31;
-        curScaleY = (instancePosition >> curScalePosInPackedIntY) & 31;
-        curScaleZ = (instancePosition >> curScalePosInPackedIntZ) & 31;
+//        curScaleX = (instancePosition >> curScalePosInPackedIntX) & 31;
+//        curScaleZ = (instancePosition >> curScalePosInPackedIntZ) & 31;
+//        curScaleY = (instancePosition >> curScalePosInPackedIntY) & 31;
 
+        curScaleA = (instancePosition >> curScalePosInPackedIntA) & 31;
+        curScaleB = (instancePosition >> curScalePosInPackedIntB) & 31;
+//        curScaleGen = (instancePosition >> curScalePosInPackedIntGen) & 31;
 
         vec3 curPos = vec3(chunkPosition[gl_DrawIDARB].x, chunkPosition[gl_DrawIDARB].y, chunkPosition[gl_DrawIDARB].z) + curVoxelPosUncompressed;
         innerVoxelPos = curVoxelPosUncompressed;
@@ -188,7 +200,18 @@ void main()
         //meshVertexPos = curVertex;
 
         curVertex += 0.5;
-        curVertex = vec3(curVertex.x * curScaleX, curVertex.y * curScaleY, curVertex.z * curScaleZ);
+        //curVertex = vec3(curVertex.x * curScaleX, curVertex.y * curScaleY, curVertex.z * curScaleZ);
+
+        if(faceDir == 0 || faceDir == 1){
+            curVertex = vec3(curVertex.x * curScaleA, curVertex.y, curVertex.z * curScaleB);
+        }
+        else if(faceDir == 2 || faceDir == 3){
+            curVertex = vec3(curVertex.x * curScaleA, curVertex.y * curScaleB, curVertex.z);
+        }
+        else if(faceDir == 4 || faceDir == 5){
+            curVertex = vec3(curVertex.x, curVertex.y * curScaleB, curVertex.z * curScaleA);
+        }
+
 
         fragTexCoord = vertexTexCoord;
 

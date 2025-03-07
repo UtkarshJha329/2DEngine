@@ -4,9 +4,12 @@
 #include "raylib/rlgl.h"
 
 #define FACE_DIRECTION_POSITION 16
-#define SCALE_POSITION_IN_PACKED_INT_X 19
-#define SCALE_POSITION_IN_PACKED_INT_Y 24
-#define SCALE_POSITION_IN_PACKED_INT_Z 29
+//#define SCALE_POSITION_IN_PACKED_INT_X 19
+//#define SCALE_POSITION_IN_PACKED_INT_Y 24
+//#define SCALE_POSITION_IN_PACKED_INT_Z 29
+
+#define SCALE_POSITION_IN_PACKED_INT_A 19
+#define SCALE_POSITION_IN_PACKED_INT_B 24
 
 #define FACE_UP_INDEX 0
 #define FACE_DOWN_INDEX 1
@@ -25,7 +28,7 @@ const std::string CHUNK_FILE_DELIMITER = ".";
 
 const std::string worldDataDir = "WorldData/";
 
-const int numChunksHalfWidth = 80;
+const int numChunksHalfWidth = 3;
 const int numChunksHalfWidth_Y = 3;
 const int chunkSize = 32;
 const float scale = 0.01f;
