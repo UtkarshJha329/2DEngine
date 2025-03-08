@@ -84,9 +84,9 @@ void main()
             texCoord.x = RemappedTextureCoord(curTexCoord.x, fragTexCoord.x, curScale.x, curLodLevel);
             texCoord.y = RemappedTextureCoord(curTexCoord.y, fragTexCoord.y, curScale.y, curLodLevel);
         }
-        else if(scaledXYZ.y == 1.0 && scaledXYZ.z == 1.0){
-            texCoord.y = RemappedTextureCoord(curTexCoord.y, fragTexCoord.y, curScale.y, curLodLevel);
-            texCoord.x = RemappedTextureCoord(curTexCoord.x, fragTexCoord.x, curScale.z, curLodLevel);
+        else if(scaledXYZ.z == 1.0 && scaledXYZ.y == 1.0){
+            texCoord.x = RemappedTextureCoord(curTexCoord.x, fragTexCoord.x, curScale.y, curLodLevel);
+            texCoord.y = RemappedTextureCoord(curTexCoord.y, fragTexCoord.y, curScale.z, curLodLevel);
         }
     }
 

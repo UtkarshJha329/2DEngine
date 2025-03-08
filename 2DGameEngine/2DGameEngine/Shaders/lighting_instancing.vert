@@ -159,11 +159,24 @@ void main()
     vec3 relChunkCoords = vec3((relChunkPos.x / chunkSize) + halfNumChunksWidth, relChunkPos.y / chunkSize, (relChunkPos.z / chunkSize) + halfNumChunksWidth);
     int flattenedChunkCoords = int(relChunkCoords.y * totalNumChunksWidth * totalNumChunksWidth + relChunkCoords.z * totalNumChunksWidth + relChunkCoords.x);
 
-    if(gl_VertexID == 2 || gl_VertexID == 3){
-        isThridOrFourthCorner = 1.0;
+    if(true)
+    {
+        if(gl_VertexID == 2 || gl_VertexID == 3){
+            isThridOrFourthCorner = 1.0;
+        }
+        else{
+            isThridOrFourthCorner = 0.0;
+        }
     }
-    else{
-        isThridOrFourthCorner = 0.0;
+
+    if(false)
+    {
+        if(gl_VertexID == 0 || gl_VertexID == 1){
+            isThridOrFourthCorner = 1.0;
+        }
+        else{
+            isThridOrFourthCorner = 0.0;
+        }
     }
 
 //  chunksVisibility[flattenedChunkCoords] != 2 && chunksVisibility[flattenedChunkCoords] != 0
