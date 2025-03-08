@@ -184,7 +184,7 @@ void CreateIndirectDrawOrderBasedOnFaceVisibility(vec3 innerChunkIndex, vec3 cam
         //vec3 dirToChunkFromCamera = vec3(innerChunkIndex.x, innerChunkIndex.y, innerChunkIndex.z) * chunkSize - vec3(0.0, cameraPos.y, 0.0);
 
         vec3 curChunkRelPosFromCentre = vec3(dirToChunkFromCamera.x, 0.0, dirToChunkFromCamera.z);
-        float distToChunk = abs(length(curChunkRelPosFromCentre));
+        float distToChunk = abs(length(curChunkRelPosFromCentre)) / chunkSize;
 
         float lodLevelOffset = 32.0;
 
