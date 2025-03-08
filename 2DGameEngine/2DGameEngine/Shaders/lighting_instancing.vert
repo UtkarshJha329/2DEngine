@@ -11,7 +11,7 @@ layout (location = 2) in vec3 vertexNormal;
 layout (location = 3) in int instancePosition;
 
 struct Position{
-    float x, y, z;
+    float x, y, z, w;
 };
 
 layout(std430, binding = 13) buffer ChunkPositionBuffer
@@ -38,6 +38,13 @@ out vec3 relChunkPos;
 flat out vec3 innerVoxelPos;
 flat out float _halfNumChunksWidth;
 flat out int _chunkSize;
+flat out float _lodLevel;
+flat out vec2 curTexCoord;
+flat out float isThridOrFourthCorner;
+flat out vec3 scaledXYZ;
+flat out vec3 curScale;
+flat out float curLodLevel;
+
 //out vec3 meshVertexPos;
 
 // NOTE: Add here your custom variables
@@ -152,6 +159,13 @@ void main()
     vec3 relChunkCoords = vec3((relChunkPos.x / chunkSize) + halfNumChunksWidth, relChunkPos.y / chunkSize, (relChunkPos.z / chunkSize) + halfNumChunksWidth);
     int flattenedChunkCoords = int(relChunkCoords.y * totalNumChunksWidth * totalNumChunksWidth + relChunkCoords.z * totalNumChunksWidth + relChunkCoords.x);
 
+    if(gl_VertexID == 2 || gl_VertexID == 3){
+        isThridOrFourthCorner = 1.0;
+    }
+    else{
+        isThridOrFourthCorner = 0.0;
+    }
+
 //  chunksVisibility[flattenedChunkCoords] != 2 && chunksVisibility[flattenedChunkCoords] != 0
 //  chunksVisibility[flattenedChunkCoords] == 1
     if(true){
@@ -201,19 +215,37 @@ void main()
 
         curVertex += 0.5;
         //curVertex = vec3(curVertex.x * curScaleX, curVertex.y * curScaleY, curVertex.z * curScaleZ);
+        
+        _lodLevel = chunkPosition[gl_DrawIDARB].w;
+        curLodLevel = _lodLevel;
+        float lodScaleValue = pow(2, _lodLevel);
+        //float oneByLodScaleValue = 1 / lodScaleValue;
 
+        //fragTexCoord = vertexTexCoord;
+        curTexCoord = vertexTexCoord;
+        fragTexCoord = vertexTexCoord;
+ 
         if(faceDir == 0 || faceDir == 1){
+            //lodScaleValue = faceDir == 1 ? 0.0 : lodScaleValue;
+            //curVertex = vec3(curVertex.x * curScaleA, curVertex.y + lodScaleValue, curVertex.z * curScaleB);
             curVertex = vec3(curVertex.x * curScaleA, curVertex.y, curVertex.z * curScaleB);
+            scaledXYZ = vec3(1.0, 0.0, 1.0);
+            curScale = vec3(curScaleA, lodScaleValue, curScaleB);
         }
         else if(faceDir == 2 || faceDir == 3){
+            //lodScaleValue = faceDir == 3 ? 0.0 : lodScaleValue;
+            //curVertex = vec3(curVertex.x * curScaleA, curVertex.y * curScaleB, curVertex.z + lodScaleValue);
             curVertex = vec3(curVertex.x * curScaleA, curVertex.y * curScaleB, curVertex.z);
+            scaledXYZ = vec3(1.0, 1.0, 0.0);
+            curScale = vec3(curScaleA, curScaleB, lodScaleValue);
         }
         else if(faceDir == 4 || faceDir == 5){
+            //lodScaleValue = faceDir == 5 ? 0.0 : lodScaleValue;
+            //curVertex = vec3(curVertex.x + lodScaleValue, curVertex.y * curScaleB, curVertex.z * curScaleA);
             curVertex = vec3(curVertex.x, curVertex.y * curScaleB, curVertex.z * curScaleA);
+            scaledXYZ = vec3(0.0, 1.0, 1.0);
+            curScale = vec3(lodScaleValue, curScaleB, curScaleA);
         }
-
-
-        fragTexCoord = vertexTexCoord;
 
         gl_Position = mvp * translationMatrix  * vec4(curVertex, 1.0);
 

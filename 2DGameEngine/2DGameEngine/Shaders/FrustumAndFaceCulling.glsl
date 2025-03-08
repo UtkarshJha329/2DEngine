@@ -62,7 +62,7 @@ layout(std430, binding = 12) buffer LeftFacesMetadataBuffer
 };
 
 struct Position{
-    float x, y, z;
+    float x, y, z, w;
 };
 
 layout(std430, binding = 13) buffer ChunkDrawCommandPositions
@@ -89,6 +89,8 @@ layout (location = 9) uniform sampler2D previousDepthInformationTex;
 layout (location = 10) uniform float shouldPerformOcclusionCulling;
 
 layout (location = 11) uniform mat4 mvp;
+
+layout (location = 12) uniform float LODLevel;
 
 vec3 up = { 0, 1, 0 };
 vec3 down = { 0, -1, 0 };
@@ -176,13 +178,45 @@ void CreateIndirectDrawOrderBasedOnFaceVisibility(vec3 innerChunkIndex, vec3 cam
         }
 
 
-        Position drawChunkPos = { (curChunkIndex.x * chunkSize), (curChunkIndex.y * chunkSize), (curChunkIndex.z * chunkSize)};
+        Position drawChunkPos = { (curChunkIndex.x * chunkSize), (curChunkIndex.y * chunkSize), (curChunkIndex.z * chunkSize), 1.0};
 
         vec3 dirToChunkFromCamera = vec3(drawChunkPos.x, drawChunkPos.y, drawChunkPos.z) - (cameraPos);
         //vec3 dirToChunkFromCamera = vec3(innerChunkIndex.x, innerChunkIndex.y, innerChunkIndex.z) * chunkSize - vec3(0.0, cameraPos.y, 0.0);
 
         vec3 curChunkRelPosFromCentre = vec3(dirToChunkFromCamera.x, 0.0, dirToChunkFromCamera.z);
         float distToChunk = abs(length(curChunkRelPosFromCentre));
+
+        float lodLevelOffset = 32.0;
+
+        vec2 lodDistance1 = { 0, lodLevelOffset - 1 };
+        vec2 lodDistance2 = { lodDistance1.y + 1, lodDistance1.y + lodLevelOffset };
+        vec2 lodDistance3 = { lodDistance2.y + 1, lodDistance2.y + lodLevelOffset };
+        vec2 lodDistance4 = { lodDistance3.y + 1, lodDistance3.y + lodLevelOffset };
+        vec2 lodDistance5 = { lodDistance4.y + 1, lodDistance4.y + lodLevelOffset };
+
+        float curLodLevel = 0.0;
+        if (distToChunk >= lodDistance1.x && distToChunk <= lodDistance1.y) {
+            curLodLevel = LODLevel + 0;
+        }
+        else if (distToChunk >= lodDistance2.x && distToChunk <= lodDistance2.y) {
+            curLodLevel = LODLevel + 1;
+        }
+        else if (distToChunk >= lodDistance3.x && distToChunk <= lodDistance3.y) {
+            curLodLevel = LODLevel + 2;
+        }
+        else if (distToChunk >= lodDistance4.x && distToChunk <= lodDistance4.y) {
+            curLodLevel = LODLevel + 3;
+        }
+        else if (distToChunk >= lodDistance5.x) {
+            curLodLevel = LODLevel + 4;
+        }
+
+        if (curLodLevel > 5) {
+            curLodLevel = 5;
+        }
+
+        drawChunkPos.w = curLodLevel;
+        
 
         //vec2 screenResolution = vec2(1280, 720);
 

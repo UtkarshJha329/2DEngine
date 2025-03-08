@@ -41,6 +41,11 @@ extern "C"
 #else
 #endif
 
+typedef struct float4 {
+    float v[4];
+} float4;
+
+
 struct ChangesToMegaPositionsArray {
     int start   = 0;
     int size    = 0;
@@ -75,11 +80,12 @@ static void GenMeshCustom2D(std::vector<std::vector<std::vector<float>>>& noiseF
     , Vector3 chunkIndex
     , int curLodLevel);
 
+//Can be multithreaded to increase performance by doing one thread per face direction.
 static void GenMeshCustom2DLOD(std::vector<std::vector<std::vector<float>>>& noiseForCurrentChunk
     , std::vector<int>& chunkMeshData
     , ChunkFacesMetadata& chunkFacesMetadata
-    , VertexPositions &megaVertPositions
-    , Vector3 rescopedChunkIndex
+    , VertexPositions& megaVertPositions
+    , Vector3 innerChunkIndex
     , Vector3 chunkIndex
     , int curLodLevel);
 
@@ -148,7 +154,7 @@ static void GenChunkMeshWithNoise(VertexPositions &megaVertPositions
     MakeNoiseForChunk(_noiseForCurChunk, fnFractal, chunkIndex.x, chunkIndex.y, chunkIndex.z, numChunksFullWidth, numChunksFullWidth_Y, chunkSize, extraVoxelsToCompute, scale);
     //MakeNoiseForChunkLOD(_noiseForCurChunk, fnFractal, chunkIndex.x, chunkIndex.y, chunkIndex.z, numChunksFullWidth, numChunksFullWidth_Y, chunkSize, extraVoxelsToCompute, scale, curLodLevel);
 
-    ConvoluteNoise(_noiseForCurChunk, curLodLevel);
+    //ConvoluteNoise(_noiseForCurChunk, curLodLevel);
 
     std::vector<int> chunkMeshData;
     ChunkFacesMetadata chunkFacesMetadata;
@@ -462,7 +468,7 @@ int main()
     std::vector<int> chunkVisibility(totalNumChunks, 0);
 
     std::vector<DrawArraysIndirectCommand> drawArraysIndirectCommandsGPU(totalNumChunks * NUM_FACES, { 0, 0, 0, 0 });
-    std::vector<float3> drawArraysIndirectChunkPositions(totalNumChunks * NUM_FACES, { 0, 0, 0});
+    std::vector<float4> drawArraysIndirectChunkPositions(totalNumChunks * NUM_FACES, { 0, 0, 0});
     int nextIndirectdrawCommandIndexBufferValue = -1;
 
     for (int i = 0; i < chunkVisibility.size(); i++)
@@ -1045,6 +1051,9 @@ int main()
             float3 cameraPositionToSend = { camera.position.x, camera.position.y, camera.position.z };
             int cameraPositionLoc = rlGetLocationUniform(frustumAndFaceCullingComputeProgram, "cameraPosition");
             rlSetUniform(cameraPositionLoc, &cameraPositionToSend, SHADER_UNIFORM_VEC3, 1);
+
+            int LODLevelLoc = rlGetLocationUniform(frustumAndFaceCullingComputeProgram, "LODLevel");
+            rlSetUniform(LODLevelLoc, &LODLevel, SHADER_UNIFORM_FLOAT, 1);
 
             //Set MVP matrix in compute shader.
             Matrix modelMatrix = MatrixIdentity();
@@ -2021,6 +2030,7 @@ static void GenMeshCustom2D(std::vector<std::vector<std::vector<float>>> &noiseF
     }
 }
 
+//Can be multithreaded to increase performance by doing one thread per face direction.
 static void GenMeshCustom2DLOD(std::vector<std::vector<std::vector<float>>> &noiseForCurrentChunk
                                                         , std::vector<int> &chunkMeshData
                                                         , ChunkFacesMetadata &chunkFacesMetadata
@@ -2057,7 +2067,6 @@ static void GenMeshCustom2DLOD(std::vector<std::vector<std::vector<float>>> &noi
 
     int stepSizeForConvolution = powerOfTwo;
     stepSizeForConvolution = 1;
-
     for (int x = startX; x <= endX; x += stepSizeForConvolution)
     {
         for (int z = startZ; z <= endZ; z += stepSizeForConvolution)
@@ -2094,6 +2103,10 @@ static void GenMeshCustom2DLOD(std::vector<std::vector<std::vector<float>>> &noi
                         //curPositionTemp = curPositionTemp | (scale << SCALE_POSITION_IN_PACKED_INT_X);
                         //curPositionTemp = curPositionTemp | (scale << SCALE_POSITION_IN_PACKED_INT_Y);
                         //curPositionTemp = curPositionTemp | (scale << SCALE_POSITION_IN_PACKED_INT_Z);
+
+                        curPositionTemp = curPositionTemp | (scale << SCALE_POSITION_IN_PACKED_INT_A);
+                        curPositionTemp = curPositionTemp | (scale << SCALE_POSITION_IN_PACKED_INT_B);
+                         
                         //transformOfVerticesOfFaceInParticularDir[BlockFaceDirection::UP].push_back(curPositionTemp);
                         //megaVertPositions.AddUp(curPositionTemp, innerChunkIndex);
 
@@ -2110,6 +2123,10 @@ static void GenMeshCustom2DLOD(std::vector<std::vector<std::vector<float>>> &noi
                         //curPositionTemp = curPositionTemp | (scale << SCALE_POSITION_IN_PACKED_INT_X);
                         //curPositionTemp = curPositionTemp | (scale << SCALE_POSITION_IN_PACKED_INT_Y);
                         //curPositionTemp = curPositionTemp | (scale << SCALE_POSITION_IN_PACKED_INT_Z);
+
+                        curPositionTemp = curPositionTemp | (scale << SCALE_POSITION_IN_PACKED_INT_A);
+                        curPositionTemp = curPositionTemp | (scale << SCALE_POSITION_IN_PACKED_INT_B);
+
                         //transformOfVerticesOfFaceInParticularDir[BlockFaceDirection::DOWN].push_back(curPositionTemp);
                         //megaVertPositions.AddDown(curPositionTemp, innerChunkIndex);
 
@@ -2125,6 +2142,10 @@ static void GenMeshCustom2DLOD(std::vector<std::vector<std::vector<float>>> &noi
                         //curPositionTemp = curPositionTemp | (scale << SCALE_POSITION_IN_PACKED_INT_X);
                         //curPositionTemp = curPositionTemp | (scale << SCALE_POSITION_IN_PACKED_INT_Y);
                         //curPositionTemp = curPositionTemp | (scale << SCALE_POSITION_IN_PACKED_INT_Z);
+
+                        curPositionTemp = curPositionTemp | (scale << SCALE_POSITION_IN_PACKED_INT_A);
+                        curPositionTemp = curPositionTemp | (scale << SCALE_POSITION_IN_PACKED_INT_B);
+
                         //transformOfVerticesOfFaceInParticularDir[BlockFaceDirection::FRONT].push_back(curPositionTemp);
                         //megaVertPositions.AddFront(curPositionTemp, innerChunkIndex);
 
@@ -2140,6 +2161,10 @@ static void GenMeshCustom2DLOD(std::vector<std::vector<std::vector<float>>> &noi
                         //curPositionTemp = curPositionTemp | (scale << SCALE_POSITION_IN_PACKED_INT_X);
                         //curPositionTemp = curPositionTemp | (scale << SCALE_POSITION_IN_PACKED_INT_Y);
                         //curPositionTemp = curPositionTemp | (scale << SCALE_POSITION_IN_PACKED_INT_Z);
+
+                        curPositionTemp = curPositionTemp | (scale << SCALE_POSITION_IN_PACKED_INT_A);
+                        curPositionTemp = curPositionTemp | (scale << SCALE_POSITION_IN_PACKED_INT_B);
+
                         //transformOfVerticesOfFaceInParticularDir[BlockFaceDirection::BACK].push_back(curPositionTemp);
                         //megaVertPositions.AddBack(curPositionTemp, innerChunkIndex);
 
@@ -2155,6 +2180,10 @@ static void GenMeshCustom2DLOD(std::vector<std::vector<std::vector<float>>> &noi
                         //curPositionTemp = curPositionTemp | (scale << SCALE_POSITION_IN_PACKED_INT_X);
                         //curPositionTemp = curPositionTemp | (scale << SCALE_POSITION_IN_PACKED_INT_Y);
                         //curPositionTemp = curPositionTemp | (scale << SCALE_POSITION_IN_PACKED_INT_Z);
+
+                        curPositionTemp = curPositionTemp | (scale << SCALE_POSITION_IN_PACKED_INT_A);
+                        curPositionTemp = curPositionTemp | (scale << SCALE_POSITION_IN_PACKED_INT_B);
+
                         //transformOfVerticesOfFaceInParticularDir[BlockFaceDirection::RIGHT].push_back(curPositionTemp);
                         //megaVertPositions.AddRight(curPositionTemp, innerChunkIndex);
 
@@ -2170,6 +2199,10 @@ static void GenMeshCustom2DLOD(std::vector<std::vector<std::vector<float>>> &noi
                         //curPositionTemp = curPositionTemp | (scale << SCALE_POSITION_IN_PACKED_INT_X);
                         //curPositionTemp = curPositionTemp | (scale << SCALE_POSITION_IN_PACKED_INT_Y);
                         //curPositionTemp = curPositionTemp | (scale << SCALE_POSITION_IN_PACKED_INT_Z);
+
+                        curPositionTemp = curPositionTemp | (scale << SCALE_POSITION_IN_PACKED_INT_A);
+                        curPositionTemp = curPositionTemp | (scale << SCALE_POSITION_IN_PACKED_INT_B);
+
                         //transformOfVerticesOfFaceInParticularDir[BlockFaceDirection::LEFT].push_back(curPositionTemp);
                         //megaVertPositions.AddLeft(curPositionTemp, innerChunkIndex);
 
@@ -2181,7 +2214,6 @@ static void GenMeshCustom2DLOD(std::vector<std::vector<std::vector<float>>> &noi
         }
     }
 }
-
 
 class GreedyMeshCurShape {
 
@@ -2923,6 +2955,275 @@ static void BinaryGreedyMeshCurFaceDir(std::vector<std::vector<uint64_t>>& bitNo
     }
 }
 
+static void BinaryGreedyMeshCurFaceDirLOD(std::vector<std::vector<uint64_t>>& bitNoiseForCurrentChunkCurDirOnlyVisible, int curLodLevel, std::vector<GreedyMeshCurShape>& greedyMeshForCurFace, int faceDir) {
+
+    PROFILE_FUNCTION();
+
+    int scale = pow(2, curLodLevel);
+    //int curChunkIndexInBigArray = megaVertPositions.ChunkTotalFlatIndexWithVoxels(innerChunkIndex);
+
+    int powerOfTwo = pow(2, curLodLevel);
+    int startX = powerOfTwo;
+    int endX = chunkSize;
+
+    int startY = powerOfTwo;
+    int endY = chunkSize;
+
+    int startZ = powerOfTwo;
+    int endZ = chunkSize;
+
+
+    int stepSizeForConvolution = powerOfTwo;
+    stepSizeForConvolution = 1;
+
+    int innerLoopEnd = bitNoiseForCurrentChunkCurDirOnlyVisible.size();
+
+    bool doGreedyMeshing = true;
+
+    if (doGreedyMeshing)
+    {
+        if (faceDir == FACE_UP_INDEX || faceDir == FACE_DOWN_INDEX)
+        {
+            for (int y = startY; y <= endY; y += stepSizeForConvolution)
+            {
+                for (int z = startZ; z <= endZ; z += stepSizeForConvolution)
+                {
+                    for (int x = startX; x <= endX; x += stepSizeForConvolution)
+                    {
+                        //uint64_t maskForCurFace = static_cast<uint64_t>(1) << x;
+                        uint64_t maskForCurFace = static_cast<uint64_t>(1) << x;
+                        uint64_t curNoise = bitNoiseForCurrentChunkCurDirOnlyVisible[y][z] & maskForCurFace;
+
+                        if (curNoise > 0)
+                        {
+                            GreedyMeshCurShape curShape = { Vector3{(float)x, (float)y, (float)z},  Vector3{(float)x, (float)y, (float)z}, Vector3{ (float)scale, (float)scale, (float)scale } };
+                            //GreedyMeshCurShape curShape = { Vector3{(float)x, (float)y, (float)z},  Vector3{(float)x, (float)y, (float)z}, Vector3{ 0.0f, 0.0f, 0.0f } };
+
+                            if (true)
+                            {
+                                uint64_t curCheckingMaskX = 0;
+                                int curXHead = std::countr_zero(bitNoiseForCurrentChunkCurDirOnlyVisible[y][z]);
+
+                                int cumulativeScaleX = 0;
+
+                                for (int i = curXHead; i < innerLoopEnd; i += stepSizeForConvolution)
+                                {
+                                    uint64_t bitPosition = i;
+                                    bool curXIsFilled = ((bitNoiseForCurrentChunkCurDirOnlyVisible[y][z] >> bitPosition) & 1) > 0;
+                                    if (curXIsFilled) {
+                                        cumulativeScaleX += scale;
+                                        curCheckingMaskX = curCheckingMaskX | static_cast<uint64_t>(1) << bitPosition; // Update Mask
+                                        uint64_t maskToSetCurVoxelToEmpty = ~(static_cast<uint64_t>(1) << bitPosition);
+                                        bitNoiseForCurrentChunkCurDirOnlyVisible[y][z] = bitNoiseForCurrentChunkCurDirOnlyVisible[y][z] & maskToSetCurVoxelToEmpty; // Make noise value 0 so that it is ignored during the next loop.
+                                    }
+                                    else {
+                                        x = i;
+                                        curShape.scale.x = cumulativeScaleX;
+                                        break;
+                                    }
+                                }
+
+                                int cumulativeScaleZ = scale;
+                                for (int i = z + stepSizeForConvolution; i < innerLoopEnd; i += stepSizeForConvolution)
+                                {
+                                    uint64_t noisesForCurZ = bitNoiseForCurrentChunkCurDirOnlyVisible[y][i];
+                                    bool noisesIncludesMask = (noisesForCurZ & curCheckingMaskX) == curCheckingMaskX;
+
+                                    if (noisesIncludesMask) {
+                                        cumulativeScaleZ += scale;
+                                        uint64_t modifiedNoise = bitNoiseForCurrentChunkCurDirOnlyVisible[y][i] & ~(curCheckingMaskX);
+                                        bitNoiseForCurrentChunkCurDirOnlyVisible[y][i] = modifiedNoise; // remove noise from data since previous face was expanded here.
+                                    }
+                                    else {
+                                        curShape.scale.z = cumulativeScaleZ;
+                                        break;
+                                    }
+                                }
+                            }
+                            greedyMeshForCurFace.push_back(curShape);
+                        }
+                    }
+                }
+            }
+        }
+        else if (faceDir == FACE_FRONT_INDEX || faceDir == FACE_BACK_INDEX)
+        {
+            for (int z = startZ; z <= endZ; z += stepSizeForConvolution)
+            {
+                for (int y = startY; y <= endY; y += stepSizeForConvolution)
+                {
+                    for (int x = startX; x <= endX; x += stepSizeForConvolution)
+                    {
+                        uint64_t maskForCurFace = static_cast<uint64_t>(1) << x;
+                        uint64_t curNoise = bitNoiseForCurrentChunkCurDirOnlyVisible[z][y] & maskForCurFace;
+
+                        if (curNoise > 0)
+                        {
+                            GreedyMeshCurShape curShape = { Vector3{(float)x, (float)y, (float)z},  Vector3{(float)x, (float)y, (float)z}, Vector3{ (float)scale, (float)scale, (float)scale } };
+
+                            if (true)
+                            {
+                                uint64_t curCheckingMaskX = 0;
+                                int curXHead = std::countr_zero(bitNoiseForCurrentChunkCurDirOnlyVisible[z][y]);
+
+                                int cumulativeScaleX = 0;
+
+                                for (int i = curXHead; i < innerLoopEnd; i += stepSizeForConvolution)
+                                {
+                                    uint64_t bitPosition = i;
+                                    bool curXIsFilled = ((bitNoiseForCurrentChunkCurDirOnlyVisible[z][y] >> bitPosition) & 1) > 0;
+                                    if (curXIsFilled) {
+                                        cumulativeScaleX += scale;
+                                        curCheckingMaskX = curCheckingMaskX | static_cast<uint64_t>(1) << bitPosition; // Update Mask
+                                        uint64_t maskToSetCurVoxelToEmpty = ~(static_cast<uint64_t>(1) << bitPosition);
+                                        bitNoiseForCurrentChunkCurDirOnlyVisible[z][y] = bitNoiseForCurrentChunkCurDirOnlyVisible[z][y] & maskToSetCurVoxelToEmpty; // Make noise value 0 so that it is ignored during the next loop.
+                                    }
+                                    else {
+                                        x = i;
+                                        curShape.scale.x = cumulativeScaleX;
+                                        break;
+                                    }
+                                }
+
+                                int cumulativeScaleY = scale;
+                                for (int i = y + stepSizeForConvolution; i < innerLoopEnd; i += stepSizeForConvolution)
+                                {
+                                    uint64_t noisesForCurY = bitNoiseForCurrentChunkCurDirOnlyVisible[z][i];
+                                    bool noisesIncludesMask = (noisesForCurY & curCheckingMaskX) == curCheckingMaskX;
+
+                                    if (noisesIncludesMask) {
+                                        cumulativeScaleY += scale;
+                                        bitNoiseForCurrentChunkCurDirOnlyVisible[z][i] = bitNoiseForCurrentChunkCurDirOnlyVisible[z][i] & ~(curCheckingMaskX); // remove noise from data since previous face was expanded here.
+                                    }
+                                    else {
+                                        curShape.scale.y = cumulativeScaleY;
+                                        break;
+                                    }
+                                }
+                            }
+
+                            greedyMeshForCurFace.push_back(curShape);
+                        }
+                    }
+                }
+            }
+        }
+        else if (faceDir == FACE_RIGHT_INDEX || faceDir == FACE_LEFT_INDEX)
+        {
+            for (int x = startX; x <= endX; x += stepSizeForConvolution)
+            {
+                for (int y = startY; y <= endY; y += stepSizeForConvolution)
+                {
+                    for (int z = startZ; z <= endZ; z += stepSizeForConvolution)
+                    {
+                        //uint64_t maskForCurFace = static_cast<uint64_t>(1) << x;
+                        uint64_t maskForCurFace = static_cast<uint64_t>(1) << z;
+                        uint64_t curNoise = bitNoiseForCurrentChunkCurDirOnlyVisible[x][y] & maskForCurFace;
+
+                        if (curNoise > 0)
+                        {
+                            GreedyMeshCurShape curShape = { Vector3{(float)x, (float)y, (float)z},  Vector3{(float)x, (float)y, (float)z}, Vector3{ (float)scale, (float)scale, (float)scale } };
+                            //GreedyMeshCurShape curShape = { Vector3{(float)x, (float)y, (float)z},  Vector3{(float)x, (float)y, (float)z}, Vector3{ 0.0f, 0.0f, 0.0f } };
+
+                            if (true)
+                            {
+                                uint64_t curCheckingMaskZ = 0;
+                                int curZHead = std::countr_zero(bitNoiseForCurrentChunkCurDirOnlyVisible[x][y]);
+
+                                int cumulativeScaleZ = 0;
+
+                                for (int i = curZHead; i < innerLoopEnd; i += stepSizeForConvolution)
+                                {
+                                    uint64_t bitPosition = i;
+                                    bool curXIsFilled = ((bitNoiseForCurrentChunkCurDirOnlyVisible[x][y] >> bitPosition) & 1) > 0;
+                                    if (curXIsFilled) {
+                                        cumulativeScaleZ += scale;
+                                        curCheckingMaskZ = curCheckingMaskZ | static_cast<uint64_t>(1) << bitPosition; // Update Mask
+                                        uint64_t maskToSetCurVoxelToEmpty = ~(static_cast<uint64_t>(1) << bitPosition);
+                                        bitNoiseForCurrentChunkCurDirOnlyVisible[x][y] = bitNoiseForCurrentChunkCurDirOnlyVisible[x][y] & maskToSetCurVoxelToEmpty; // Make noise value 0 so that it is ignored during the next loop.
+                                    }
+                                    else {
+                                        z = i;
+                                        curShape.scale.z = cumulativeScaleZ;
+                                        break;
+                                    }
+                                }
+
+                                int cumulativeScaleY = scale;
+                                for (int i = y + stepSizeForConvolution; i < innerLoopEnd; i += stepSizeForConvolution)
+                                {
+                                    uint64_t noisesForCurY = bitNoiseForCurrentChunkCurDirOnlyVisible[x][i];
+                                    bool noisesIncludesMask = (noisesForCurY & curCheckingMaskZ) == curCheckingMaskZ;
+
+                                    if (noisesIncludesMask) {
+                                        cumulativeScaleY += scale;
+                                        bitNoiseForCurrentChunkCurDirOnlyVisible[x][i] = bitNoiseForCurrentChunkCurDirOnlyVisible[x][i] & ~(curCheckingMaskZ); // remove noise from data since previous face was expanded here.
+                                    }
+                                    else {
+                                        curShape.scale.y = cumulativeScaleY;
+                                        break;
+                                    }
+                                }
+                            }
+                            greedyMeshForCurFace.push_back(curShape);
+                        }
+                    }
+                }
+            }
+        }
+
+        else
+        {
+            for (int y = startY; y <= endY; y += stepSizeForConvolution)
+            {
+                for (int z = startZ; z <= endZ; z += stepSizeForConvolution)
+                {
+                    for (int x = startX; x <= endX; x += stepSizeForConvolution)
+                    {
+                        uint64_t maskForCurFace = static_cast<uint64_t>(1) << x;
+                        uint64_t curNoise = bitNoiseForCurrentChunkCurDirOnlyVisible[y][z] & maskForCurFace;
+
+                        if (curNoise > 0)
+                        {
+                            GreedyMeshCurShape curShape = { Vector3{(float)x, (float)y, (float)z},  Vector3{(float)x, (float)y, (float)z}, Vector3{ (float)scale, (float)scale, (float)scale } };
+                            greedyMeshForCurFace.push_back(curShape);
+                        }
+                    }
+                }
+            }
+
+        }
+
+    }
+
+
+    if (!doGreedyMeshing) {
+
+        for (int y = startY; y <= endY; y += stepSizeForConvolution)
+        {
+            for (int z = startZ; z <= endZ; z += stepSizeForConvolution)
+            {
+                for (int x = startX; x <= endX; x += stepSizeForConvolution)
+                {
+                    unsigned int maskForCurFace = 1 << x;
+                    unsigned int curNoise = bitNoiseForCurrentChunkCurDirOnlyVisible[y][z] & maskForCurFace;
+
+                    if (curNoise > 0)
+                    {
+                        GreedyMeshCurShape curShape = { Vector3{(float)x, (float)y, (float)z},  Vector3{(float)x, (float)y, (float)z}, Vector3{ (float)scale, (float)scale, (float)scale } };
+                        greedyMeshForCurFace.push_back(curShape);
+
+                    }
+
+
+
+                }
+            }
+        }
+    }
+}
+
+
 //Can be multithreaded to increase performance by doing one thread per face direction.
 static void GreedyMesh2D(std::vector<std::vector<std::vector<float>>>& noiseForCurrentChunk
     , std::vector<std::vector<std::vector<float>>>& scaleForEachVoxelInChunk
@@ -3199,12 +3500,23 @@ static void GreedyMesh2D(std::vector<std::vector<std::vector<float>>>& noiseForC
     }
     else
     {
-        BinaryGreedyMeshCurFaceDir(bitNoiseForCurrentChunkUpFace, curLodLevel, greedyMeshForUpFace, FACE_UP_INDEX);
-        BinaryGreedyMeshCurFaceDir(bitNoiseForCurrentChunkDownFace, curLodLevel, greedyMeshForDownFace, FACE_DOWN_INDEX);
-        BinaryGreedyMeshCurFaceDir(bitNoiseForCurrentChunkFrontFace, curLodLevel, greedyMeshForFrontFace, FACE_FRONT_INDEX);
-        BinaryGreedyMeshCurFaceDir(bitNoiseForCurrentChunkBackFace, curLodLevel, greedyMeshForBackFace, FACE_BACK_INDEX);
-        BinaryGreedyMeshCurFaceDir(bitNoiseForCurrentChunkRightFace, curLodLevel, greedyMeshForRightFace, FACE_RIGHT_INDEX);
-        BinaryGreedyMeshCurFaceDir(bitNoiseForCurrentChunkLeftFace, curLodLevel, greedyMeshForLeftFace, FACE_LEFT_INDEX);
+        if (true) {
+            BinaryGreedyMeshCurFaceDir(bitNoiseForCurrentChunkUpFace, curLodLevel, greedyMeshForUpFace, FACE_UP_INDEX);
+            BinaryGreedyMeshCurFaceDir(bitNoiseForCurrentChunkDownFace, curLodLevel, greedyMeshForDownFace, FACE_DOWN_INDEX);
+            BinaryGreedyMeshCurFaceDir(bitNoiseForCurrentChunkFrontFace, curLodLevel, greedyMeshForFrontFace, FACE_FRONT_INDEX);
+            BinaryGreedyMeshCurFaceDir(bitNoiseForCurrentChunkBackFace, curLodLevel, greedyMeshForBackFace, FACE_BACK_INDEX);
+            BinaryGreedyMeshCurFaceDir(bitNoiseForCurrentChunkRightFace, curLodLevel, greedyMeshForRightFace, FACE_RIGHT_INDEX);
+            BinaryGreedyMeshCurFaceDir(bitNoiseForCurrentChunkLeftFace, curLodLevel, greedyMeshForLeftFace, FACE_LEFT_INDEX);
+        }
+
+        if (false) {
+            BinaryGreedyMeshCurFaceDirLOD(bitNoiseForCurrentChunkUpFace, curLodLevel, greedyMeshForUpFace, FACE_UP_INDEX);
+            BinaryGreedyMeshCurFaceDirLOD(bitNoiseForCurrentChunkDownFace, curLodLevel, greedyMeshForDownFace, FACE_DOWN_INDEX);
+            BinaryGreedyMeshCurFaceDirLOD(bitNoiseForCurrentChunkFrontFace, curLodLevel, greedyMeshForFrontFace, FACE_FRONT_INDEX);
+            BinaryGreedyMeshCurFaceDirLOD(bitNoiseForCurrentChunkBackFace, curLodLevel, greedyMeshForBackFace, FACE_BACK_INDEX);
+            BinaryGreedyMeshCurFaceDirLOD(bitNoiseForCurrentChunkRightFace, curLodLevel, greedyMeshForRightFace, FACE_RIGHT_INDEX);
+            BinaryGreedyMeshCurFaceDirLOD(bitNoiseForCurrentChunkLeftFace, curLodLevel, greedyMeshForLeftFace, FACE_LEFT_INDEX);
+        }
 
     }
 

@@ -29,7 +29,7 @@ const std::string CHUNK_FILE_DELIMITER = ".";
 const std::string worldDataDir = "WorldData/";
 
 const int numChunksHalfWidth = 3;
-const int numChunksHalfWidth_Y = 3;
+const int numChunksHalfWidth_Y = 1;
 const int chunkSize = 32;
 const float scale = 0.01f;
 

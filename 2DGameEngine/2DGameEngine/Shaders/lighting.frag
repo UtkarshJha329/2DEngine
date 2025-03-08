@@ -8,6 +8,11 @@ in vec3 relChunkPos;
 flat in vec3 innerVoxelPos;
 flat in float _halfNumChunksWidth;
 flat in int _chunkSize;
+flat in vec2 curTexCoord;
+flat in float isThridOrFourthCorner;
+flat in vec3 scaledXYZ;
+flat in vec3 curScale;
+flat in float curLodLevel;
 //in vec3 meshVertexPos;
 
 // Input uniform values
@@ -38,6 +43,25 @@ float LinearizeDepth(float depth)
     return (2.0 * near * far) / (far + near - z * (far - near));	
 }
 
+float RemappedTextureCoord(float uninterpolatedTexCoordOfVertex, float interpolatedTexCoord, float curScale, float curLodLevel){
+
+    float remappedTexCoord = 0.0;
+
+    float numberOfTimesTextureRepeats = curScale / pow(2, curLodLevel);
+    float numTexturesOnAxis = 6.0;
+    float widthOfEachTextureForFace = 1.0 / numTexturesOnAxis;
+
+    float remappedInterpolatedTexCoord = interpolatedTexCoord * numberOfTimesTextureRepeats;
+    float compartmentalizedTexCoord = mod(remappedInterpolatedTexCoord, widthOfEachTextureForFace);
+
+    //float curTexCoordMin = uninterpolatedTexCoordOfVertex  - (numberOfTimesTextureRepeats / (numTexturesOnAxis));
+
+    remappedTexCoord = compartmentalizedTexCoord;
+
+    return remappedTexCoord;
+
+}
+
 void main()
 {
 //    float clipValue = 0.5;
@@ -48,7 +72,26 @@ void main()
 //        discard;
 //    }
     // Texel color fetching from texture sampler
-    vec4 texelColor = texture(texture0, fragTexCoord);
+    
+    vec2 texCoord = fragTexCoord;
+    if(isThridOrFourthCorner == 1.0){
+
+        if(scaledXYZ.x == 1.0 && scaledXYZ.z == 1.0){
+            texCoord.x = RemappedTextureCoord(curTexCoord.x, fragTexCoord.x, curScale.x, curLodLevel);
+            texCoord.y = RemappedTextureCoord(curTexCoord.y, fragTexCoord.y, curScale.z, curLodLevel);
+        }
+        else if(scaledXYZ.x == 1.0 && scaledXYZ.y == 1.0){
+            texCoord.x = RemappedTextureCoord(curTexCoord.x, fragTexCoord.x, curScale.x, curLodLevel);
+            texCoord.y = RemappedTextureCoord(curTexCoord.y, fragTexCoord.y, curScale.y, curLodLevel);
+        }
+        else if(scaledXYZ.y == 1.0 && scaledXYZ.z == 1.0){
+            texCoord.y = RemappedTextureCoord(curTexCoord.y, fragTexCoord.y, curScale.y, curLodLevel);
+            texCoord.x = RemappedTextureCoord(curTexCoord.x, fragTexCoord.x, curScale.z, curLodLevel);
+        }
+    }
+
+
+    vec4 texelColor = texture(texture0, texCoord);
 
     if(faceDir == 0){
             finalColor = pow(texelColor, vec4(1.0/2.2));
