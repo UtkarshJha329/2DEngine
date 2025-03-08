@@ -244,6 +244,7 @@ void main()
             curVertex = vec3(curVertex.x * curScaleA, curVertex.y, curVertex.z * curScaleB);
             scaledXYZ = vec3(1.0, 0.0, 1.0);
             curScale = vec3(curScaleA, lodScaleValue, curScaleB);
+            curVertex.y *= lodScaleValue;
         }
         else if(faceDir == 2 || faceDir == 3){
             //lodScaleValue = faceDir == 3 ? 0.0 : lodScaleValue;
@@ -251,6 +252,7 @@ void main()
             curVertex = vec3(curVertex.x * curScaleA, curVertex.y * curScaleB, curVertex.z);
             scaledXYZ = vec3(1.0, 1.0, 0.0);
             curScale = vec3(curScaleA, curScaleB, lodScaleValue);
+            curVertex.z *= lodScaleValue;
         }
         else if(faceDir == 4 || faceDir == 5){
             //lodScaleValue = faceDir == 5 ? 0.0 : lodScaleValue;
@@ -258,6 +260,7 @@ void main()
             curVertex = vec3(curVertex.x, curVertex.y * curScaleB, curVertex.z * curScaleA);
             scaledXYZ = vec3(0.0, 1.0, 1.0);
             curScale = vec3(lodScaleValue, curScaleB, curScaleA);
+            curVertex.x *= lodScaleValue;
         }
 
         gl_Position = mvp * translationMatrix  * vec4(curVertex, 1.0);

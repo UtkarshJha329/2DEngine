@@ -47,7 +47,8 @@ float RemappedTextureCoord(float uninterpolatedTexCoordOfVertex, float interpola
 
     float remappedTexCoord = 0.0;
 
-    float numberOfTimesTextureRepeats = curScale / pow(2, curLodLevel);
+    //float numberOfTimesTextureRepeats = curScale / pow(2, curLodLevel);
+    float numberOfTimesTextureRepeats = curScale;
     float numTexturesOnAxis = 6.0;
     float widthOfEachTextureForFace = 1.0 / numTexturesOnAxis;
 
