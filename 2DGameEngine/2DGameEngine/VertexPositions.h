@@ -258,6 +258,21 @@ public:
         //nextToFill += numCopyFromCopyArray;
     }
 
+    //void CopyDataToMegaArrayIntoChunk(std::vector<int> & copyIntoArray, std::vector<int> & copyFromArray
+    //                                , int offsetIntoCopyArray, int numCopyFromCopyArray
+    //                                , Vector3 copyIntoChunkInnerIndex
+    //                                , int* mappedPositionThatNeedsToBeRemaped) {
+    //    auto copyBeginFrom = copyFromArray.begin() + offsetIntoCopyArray;
+    //    auto copyEndAt = copyBeginFrom + numCopyFromCopyArray;
+
+    //    int copyIntoArrayCopyAtPosition = AllocateMemoryOfSize(numCopyFromCopyArray);
+
+    //    std::copy(copyBeginFrom, copyEndAt, copyIntoArray.begin() + copyIntoArrayCopyAtPosition);
+    //    //std::cout << totalFilled << std::endl;
+    //    *mappedPositionThatNeedsToBeRemaped = copyIntoArrayCopyAtPosition;
+    //    //nextToFill += numCopyFromCopyArray;
+    //}
+
     int AllocateMemoryOfSize(int sizeOfMemoryToAllocate) {
         //for (int i = 0; i < freeListMetadataList.size(); i++)
         //{

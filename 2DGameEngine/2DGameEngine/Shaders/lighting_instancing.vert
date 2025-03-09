@@ -179,6 +179,11 @@ void main()
         }
     }
 
+    _lodLevel = chunkPosition[gl_DrawIDARB].w;
+    curLodLevel = _lodLevel;
+    float lodScaleValue = pow(2, _lodLevel);
+    //float oneByLodScaleValue = 1 / lodScaleValue;
+
 //  chunksVisibility[flattenedChunkCoords] != 2 && chunksVisibility[flattenedChunkCoords] != 0
 //  chunksVisibility[flattenedChunkCoords] == 1
     if(true){
@@ -195,7 +200,7 @@ void main()
         curScaleB = (instancePosition >> curScalePosInPackedIntB) & 31;
 //        curScaleGen = (instancePosition >> curScalePosInPackedIntGen) & 31;
 
-        vec3 curPos = vec3(chunkPosition[gl_DrawIDARB].x, chunkPosition[gl_DrawIDARB].y, chunkPosition[gl_DrawIDARB].z) + curVoxelPosUncompressed;
+        vec3 curPos = vec3(chunkPosition[gl_DrawIDARB].x, chunkPosition[gl_DrawIDARB].y, chunkPosition[gl_DrawIDARB].z) + curVoxelPosUncompressed * vec3(lodScaleValue, 1.0, lodScaleValue);
         innerVoxelPos = curVoxelPosUncompressed;
 
         //vec3 curPos = chunkPosition + curVoxelPos;
@@ -229,11 +234,6 @@ void main()
         curVertex += 0.5;
         //curVertex = vec3(curVertex.x * curScaleX, curVertex.y * curScaleY, curVertex.z * curScaleZ);
         
-        _lodLevel = chunkPosition[gl_DrawIDARB].w;
-        curLodLevel = _lodLevel;
-        float lodScaleValue = pow(2, _lodLevel);
-        //float oneByLodScaleValue = 1 / lodScaleValue;
-
         //fragTexCoord = vertexTexCoord;
         curTexCoord = vertexTexCoord;
         fragTexCoord = vertexTexCoord;
