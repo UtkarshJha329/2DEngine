@@ -20,7 +20,7 @@
 #include <thread>
 #include <mutex>
 
-#define PROFILING 1
+#define PROFILING 0
 #if PROFILING
 #define PROFILE_SCOPE(name) InstrumentationTimer timer##__LINE__(name)
 #define PROFILE_FUNCTION() PROFILE_SCOPE(__FUNCTION__)

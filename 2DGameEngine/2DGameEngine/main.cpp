@@ -784,7 +784,7 @@ int main()
     renderQuad.commandsLengthBOID = rlLoadShaderBuffer(sizeof(int), &nextIndirectdrawCommandIndexBufferValue, RL_DYNAMIC_DRAW);
 
     renderQuad.commandsBufferVBOID = rlLoadShaderBuffer(drawArraysIndirectCommandsGPU.size() * sizeof(DrawArraysIndirectCommand), drawArraysIndirectCommandsGPU.data(), RL_DYNAMIC_DRAW);
-    renderQuad.chunkPositionsVBOID = rlLoadShaderBuffer(drawArraysIndirectChunkPositions.size() * sizeof(float3), drawArraysIndirectChunkPositions.data(), RL_DYNAMIC_DRAW);
+    renderQuad.chunkPositionsVBOID = rlLoadShaderBuffer(drawArraysIndirectChunkPositions.size() * sizeof(float4), drawArraysIndirectChunkPositions.data(), RL_DYNAMIC_DRAW);
 
     int chunkVisibilityValue = 0;
     int chunkVisibilityValueBuffer = rlLoadShaderBuffer(1 * sizeof(int), &chunkVisibilityValue, RL_DYNAMIC_DRAW);
@@ -1709,18 +1709,18 @@ static void MakeNoiseForChunkLOD(std::vector<std::vector<std::vector<float>>>& n
 
     for (int x = start; x < end; x++)
     {
-        _x = (x * voxelScale) + (chunksX * chunkSize);
+        _x = (x * voxelScale) + (chunksX * chunkSize * voxelScale);
 
         for (int z = start; z < end; z++)
         {
-            _z = (z * voxelScale) + (chunksZ * chunksSize);
+            _z = (z * voxelScale) + (chunksZ * chunkSize * voxelScale);
 
             //float noise = perlin.noise2D_01((double)_x * scale, (double)_z * scale);
             //float noise = perlin.normalizedOctave2D_01((double)_x * scale, (double)_z * scale, 4);
             float noise = 0;
             fnFractal->GenUniformGrid2D(&noise, _x, _z, 1, 1, scale, 1337);
 
-            int scaledNoise = (int)(noise * chunksSize * numChunksFullWidth_Y);
+            int scaledNoise = (int)(noise * chunkSize * numChunksFullWidth_Y);
 
             for (int y = start; y < end; y++)
             {
@@ -2965,12 +2965,15 @@ static void BinaryGreedyMeshCurFaceDirLOD(std::vector<std::vector<uint64_t>>& bi
 
     int powerOfTwo = pow(2, curLodLevel);
     int startX = powerOfTwo;
+    startX = 1;
     int endX = chunkSize;
 
     int startY = powerOfTwo;
+    //startY = 1;
     int endY = chunkSize;
 
     int startZ = powerOfTwo;
+    startZ = 1;
     int endZ = chunkSize;
 
     //int stepSizeForConvolution = powerOfTwo;
@@ -3567,12 +3570,15 @@ static void GreedyMesh2DLOD(std::vector<std::vector<std::vector<float>>>& noiseF
 
     int powerOfTwo = pow(2, curLodLevel);
     int startX = powerOfTwo;
+    startX = 1;
     int endX = chunkSize;
 
     int startY = powerOfTwo;
+    //startY = 1;
     int endY = chunkSize;
 
     int startZ = powerOfTwo;
+    startZ = 1;
     int endZ = chunkSize;
 
     //int stepSizeForConvolution = powerOfTwo;
