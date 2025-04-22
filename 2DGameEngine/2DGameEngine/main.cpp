@@ -133,7 +133,7 @@ static std::mutex chunkUpdatedIndexWithVoxelMutex;
 static std::mutex chunkMappingAllocatingMutex;
 static void GenChunkMeshWithNoise(VertexPositions &megaVertPositions
                                 , std::unordered_map<int, bool> &chunkGenerated
-                                , std::vector<int> &chunkUpdatedIndexWithVoxelMatchedToChunk
+                                , std::vector<int>& chunkUpdatedIndexWithVoxelMatchedToChunk
                                 , int &chunkBeingGeneratedCount
                                 , Vector3 chunkIndex, Vector3 innerChunkIndex
                                 , int curLodLevel
@@ -784,7 +784,7 @@ int main()
     renderQuad.commandsLengthBOID = rlLoadShaderBuffer(sizeof(int), &nextIndirectdrawCommandIndexBufferValue, RL_DYNAMIC_DRAW);
 
     renderQuad.commandsBufferVBOID = rlLoadShaderBuffer(drawArraysIndirectCommandsGPU.size() * sizeof(DrawArraysIndirectCommand), drawArraysIndirectCommandsGPU.data(), RL_DYNAMIC_DRAW);
-    renderQuad.chunkPositionsVBOID = rlLoadShaderBuffer(drawArraysIndirectChunkPositions.size() * sizeof(float3), drawArraysIndirectChunkPositions.data(), RL_DYNAMIC_DRAW);
+    renderQuad.chunkPositionsVBOID = rlLoadShaderBuffer(drawArraysIndirectChunkPositions.size() * sizeof(float4), drawArraysIndirectChunkPositions.data(), RL_DYNAMIC_DRAW);
 
     int chunkVisibilityValue = 0;
     int chunkVisibilityValueBuffer = rlLoadShaderBuffer(1 * sizeof(int), &chunkVisibilityValue, RL_DYNAMIC_DRAW);
@@ -1250,7 +1250,7 @@ int main()
                         PROFILE_SCOPE("Updating GPU data and Rendering.");
 
                         //OPTIMISE!!!!
-                        if ((chunkBeingGeneratedCount == 0 && chunksChanged)) {
+                        if ((/*chunkBeingGeneratedCount == 0 && chunksChanged*/chunkUpdatedVoxelPositionInBigArrayMappedToChunkPositionInArray.size() > 0)) {
                             rlEnableVertexArray(renderQuad.mesh.vaoId);
 
                             //renderQuad.instanceVBOID = rlLoadVertexBuffer(megaVertPositions.megaArrayOfAllPositions.data(), megaVertPositions.megaArrayOfAllPositions.size() * sizeof(int), true);
@@ -1297,7 +1297,12 @@ int main()
                             rlDisableVertexBuffer();
                             rlDisableVertexArray();
                             chunksChanged = false;
-                            chunkUpdatedVoxelPositionInBigArrayMappedToChunkPositionInArray.clear();
+
+
+                            {
+                                std::lock_guard<std::mutex> lockChunkUpdatedIndex(chunkUpdatedIndexWithVoxelMutex);
+                                chunkUpdatedVoxelPositionInBigArrayMappedToChunkPositionInArray.clear();
+                            }
                         }
 
                         rlBindShaderBuffer(renderQuad.chunkPositionsVBOID, 13);
