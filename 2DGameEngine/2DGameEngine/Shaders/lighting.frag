@@ -146,7 +146,7 @@ void main()
         else if(curLodLevel == 3.0){
             colour = vec3(0.0, 1.0, 1.0);
         }
-        else if(curLodLevel == 4.0){
+        else if(curLodLevel >= 4.0){
             //if(dist < (maxLODLevel * numChunksPerLOD))
             colour = vec3(1.0);
         }

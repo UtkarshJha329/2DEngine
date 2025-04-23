@@ -229,7 +229,8 @@ void CreateIndirectDrawOrderBasedOnFaceVisibility(vec3 innerChunkIndex, vec3 cam
         //drawChunkPos.w = curLodLevel;
         //drawChunkPos.w = 0.0;
 
-        distToChunk = abs(length(vec3(drawChunkPos.x, drawChunkPos.y, drawChunkPos.z))) / chunkSize;
+        //distToChunk = abs(length(vec3(drawChunkPos.x, drawChunkPos.y, drawChunkPos.z))) / chunkSize;
+        distToChunk = int(abs(length(vec3(curChunkIndex.x, 0.0, curChunkIndex.z))));
         if (distToChunk >= lodDistance1.x && distToChunk <= lodDistance1.y) {
             curLodLevel = LODLevel + 0;
         }
