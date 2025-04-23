@@ -141,6 +141,8 @@ static void GenChunkMeshWithNoise(VertexPositions &megaVertPositions
 {
     PROFILE_FUNCTION();
 
+    //std::cout << "Generating new mesh." << std::endl;
+
     auto fnSimplex = FastNoise::New<FastNoise::Simplex>();
     auto fnFractal = FastNoise::New<FastNoise::FractalFBm>();
 
@@ -849,7 +851,36 @@ int main()
             SetShaderValue(instanceShader, randValueLoc, &randValue, SHADER_UNIFORM_FLOAT);
         }
 
-        UpdateCamera(&camera, CAMERA_FREE);
+
+        float cameraMoveSpeed = 100.0f;
+        if (IsKeyPressed(KEY_I)) {
+            cameraMoveSpeed += 10.0f;
+        }
+        if (IsKeyPressed(KEY_O)) {
+            cameraMoveSpeed -= 10.0f;
+        }
+
+        if (/*IsMouseButtonDown(MOUSE_BUTTON_RIGHT)*/true) {
+
+            UpdateCameraPro(&camera,
+                Vector3{
+                (IsKeyDown(KEY_W) || IsKeyDown(KEY_UP)) * cameraMoveSpeed * GetFrameTime() -    // Move forward-backward
+                    (IsKeyDown(KEY_S) || IsKeyDown(KEY_DOWN)) * cameraMoveSpeed * GetFrameTime(),
+                    (IsKeyDown(KEY_D) || IsKeyDown(KEY_RIGHT)) * cameraMoveSpeed * GetFrameTime() -     // Move right-left
+                    (IsKeyDown(KEY_A) || IsKeyDown(KEY_LEFT)) * cameraMoveSpeed * GetFrameTime(),
+                    (IsKeyDown(KEY_SPACE)) * cameraMoveSpeed * GetFrameTime() -     // Move up-down
+                    (IsKeyDown(KEY_LEFT_CONTROL)) * cameraMoveSpeed * GetFrameTime()
+                },
+                Vector3{
+                GetMouseDelta().x * 0.05f,                            // Rotation: yaw
+                    GetMouseDelta().y * 0.05f,                            // Rotation: pitch
+                    0.0f                                                // Rotation: roll
+                },
+                GetMouseWheelMove() * 2.0f);                              // Move to target (zoom)
+
+            //UpdateCamera(&camera, CAMERA_FREE);
+        }
+
 
         float cameraPos[3] = { camera.position.x, camera.position.y, camera.position.z };
         SetShaderValue(instancedMaterial.shader, instancedMaterial.shader.locs[SHADER_LOC_VECTOR_VIEW], cameraPos, SHADER_UNIFORM_VEC3);
@@ -861,43 +892,47 @@ int main()
 
         if (oldCameraChunkPosition.x != cameraChunkIndex.x || oldCameraChunkPosition.z != cameraChunkIndex.z) {
 
-            //std::cout << "Detected change in camera chunk position." << std::endl;
-            Vector3 offset = Vector3{ cameraChunkIndex.x - oldCameraChunkPosition.x, 0, cameraChunkIndex.z - oldCameraChunkPosition.z };
-
-            for (auto& it : mappedInnerIndexMap) {
-
-                it.second = Vector3{ it.second.x + offset.x, it.second.y, it.second.z + offset.z };
-
-                if (it.second.x > numChunksHalfWidth) {
-                    it.second.x = (it.second.x * -1) + 1;
-                }
-
-                if (it.second.x < -numChunksHalfWidth) {
-                    it.second.x = (it.second.x * -1) - 1;
-                }
-
-                if (it.second.z > numChunksHalfWidth) {
-                    it.second.z = (it.second.z * -1) + 1;
-                }
-
-                if (it.second.z < -numChunksHalfWidth) {
-                    it.second.z = (it.second.z * -1) - 1;
-                }
-            }
-
-            //Mark All Chunks That Are New To Be Reaclculated
-            for (int i = 0; i < renderTraversalOrder.size(); i++)
+            if (false)
             {
-                if ((offset.x != 0 && renderTraversalOrder[i].x == offset.x * numChunksHalfWidth) || (offset.z != 0 && renderTraversalOrder[i].z == offset.z * numChunksHalfWidth)) {
-                    //innerIndexWhereNewMeshNeedsToBeCalculated[megaVertPositions.InnerIndexFlattened(renderTraversalOrder[i])] = true;
-                    chunksWhereNewMeshNeedsToBeCalculated.push_back(renderTraversalOrder[i]);
+
+                //std::cout << "Detected change in camera chunk position." << std::endl;
+                Vector3 offset = Vector3{ cameraChunkIndex.x - oldCameraChunkPosition.x, 0, cameraChunkIndex.z - oldCameraChunkPosition.z };
+
+                for (auto& it : mappedInnerIndexMap) {
+
+                    it.second = Vector3{ it.second.x + offset.x, it.second.y, it.second.z + offset.z };
+
+                    if (it.second.x > numChunksHalfWidth) {
+                        it.second.x = (it.second.x * -1) + 1;
+                    }
+
+                    if (it.second.x < -numChunksHalfWidth) {
+                        it.second.x = (it.second.x * -1) - 1;
+                    }
+
+                    if (it.second.z > numChunksHalfWidth) {
+                        it.second.z = (it.second.z * -1) + 1;
+                    }
+
+                    if (it.second.z < -numChunksHalfWidth) {
+                        it.second.z = (it.second.z * -1) - 1;
+                    }
                 }
 
-                if (LODBorderMesh(renderTraversalOrder[i]))
+                //Mark All Chunks That Are New To Be Reaclculated
+                for (int i = 0; i < renderTraversalOrder.size(); i++)
                 {
-                    //std::cout << "NEED TO RECALCULATE" << std::endl;
-                    //innerIndexWhereNewMeshNeedsToBeCalculated[megaVertPositions.InnerIndexFlattened(renderTraversalOrder[i])] = true;
-                    chunksWhereNewMeshNeedsToBeCalculated.push_back(renderTraversalOrder[i]);
+                    if ((offset.x != 0 && renderTraversalOrder[i].x == offset.x * numChunksHalfWidth) || (offset.z != 0 && renderTraversalOrder[i].z == offset.z * numChunksHalfWidth)) {
+                        //innerIndexWhereNewMeshNeedsToBeCalculated[megaVertPositions.InnerIndexFlattened(renderTraversalOrder[i])] = true;
+                        chunksWhereNewMeshNeedsToBeCalculated.push_back(renderTraversalOrder[i]);
+                    }
+
+                    if (LODBorderMesh(renderTraversalOrder[i]))
+                    {
+                        //std::cout << "NEED TO RECALCULATE" << std::endl;
+                        //innerIndexWhereNewMeshNeedsToBeCalculated[megaVertPositions.InnerIndexFlattened(renderTraversalOrder[i])] = true;
+                        chunksWhereNewMeshNeedsToBeCalculated.push_back(renderTraversalOrder[i]);
+                    }
                 }
             }
         }
@@ -1112,6 +1147,7 @@ int main()
                         {
                             //PROFILE_SCOPE("Time for checking one chunk.");
 
+                            //std::cout << "Recalculating mesh." << std::endl;
 
                             //int renderTraversalIndexFlattened = megaVertPositions.InnerIndexFlattened(renderTraversalOrder[i]);
                             int renderTraversalIndexFlattened = megaVertPositions.InnerIndexFlattened(chunksWhereNewMeshNeedsToBeCalculated[i]);
@@ -1125,7 +1161,8 @@ int main()
                                     Vector3 offsetRenderTraversalOrder = mappedInnerIndexMap[megaVertPositions.InnerIndexFlattened(chunksWhereNewMeshNeedsToBeCalculated[i])];
                                     //std::cout << offsetRenderTraversalOrder.x << ", " << offsetRenderTraversalOrder.y << ", " << offsetRenderTraversalOrder.z << std::endl;
                                     //Vector3 curChunkTraversalIndex = Vector3{ renderTraversalOrder[i].x + cameraChunkIndex.x, renderTraversalOrder[i].y, renderTraversalOrder[i].z + cameraChunkIndex.z };
-                                    Vector3 curChunkTraversalIndex = Vector3{ chunksWhereNewMeshNeedsToBeCalculated[i].x + cameraChunkIndex.x, chunksWhereNewMeshNeedsToBeCalculated[i].y, chunksWhereNewMeshNeedsToBeCalculated[i].z + cameraChunkIndex.z };
+                                    //Vector3 curChunkTraversalIndex = Vector3{ chunksWhereNewMeshNeedsToBeCalculated[i].x + cameraChunkIndex.x, chunksWhereNewMeshNeedsToBeCalculated[i].y, chunksWhereNewMeshNeedsToBeCalculated[i].z + cameraChunkIndex.z };
+                                    Vector3 curChunkTraversalIndex = Vector3{ chunksWhereNewMeshNeedsToBeCalculated[i].x, chunksWhereNewMeshNeedsToBeCalculated[i].y, chunksWhereNewMeshNeedsToBeCalculated[i].z };
 
                                     //Vector3 oldChunkTraversalIndex = Vector3{ renderTraversalOrder[i].x + oldCameraChunkPosition.x, renderTraversalOrder[i].y, renderTraversalOrder[i].z + oldCameraChunkPosition.z };
                                     Vector3 oldChunkTraversalIndex = Vector3{ chunksWhereNewMeshNeedsToBeCalculated[i].x + oldCameraChunkPosition.x, chunksWhereNewMeshNeedsToBeCalculated[i].y, chunksWhereNewMeshNeedsToBeCalculated[i].z + oldCameraChunkPosition.z };
@@ -1205,6 +1242,8 @@ int main()
                                         if (curLodLevel > 5) {
                                             curLodLevel = 5;
                                         }
+
+                                        //curLodLevel = 0;
 
                                         bool reclaimMemory = !megaVertPositions.IsFirstTimeAllocatingMemory(offsetRenderTraversalOrder);
 
@@ -1298,6 +1337,7 @@ int main()
                             rlDisableVertexArray();
                             chunksChanged = false;
 
+                            //std::cout << "Updating mesh data on gpu." << std::endl;
 
                             {
                                 std::lock_guard<std::mutex> lockChunkUpdatedIndex(chunkUpdatedIndexWithVoxelMutex);

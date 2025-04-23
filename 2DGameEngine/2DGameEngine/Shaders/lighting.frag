@@ -131,26 +131,47 @@ void main()
         //vec3 mappedChunkPos = vec3(mod(chunkPos.x, numChunks), mod(chunkPos.y, numChunksY), mod(chunkPos.z, numChunks));
         vec3 colour = vec3(0.0, 0.0, 0.0);
 
-        int maxLODLevel = 5;
-        float dist = length(relChunkCoordsAbs);
+//        int maxLODLevel = 5;
+//        float dist = length(relChunkCoordsAbs);
 
-        if(dist < ((maxLODLevel - 4) * numChunksPerLOD)){
+        if(curLodLevel == 0.0){
             colour = vec3(0.0, 0.0, 0.0);
         }
-        else if(dist < ((maxLODLevel - 3) * numChunksPerLOD)){
+        else if(curLodLevel == 1.0){
             colour = vec3(0.0, 1.0, 0.0);
         }
-        else if(dist < ((maxLODLevel - 2) * numChunksPerLOD)){
+        else if(curLodLevel == 2.0){
             colour = vec3(1.0, 0.0, 1.0);
         }
-        else if(dist < ((maxLODLevel - 1) * numChunksPerLOD)){
+        else if(curLodLevel == 3.0){
             colour = vec3(0.0, 1.0, 1.0);
         }
-        else{
+        else if(curLodLevel == 4.0){
             //if(dist < (maxLODLevel * numChunksPerLOD))
             colour = vec3(1.0);
         }
-
+        
+        
+//        int maxLODLevel = 5;
+//        float dist = length(relChunkCoordsAbs);
+//
+//        if(dist < ((maxLODLevel - 4) * numChunksPerLOD)){
+//            colour = vec3(0.0, 0.0, 0.0);
+//        }
+//        else if(dist < ((maxLODLevel - 3) * numChunksPerLOD)){
+//            colour = vec3(0.0, 1.0, 0.0);
+//        }
+//        else if(dist < ((maxLODLevel - 2) * numChunksPerLOD)){
+//            colour = vec3(1.0, 0.0, 1.0);
+//        }
+//        else if(dist < ((maxLODLevel - 1) * numChunksPerLOD)){
+//            colour = vec3(0.0, 1.0, 1.0);
+//        }
+//        else{
+//            //if(dist < (maxLODLevel * numChunksPerLOD))
+//            colour = vec3(1.0);
+//        }
+//
         //finalColor = vec4(mappedChunkPos * 1 / numChunks, 1.0);
         
         finalColor = vec4(colour, 1.0);

@@ -137,12 +137,21 @@ int ChunkFlatIndexWithoutVoxels(vec3 innerChunkIndex, int numChunksWidthFull){
 
 }
 
+bool ChunkFaceVisible(vec3 dirFromCameraToChunk, vec3 direction) {
+    return dot(dirFromCameraToChunk, direction) < 0;
+}
+
 void CreateIndirectDrawOrderBasedOnFaceVisibility(vec3 innerChunkIndex, vec3 cameraPos, int numChunksWidthFull, int chunkSize)
 {
         int numChunksHalfWidth = (numChunksWidthFull - 1) / 2;
 
         ivec3 cameraChunkIndex = ivec3(int(cameraPosition.x) / chunkSize, int(cameraPosition.y) / chunkSize, int(cameraPosition.z) / chunkSize);
-        vec3 curChunkIndex = { ((innerChunkIndex.x + cameraChunkIndex.x)), (innerChunkIndex.y), (innerChunkIndex.z + cameraChunkIndex.z) };
+        cameraChunkIndex.x = cameraPosition.x < 0 ? cameraChunkIndex.x - 1 : cameraChunkIndex.x;
+        cameraChunkIndex.z = cameraPosition.z < 0 ? cameraChunkIndex.z - 1 : cameraChunkIndex.z;
+        //ivec3 cameraChunkIndex = ivec3(round(cameraPosition.x) / chunkSize, round(cameraPosition.y) / chunkSize, round(cameraPosition.z) / chunkSize);
+        //ivec3 cameraChunkIndex = ivec3(floor(cameraPosition.x) / chunkSize, floor(cameraPosition.y) / chunkSize, floor(cameraPosition.z) / chunkSize);
+        //vec3 curChunkIndex = { ((innerChunkIndex.x + cameraChunkIndex.x)), (innerChunkIndex.y), (innerChunkIndex.z + cameraChunkIndex.z) };
+        vec3 curChunkIndex = { ((innerChunkIndex.x)), (innerChunkIndex.y), (innerChunkIndex.z) };
 
         vec3 offsetInnerIndex = curChunkIndex;
         if (offsetInnerIndex.x > numChunksHalfWidth) {
@@ -178,7 +187,9 @@ void CreateIndirectDrawOrderBasedOnFaceVisibility(vec3 innerChunkIndex, vec3 cam
         }
 
 
-        Position drawChunkPos = { (curChunkIndex.x * chunkSize), (curChunkIndex.y * chunkSize), (curChunkIndex.z * chunkSize), 1.0};
+        float offsetByLodDist = pow(2, LODLevel);
+        Position drawChunkPos = { (curChunkIndex.x * chunkSize * offsetByLodDist), (curChunkIndex.y * chunkSize), (curChunkIndex.z * chunkSize * offsetByLodDist), 1.0};
+        //Position drawChunkPos = { (innerChunkIndex.x * chunkSize * offsetByLodDist), (innerChunkIndex.y * chunkSize), (innerChunkIndex.z * chunkSize * offsetByLodDist), 1.0};
 
         vec3 dirToChunkFromCamera = vec3(drawChunkPos.x, drawChunkPos.y, drawChunkPos.z) - (cameraPos);
         //vec3 dirToChunkFromCamera = vec3(innerChunkIndex.x, innerChunkIndex.y, innerChunkIndex.z) * chunkSize - vec3(0.0, cameraPos.y, 0.0);
@@ -195,6 +206,30 @@ void CreateIndirectDrawOrderBasedOnFaceVisibility(vec3 innerChunkIndex, vec3 cam
         vec2 lodDistance5 = { lodDistance4.y + 1, lodDistance4.y + lodLevelOffset };
 
         float curLodLevel = 0.0;
+        //if (distToChunk >= lodDistance1.x && distToChunk <= lodDistance1.y) {
+        //    curLodLevel = LODLevel + 0;
+        //}
+        //else if (distToChunk >= lodDistance2.x && distToChunk <= lodDistance2.y) {
+        //    curLodLevel = LODLevel + 1;
+        //}
+        //else if (distToChunk >= lodDistance3.x && distToChunk <= lodDistance3.y) {
+        //    curLodLevel = LODLevel + 2;
+        //}
+        //else if (distToChunk >= lodDistance4.x && distToChunk <= lodDistance4.y) {
+        //    curLodLevel = LODLevel + 3;
+        //}
+        //else if (distToChunk >= lodDistance5.x) {
+        //    curLodLevel = LODLevel + 4;
+        //}
+
+        //if (curLodLevel > 5) {
+        //    curLodLevel = 5;
+        //}
+
+        //drawChunkPos.w = curLodLevel;
+        //drawChunkPos.w = 0.0;
+
+        distToChunk = abs(length(vec3(drawChunkPos.x, drawChunkPos.y, drawChunkPos.z))) / chunkSize;
         if (distToChunk >= lodDistance1.x && distToChunk <= lodDistance1.y) {
             curLodLevel = LODLevel + 0;
         }
@@ -216,7 +251,9 @@ void CreateIndirectDrawOrderBasedOnFaceVisibility(vec3 innerChunkIndex, vec3 cam
         }
 
         drawChunkPos.w = curLodLevel;
-        
+        //drawChunkPos.w = 0.0;
+
+
 
         //vec2 screenResolution = vec2(1280, 720);
 
@@ -252,11 +289,12 @@ void CreateIndirectDrawOrderBasedOnFaceVisibility(vec3 innerChunkIndex, vec3 cam
             //bool cameraInThisChunkWidthAndBreadth = (abs(innerChunkIndex.x) == (0) || abs(innerChunkIndex.z) == (0));
             //bool cameraInThisChunkWidthAndBreadth = ((innerChunkIndex.x) == (0) || (innerChunkIndex.z) == (0));
             //bool cameraInThisChunkWidthAndBreadth = (abs(innerChunkIndex.x) <= (1) || abs(innerChunkIndex.z) <= (1));
-            bool cameraInThisChunkWidthAndBreadth = (((innerChunkIndex.x) >= (-1) && innerChunkIndex.x <= 0) || ((innerChunkIndex.z) >= (-1) && innerChunkIndex.z <= 0));
+            //bool cameraInThisChunkWidthAndBreadth = (((innerChunkIndex.x) >= (-1) && innerChunkIndex.x <= 0) || ((innerChunkIndex.z) >= (-1) && innerChunkIndex.z <= 0));
+            bool cameraInThisChunkWidthAndBreadth = (innerChunkIndex.x == (cameraChunkIndex.x)) || (innerChunkIndex.z == (cameraChunkIndex.z));
             //bool cameraInThisChunkWidthAndBreadth = (abs(innerChunkIndex.x) <= (0) || abs(innerChunkIndex.z) <= (0));
-            bool drawAll = false;
+            bool drawAll = true;
 
-            if (dotUp < 0 || cameraInThisChunkWidthAndBreadth || drawAll) {
+            if (ChunkFaceVisible(dirToChunkFromCamera, up) || cameraInThisChunkWidthAndBreadth || drawAll) {
                 int start = upFacesMetadata[curChunkIndexWithoutVoxels].startPositionInBigArray;
                 int numInstances = upFacesMetadata[curChunkIndexWithoutVoxels].size;
                 if (numInstances > 0) {
@@ -267,7 +305,7 @@ void CreateIndirectDrawOrderBasedOnFaceVisibility(vec3 innerChunkIndex, vec3 cam
                 }
             }
 
-            if (dotDown < 0 || cameraInThisChunkWidthAndBreadth || drawAll) {
+            if (ChunkFaceVisible(dirToChunkFromCamera, down) || cameraInThisChunkWidthAndBreadth || drawAll) {
                 int start = downFacesMetadata[curChunkIndexWithoutVoxels].startPositionInBigArray;
                 int numInstances = downFacesMetadata[curChunkIndexWithoutVoxels].size;
                 if (numInstances > 0) {
@@ -278,7 +316,7 @@ void CreateIndirectDrawOrderBasedOnFaceVisibility(vec3 innerChunkIndex, vec3 cam
                 }
             }
 
-            if (dotFront < 0 || cameraInThisChunkWidthAndBreadth || drawAll) {
+            if (ChunkFaceVisible(dirToChunkFromCamera, front) || cameraInThisChunkWidthAndBreadth || drawAll) {
                 int start = frontFacesMetadata[curChunkIndexWithoutVoxels].startPositionInBigArray;
                 int numInstances = frontFacesMetadata[curChunkIndexWithoutVoxels].size;
                 if (numInstances > 0) {
@@ -289,7 +327,7 @@ void CreateIndirectDrawOrderBasedOnFaceVisibility(vec3 innerChunkIndex, vec3 cam
                 }
             }
 
-            if (dotBack < 0 || cameraInThisChunkWidthAndBreadth || drawAll) {
+            if (ChunkFaceVisible(dirToChunkFromCamera, back) || cameraInThisChunkWidthAndBreadth || drawAll) {
                 int start = backFacesMetadata[curChunkIndexWithoutVoxels].startPositionInBigArray;
                 int numInstances = backFacesMetadata[curChunkIndexWithoutVoxels].size;
                 if (numInstances > 0) {
@@ -300,7 +338,7 @@ void CreateIndirectDrawOrderBasedOnFaceVisibility(vec3 innerChunkIndex, vec3 cam
                 }
             }
 
-            if (dotRight < 0 || cameraInThisChunkWidthAndBreadth || drawAll) {
+            if (ChunkFaceVisible(dirToChunkFromCamera, right) || cameraInThisChunkWidthAndBreadth || drawAll) {
                 int start = rightFacesMetadata[curChunkIndexWithoutVoxels].startPositionInBigArray;
                 int numInstances = rightFacesMetadata[curChunkIndexWithoutVoxels].size;
                 if (numInstances > 0) {
@@ -311,7 +349,7 @@ void CreateIndirectDrawOrderBasedOnFaceVisibility(vec3 innerChunkIndex, vec3 cam
                 }
             }
 
-            if (dotLeft < 0 || cameraInThisChunkWidthAndBreadth || drawAll) {
+            if (ChunkFaceVisible(dirToChunkFromCamera, left) || cameraInThisChunkWidthAndBreadth || drawAll) {
                 int start = leftFacesMetadata[curChunkIndexWithoutVoxels].startPositionInBigArray;
                 int numInstances = leftFacesMetadata[curChunkIndexWithoutVoxels].size;
                 if (numInstances > 0) {
@@ -347,7 +385,8 @@ void main(){
 
             float farPlaneDistance = 100000000.0f;
 
-            vec3 cameraModifiedPosition = vec3(0.0) - (cameraDir * diagonalDist * 2 * 1.414f);
+            //vec3 cameraModifiedPosition = vec3(0.0) - (cameraDir * diagonalDist * 2 * 1.414f);
+            vec3 cameraModifiedPosition = cameraPosition - (cameraDir * diagonalDist * 2 * 1.414f);
 
             Plane nearPlane = { nearPlaneNormal, cameraModifiedPosition};
             Plane farPlane = { farPlaneNormal, cameraModifiedPosition + (cameraDir * (farPlaneDistance + diagonalDist * 1.414f))};

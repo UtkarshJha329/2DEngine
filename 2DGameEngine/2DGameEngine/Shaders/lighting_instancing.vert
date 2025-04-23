@@ -232,6 +232,7 @@ void main()
         _lodLevel = chunkPosition[gl_DrawIDARB].w;
         curLodLevel = _lodLevel;
         float lodScaleValue = pow(2, _lodLevel);
+        //lodScaleValue = 1.0;
         //float oneByLodScaleValue = 1 / lodScaleValue;
 
         //fragTexCoord = vertexTexCoord;
