@@ -567,6 +567,8 @@ void CreateComplexChunksRenderingOrder(const int& numChunksFullWidth_Y, const in
 
 void CreateSimpleChunksOrder(const int& numChunksFullWidth_Y, const int& numChunksHalfWidth, const int LODLevel, std::vector<Vector3>& renderTraversalOrder, VertexPositions& megaVertPositions, std::vector<float3>& chunksGridCoordinates) {
 
+    //std::string chunkIndices = "";
+
     for (int i = 0; i < maxLODLevel; i++)
     {
         int stepSize = pow(2, i);
@@ -580,6 +582,7 @@ void CreateSimpleChunksOrder(const int& numChunksFullWidth_Y, const int& numChun
 
                     if (i == ChunkIndexLODLevel(chunkIndex)) {
 
+                        //chunkIndices += std::to_string(chunkIndex.x) + ", " + std::to_string(chunkIndex.z) + "\n";
                         //std::cout << chunkIndex.x << ", " << chunkIndex.z << std::endl;
 
                         renderTraversalOrder.push_back(chunkIndex);
@@ -594,6 +597,7 @@ void CreateSimpleChunksOrder(const int& numChunksFullWidth_Y, const int& numChun
 
         }
     }
+    //std::cout << chunkIndices << std::endl;
 }
 
 
