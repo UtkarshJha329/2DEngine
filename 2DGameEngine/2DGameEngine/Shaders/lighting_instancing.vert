@@ -183,9 +183,16 @@ void main()
 //  chunksVisibility[flattenedChunkCoords] == 1
     if(true){
 //    if(renderAll == 1 || chunksVisibility[flattenedChunkCoords] == 1){
-        
+
+        _lodLevel = chunkPosition[gl_DrawIDARB].w;
+        curLodLevel = _lodLevel;
+        float lodScaleValue = pow(2, _lodLevel);
+
         vec3 curVoxelPosUncompressed = vec3((instancePosition >> xPosInPackedInt) & 31, (instancePosition >> yPosInPackedInt) & 31, (instancePosition >> zPosInPackedInt) & 31);
         faceDir = (instancePosition >> faceDirPosInPackedInt) & 7;
+
+        curVoxelPosUncompressed = vec3(curVoxelPosUncompressed.x * lodScaleValue, curVoxelPosUncompressed.y, curVoxelPosUncompressed.z * lodScaleValue);
+//        curVoxelPosUncompressed = curVoxelPosUncompressed * lodScaleValue;
 
 //        curScaleX = (instancePosition >> curScalePosInPackedIntX) & 31;
 //        curScaleZ = (instancePosition >> curScalePosInPackedIntZ) & 31;
@@ -229,9 +236,6 @@ void main()
         curVertex += 0.5;
         //curVertex = vec3(curVertex.x * curScaleX, curVertex.y * curScaleY, curVertex.z * curScaleZ);
         
-        _lodLevel = chunkPosition[gl_DrawIDARB].w;
-        curLodLevel = _lodLevel;
-        float lodScaleValue = pow(2, _lodLevel);
         //lodScaleValue = 1.0;
         //float oneByLodScaleValue = 1 / lodScaleValue;
 
