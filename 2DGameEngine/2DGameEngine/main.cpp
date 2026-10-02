@@ -594,7 +594,6 @@ void CreateSimpleChunksOrder(const int& numChunksFullWidth_Y, const int& numChun
                     }
                 }
             }
-
         }
     }
     //std::cout << chunkIndices << std::endl;
